@@ -1,11 +1,15 @@
 package com.hhst.youtubelite.ui;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ObjectAnimator;
 import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
+import android.view.animation.AnticipateInterpolator;
 import android.view.animation.DecelerateInterpolator;
 
 import androidx.activity.EdgeToEdge;
@@ -27,12 +31,29 @@ public class SplashActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
-        SplashScreen.installSplashScreen(this);
+        SplashScreen splashScreen = SplashScreen.installSplashScreen(this);
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_splash);
 
-        // Handle window insets for Edge-to-Edge
+        splashScreen.setOnExitAnimationListener(splashScreenView -> {
+            final ObjectAnimator slideUp = ObjectAnimator.ofFloat(
+                    splashScreenView.getView(),
+                    View.TRANSLATION_Y,
+                    0f,
+                    -splashScreenView.getView().getHeight()
+            );
+            slideUp.setInterpolator(new AnticipateInterpolator());
+            slideUp.setDuration(500L);
+            slideUp.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    splashScreenView.remove();
+                }
+            });
+            slideUp.start();
+        });
+
         View mainView = findViewById(android.R.id.content);
         ViewCompat.setOnApplyWindowInsetsListener(mainView, (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -43,48 +64,47 @@ public class SplashActivity extends AppCompatActivity {
         prepareTagline();
 
         handler.postDelayed(() -> animateWordWithDot(
-                findViewById(R.id.tagline_fast),
+                findViewById(R.id.tagline_simple),
                 findViewById(R.id.tagline_dot1)
-        ), 300);
+        ), 400);
 
         handler.postDelayed(() -> animateWordWithDot(
-                findViewById(R.id.tagline_minimal),
+                findViewById(R.id.tagline_fast),
                 findViewById(R.id.tagline_dot2)
-        ), 700);
+        ), 900);
 
-        handler.postDelayed(() -> animateView(findViewById(R.id.tagline_simple)), 1100);
+        handler.postDelayed(() -> animateView(findViewById(R.id.tagline_minimal)), 1400);
 
         handler.postDelayed(() -> {
             if (!isFinishing()) {
                 startActivity(new Intent(SplashActivity.this, MainActivity.class));
                 finish();
-                overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+                overridePendingTransition(R.anim.slide_in_up, R.anim.slide_out_up);
             }
-        }, 2000);
+        }, 2800);
     }
 
     private void prepareTagline() {
         int[] ids = {
-                R.id.tagline_fast,
+                R.id.tagline_simple,
                 R.id.tagline_dot1,
-                R.id.tagline_minimal,
+                R.id.tagline_fast,
                 R.id.tagline_dot2,
-                R.id.tagline_simple
+                R.id.tagline_minimal
         };
 
         for (int id : ids) {
             View v = findViewById(id);
             if (v != null) {
                 v.setAlpha(0f);
-                v.setTranslationY(50f);
+                v.setTranslationY(60f);
             }
         }
     }
 
     private void animateWordWithDot(View word, View dot) {
         animateView(word);
-
-        handler.postDelayed(() -> animateView(dot), 150);
+        handler.postDelayed(() -> animateView(dot), 200);
     }
 
     private void animateView(View v) {
@@ -92,8 +112,8 @@ public class SplashActivity extends AppCompatActivity {
             v.animate()
                     .alpha(1f)
                     .translationY(0f)
-                    .setDuration(400)
-                    .setInterpolator(new DecelerateInterpolator(1.4f))
+                    .setDuration(600)
+                    .setInterpolator(new DecelerateInterpolator(1.6f))
                     .start();
         }
     }

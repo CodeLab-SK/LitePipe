@@ -109,7 +109,6 @@ public class TabManager {
 	public void openTab(@NonNull final String url, @Nullable String tag) {
 		if (tag == null) tag = UrlUtils.getPageClass(url);
 		if (Constant.PAGE_WATCH.equals(tag) && openWatchTab(url)) return;
-		// Open in current tab
 		if (tab != null && (tag.equals(tab.getMTag()) && NAV_TAGS.contains(tag) || tag.equals(Constant.PAGE_SHORTS))) {
 			if (!url.equals(tab.getUrl())) tab.loadUrl(url);
 			return;
@@ -117,6 +116,7 @@ public class TabManager {
 		final String homeTag = Constant.PAGE_HOME;
 		final FragmentTransaction ft = getFm().beginTransaction();
 		final boolean suspendCurrentWatch = shouldSuspendCurrentWatch(
+						tab != null ? tab.getMTag() : null,
 						getFragmentPageClass(tab),
 						tag,
 						extensionManager.isEnabled(Constant.ENABLE_IN_APP_MINI_PLAYER),
@@ -210,8 +210,7 @@ public class TabManager {
 		if (webview != null) webview.evaluateJavascript(script, callback);
 	}
 
-	public void evaluateJavascriptForWatch(@NonNull final String script,
-	                                       @Nullable final ValueCallback<String> callback) {
+	public void evalWatchJs(@NonNull final String script, @Nullable final ValueCallback<String> callback) {
 		final YoutubeWebview webview = resolveWatchWebview();
 		if (webview != null) {
 			webview.evaluateJavascript(script, callback);
@@ -276,6 +275,10 @@ public class TabManager {
 	}
 
 	private boolean isWatchTab(@Nullable final YoutubeFragment fragment) {
+		if (fragment == null) return false;
+		if (Constant.PAGE_WATCH.equals(fragment.getMTag())) {
+			return true;
+		}
 		return Constant.PAGE_WATCH.equals(getFragmentPageClass(fragment));
 	}
 
@@ -330,18 +333,21 @@ public class TabManager {
 		final Page prev = prev(tab);
 		final boolean hasBackStack = tabs.size() > 1;
 		final boolean isMiniPlayerEnabled = extensionManager.isEnabled(Constant.ENABLE_IN_APP_MINI_PLAYER);
-		
+
 		if (shouldSuspendCurrentWatchOnBack(
+						tab.getMTag(),
 						getFragmentPageClass(tab),
 						isMiniPlayerEnabled,
 						player.get().canSuspendWatch())) {
-			final YoutubeFragment prevTab = getPreviousTab();
+
 			if (prev != null
 							&& !Constant.PAGE_WATCH.equals(prev.tag())
-							&& (prevTab == null || !prev.url().equals(prevTab.getUrl()))) {
-				openTab(prev.url(), prev.tag());
+							&& webview != null && webview.canGoBack()) {
+				webview.goBack();
 				return true;
 			}
+
+			final YoutubeFragment prevTab = getPreviousTab();
 			final FragmentTransaction ft = getFm().beginTransaction();
 			suspendCurrentWatch(ft);
 			tab = prevTab != null ? prevTab : home(ft);
@@ -353,7 +359,13 @@ public class TabManager {
 			return true;
 		}
 		
-		if (Constant.PAGE_WATCH.equals(tab.getMTag()) && !isMiniPlayerEnabled) {
+		if (suspendedWatchFragment != null) {
+			if (goBackInWatch()) return true;
+			clearSuspendedWatch();
+			return true;
+		}
+
+		if (Constant.PAGE_WATCH.equals(getFragmentPageClass(tab)) && !isMiniPlayerEnabled) {
 			player.get().hide();
 		}
 
@@ -477,20 +489,22 @@ public class TabManager {
 		return new Page(url, UrlUtils.getPageClass(url));
 	}
 
-	static boolean shouldSuspendCurrentWatch(@Nullable final String currentTag,
+	static boolean shouldSuspendCurrentWatch(@Nullable final String currentMTag,
+	                                         @Nullable final String currentPageClass,
 	                                         @Nullable final String targetTag,
 	                                         final boolean inAppMiniPlayerEnabled,
 	                                         final boolean canSuspendWatch) {
-		return Constant.PAGE_WATCH.equals(currentTag)
+		return (Constant.PAGE_WATCH.equals(currentMTag) || Constant.PAGE_WATCH.equals(currentPageClass))
 						&& !Constant.PAGE_WATCH.equals(targetTag)
 						&& inAppMiniPlayerEnabled
 						&& canSuspendWatch;
 	}
 
-	static boolean shouldSuspendCurrentWatchOnBack(@Nullable final String currentTag,
+	static boolean shouldSuspendCurrentWatchOnBack(@Nullable final String currentMTag,
+	                                               @Nullable final String currentPageClass,
 	                                               final boolean inAppMiniPlayerEnabled,
 	                                               final boolean canSuspendWatch) {
-		return Constant.PAGE_WATCH.equals(currentTag)
+		return (Constant.PAGE_WATCH.equals(currentMTag) || Constant.PAGE_WATCH.equals(currentPageClass))
 						&& inAppMiniPlayerEnabled
 						&& canSuspendWatch;
 	}

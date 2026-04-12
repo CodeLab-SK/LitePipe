@@ -84,6 +84,18 @@ public final class UrlUtils {
 						|| lowerHost.contains("myaccount.google");
 	}
 
+	public static boolean isPlaylistFirstItemUrl(@Nullable String url) {
+		if (url == null) return false;
+		try {
+			URI uri = URI.create(url);
+			String query = uri.getRawQuery();
+			if (query == null) return false;
+			return query.contains("index=1&") || query.endsWith("index=1");
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
 	@NonNull
 	public static String getPageClass(@Nullable final String url) {
 		if (url == null || url.isEmpty()) return PAGE_UNKNOWN;

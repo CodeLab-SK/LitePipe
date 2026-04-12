@@ -2,21 +2,25 @@ package com.hhst.youtubelite.ui;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.PendingIntent;
+import android.app.PictureInPictureParams;
+import android.app.RemoteAction;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.drawable.Icon;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.support.v4.media.session.PlaybackStateCompat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.webkit.WebView;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -32,6 +36,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.media.session.MediaButtonReceiver;
 import androidx.media3.common.Player;
 import androidx.media3.common.util.UnstableApi;
 import androidx.recyclerview.widget.ItemTouchHelper;
@@ -48,6 +53,7 @@ import com.hhst.youtubelite.downloader.service.DownloadService;
 import com.hhst.youtubelite.downloader.ui.DownloadActivity;
 import com.hhst.youtubelite.downloader.ui.DownloadDialog;
 import com.hhst.youtubelite.downloader.ui.PlaylistDownloadDialog;
+import com.hhst.youtubelite.downloader.ui.PlaylistDownloadItem;
 import com.hhst.youtubelite.extension.ExtensionManager;
 import com.hhst.youtubelite.extractor.VideoDetails;
 import com.hhst.youtubelite.extractor.YoutubeExtractor;
@@ -55,6 +61,7 @@ import com.hhst.youtubelite.player.LitePlayer;
 import com.hhst.youtubelite.player.common.PlayerLoopMode;
 import com.hhst.youtubelite.player.engine.Engine;
 import com.hhst.youtubelite.player.queue.QueueItem;
+import com.hhst.youtubelite.player.queue.QueueNav;
 import com.hhst.youtubelite.player.queue.QueueRepository;
 import com.hhst.youtubelite.player.queue.QueueWarmer;
 import com.hhst.youtubelite.ui.queue.QueueAdapter;
@@ -100,7 +107,6 @@ public final class MainActivity extends AppCompatActivity {
 	@Inject QueueWarmer queueWarmer;
 
 	@Nullable private PlaybackService playbackService;
-	@Nullable private DownloadService downloadService;
 
 	private View queueContainer;
 	private View expandedQueueContainer;
@@ -121,9 +127,9 @@ public final class MainActivity extends AppCompatActivity {
 
 	private final ServiceConnection downloadConnection = new ServiceConnection() {
 		@Override public void onServiceConnected(ComponentName n, IBinder s) {
-			downloadService = ((DownloadService.DownloadBinder) s).getService();
 		}
-		@Override public void onServiceDisconnected(ComponentName n) { downloadService = null; }
+		@Override public void onServiceDisconnected(ComponentName n) {
+		}
 	};
 
 	@Override
@@ -146,9 +152,17 @@ public final class MainActivity extends AppCompatActivity {
 		navBar = findViewById(R.id.custom_nav_bar);
 		navBar.setup(extensionManager, tabManager);
 		navBarDivider = findViewById(R.id.nav_bar_divider);
+		
+		navBar.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
+			if (navBar.getVisibility() == View.VISIBLE) {
+				int height = navBar.getHeight();
+				if (player != null) player.setBottomOffset(height);
+			} else {
+				if (player != null) player.setBottomOffset(0);
+			}
+		});
 
 		setupQueueUI();
-		setupNativeContextMenu();
 		requestPermissions();
 
 		bindService(new Intent(this, PlaybackService.class), playbackConnection, BIND_AUTO_CREATE);
@@ -186,16 +200,46 @@ public final class MainActivity extends AppCompatActivity {
 		super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig);
 		dispatchPictureInPictureModeChanged(player, isInPictureInPictureMode);
 		syncQueueUiVisibility(isInPictureInPictureMode);
-        
-        final View fragmentContainer = findViewById(R.id.fragment_container);
-        if (isInPictureInPictureMode) {
-            if (fragmentContainer != null) fragmentContainer.setVisibility(View.GONE);
-            if (navBar != null) navBar.setVisibility(View.GONE);
-            if (navBarDivider != null) navBarDivider.setVisibility(View.GONE);
-        } else {
-            if (fragmentContainer != null) fragmentContainer.setVisibility(View.VISIBLE);
-            updateNavBarVisibility();
-        }
+
+		final View fragmentContainer = findViewById(R.id.fragment_container);
+		if (isInPictureInPictureMode) {
+			if (fragmentContainer != null) fragmentContainer.setVisibility(View.GONE);
+			if (navBar != null) navBar.setVisibility(View.GONE);
+			if (navBarDivider != null) navBarDivider.setVisibility(View.GONE);
+			updatePictureInPictureActions();
+		} else {
+			if (fragmentContainer != null) fragmentContainer.setVisibility(View.VISIBLE);
+			updateNavBarVisibility();
+		}
+	}
+
+	private void updatePictureInPictureActions() {
+		final List<RemoteAction> actions = new ArrayList<>();
+
+		final QueueNav nav = engine.getQueueNavigationAvailability();
+
+
+		final PendingIntent prevIntent = MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS);
+		final Icon prevIcon = Icon.createWithResource(this, R.drawable.ic_previous);
+		final RemoteAction prevAction = new RemoteAction(prevIcon, getString(R.string.action_previous), getString(R.string.action_previous), prevIntent);
+		prevAction.setEnabled(nav.isPreviousActionEnabled());
+		actions.add(prevAction);
+
+		final PendingIntent ppIntent = MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY_PAUSE);
+		final boolean isPlaying = engine.isPlaying();
+		final Icon ppIcon = Icon.createWithResource(this, isPlaying ? R.drawable.ic_pause : R.drawable.ic_play);
+		final RemoteAction ppAction = new RemoteAction(ppIcon, isPlaying ? getString(R.string.action_pause) : getString(R.string.action_play), isPlaying ? getString(R.string.action_pause) : getString(R.string.action_play), ppIntent);
+		actions.add(ppAction);
+
+		final PendingIntent nextIntent = MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT);
+		final Icon nextIcon = Icon.createWithResource(this, R.drawable.ic_next);
+		final RemoteAction nextAction = new RemoteAction(nextIcon, getString(R.string.action_next), getString(R.string.action_next), nextIntent);
+		nextAction.setEnabled(nav.isNextActionEnabled());
+		actions.add(nextAction);
+
+		setPictureInPictureParams(new PictureInPictureParams.Builder()
+				.setActions(actions)
+				.build());
 	}
 
 	@Override
@@ -293,7 +337,7 @@ public final class MainActivity extends AppCompatActivity {
 		queueAdapter = new QueueAdapter(new QueueAdapter.Actions() {
 			@Override
 			public void onPlayRequested(@NonNull final QueueItem item) {
-				if (item.getUrl() != null) player.play(item.getUrl());
+				if (item.getVideoUrl() != null) player.play(item.getVideoUrl());
 			}
 
 			@Override
@@ -354,10 +398,23 @@ public final class MainActivity extends AppCompatActivity {
 					if (expandedQueueContainer != null && expandedQueueContainer.getVisibility() == View.VISIBLE) {
 						syncQueueExpandedUI(recyclerView, emptyView);
 					}
+					if (DeviceUtils.isInPictureInPictureMode(MainActivity.this)) {
+						updatePictureInPictureActions();
+					}
+				});
+			}
+
+			@Override
+			public void onIsPlayingChanged(boolean isPlaying) {
+				mainHandler.post(() -> {
+					if (DeviceUtils.isInPictureInPictureMode(MainActivity.this)) {
+						updatePictureInPictureActions();
+					}
 				});
 			}
 		});
 
+		queueRepository.addListener(this::updateQueueUI);
 		updateQueueUI();
 	}
 
@@ -380,9 +437,15 @@ public final class MainActivity extends AppCompatActivity {
 								@NonNull final TextView emptyView) {
 		if (queueAdapter == null) return;
 		final List<QueueItem> items = queueRepository.getItems();
-		queueAdapter.replaceItems(items, player.getLoadedVideoId());
+		final String loadedVideoId = player.getLoadedVideoId();
+		queueAdapter.replaceItems(items, loadedVideoId);
 		emptyView.setVisibility(items.isEmpty() ? View.VISIBLE : View.GONE);
 		recyclerView.setVisibility(items.isEmpty() ? View.GONE : View.VISIBLE);
+
+		int playingPos = queueAdapter.playingPos();
+		if (playingPos >= 0) {
+			recyclerView.scrollToPosition(playingPos);
+		}
 	}
 
 	private void syncQueueUiVisibility(final boolean isInPictureInPictureMode) {
@@ -456,33 +519,49 @@ public final class MainActivity extends AppCompatActivity {
 	}
 
 	private void updateQueueUI() {
-		if (queueContainer == null) return;
-		if (expandedQueueContainer != null && expandedQueueContainer.getVisibility() == View.VISIBLE) return;
+		runOnUiThread(() -> {
+			if (queueContainer == null) return;
 
-		List<QueueItem> queue = queueRepository.getItems();
-		if (queue.isEmpty()) {
-			queueContainer.setVisibility(View.GONE);
-			return;
-		}
+			List<QueueItem> queue = queueRepository.getItems();
+			if (queue.isEmpty() || !isWatchPage()) {
+				queueContainer.setVisibility(View.GONE);
+				if (expandedQueueContainer != null) expandedQueueContainer.setVisibility(View.GONE);
+				return;
+			}
 
-		queueContainer.setVisibility(View.VISIBLE);
-		updateQueueBarPosition();
+			if (expandedQueueContainer != null && expandedQueueContainer.getVisibility() == View.VISIBLE) {
+				syncQueueExpandedUI(findViewById(R.id.queue_items_recycler), findViewById(R.id.queue_empty));
+			} else {
+				queueContainer.setVisibility(View.VISIBLE);
+				updateQueueBarPosition();
+			}
 
-		TextView titleText = findViewById(R.id.queue_title);
-		if (titleText != null && !queue.isEmpty()) {
-			titleText.setText(queue.get(0).getTitle());
-		}
+			TextView titleText = findViewById(R.id.queue_title);
+			if (titleText != null && !queue.isEmpty()) {
+				String currentVideoId = player.getLoadedVideoId();
+				QueueItem active = null;
+				if (currentVideoId != null) {
+					for (QueueItem item : queue) {
+						if (currentVideoId.equals(item.getVideoId())) {
+							active = item;
+							break;
+						}
+					}
+				}
+				titleText.setText(active != null ? active.getTitle() : queue.get(0).getTitle());
+			}
+		});
 	}
 
 	private boolean isWatchPage() {
 		YoutubeWebview webview = getWebview();
 		if (webview == null) return false;
 		String url = webview.getUrl();
-		return url != null && (url.contains("/watch") || url.contains("/shorts/"));
+		return url != null && url.contains("/watch") && !url.contains("/shorts/");
 	}
 
 	public void setUiVisibility(boolean visible) {
-        if (DeviceUtils.isInPictureInPictureMode(this)) return;
+		if (DeviceUtils.isInPictureInPictureMode(this)) return;
 		if (navBar != null) navBar.setVisibility(visible ? View.VISIBLE : View.GONE);
 		if (navBarDivider != null) navBarDivider.setVisibility(visible ? View.VISIBLE : View.GONE);
 		if (visible) updateNavBarVisibility();
@@ -516,19 +595,20 @@ public final class MainActivity extends AppCompatActivity {
 
 	private void handleIntent(@Nullable Intent intent) {
 		if (intent == null) return;
-		if ("OPEN_DOWNLOADS".equals(intent.getAction())) {
+		final String action = intent.getAction();
+		if ("OPEN_DOWNLOADS".equals(action)) {
 			startActivity(new Intent(this, DownloadActivity.class));
 			return;
 		}
-		if ("PLAY_VIDEO".equals(intent.getAction())) {
+		if ("PLAY_VIDEO".equals(action)) {
 			String url = intent.getStringExtra("url");
 			if (url != null) player.play(url);
 			return;
 		}
 		String url = null;
-		if (Intent.ACTION_VIEW.equals(intent.getAction()) && intent.getData() != null) {
+		if (Intent.ACTION_VIEW.equals(action) && intent.getData() != null) {
 			url = intent.getData().toString();
-		} else if (Intent.ACTION_SEND.equals(intent.getAction())) {
+		} else if (Intent.ACTION_SEND.equals(action)) {
 			String text = intent.getStringExtra(Intent.EXTRA_TEXT);
 			if (text != null) url = extractUrlFromText(text);
 		}
@@ -545,48 +625,21 @@ public final class MainActivity extends AppCompatActivity {
 		return m.find() ? m.group() : null;
 	}
 
-	private void setupNativeContextMenu() {
-		findViewById(R.id.main).postDelayed(() -> {
-			final YoutubeWebview webview = getWebview();
-			if (webview != null) {
-				webview.setOnLongClickListener(v -> {
-					final WebView.HitTestResult r = webview.getHitTestResult();
-					String url = r.getExtra();
-					if (url == null) return false;
-					if (url.startsWith("/")) url = "https://m.youtube.com" + url;
-					if (url.contains("/shorts/")) return false;
-					if (url.contains("/watch") || url.contains("list=") || url.contains("video_id=")) {
-						showVideoOptionsDialog(url, null);
-						return true;
-					}
-					return false;
-				});
-				webview.evaluateJavascript("document.addEventListener('contextmenu', e => { const a = e.target.closest('a'); if (a && a.href && !a.href.includes('/shorts/') && (a.href.includes('/watch') || a.href.includes('list='))) { e.preventDefault(); let title = ''; const titleEl = a.querySelector('h3, span#video-title'); if (titleEl) title = titleEl.innerText; android.showVideoOptions(a.href, title); } }, true);", null);
-				webview.setOnPageFinishedListener(u -> {
-					updateNavBarVisibility();
-					runOnUiThread(this::updateQueueUI);
-				});
-			}
-		}, 1500);
-	}
-
 	public void showVideoOptionsDialog(String url, @Nullable String title) {
 		boolean hasVideoId = url.contains("v=") || url.contains("/watch")
 				|| url.contains("video_id=") || url.contains("/live/") || url.contains("youtu.be/");
 		boolean hasPlaylistId = url.contains("list=") || url.contains("/playlist");
 		boolean isMix = url.contains("list=RD");
 
-		boolean isPlaylist = hasPlaylistId && !hasVideoId && !isMix;
+		boolean isPlaylist = hasPlaylistId && (!hasVideoId || url.contains("&list=") || url.contains("?list=")) && !isMix;
 
 		@SuppressLint("InflateParams") View view = LayoutInflater.from(this).inflate(R.layout.dialog_video_options, null);
 		AlertDialog dialog = new MaterialAlertDialogBuilder(this)
 				.setView(view)
 				.create();
 
-		if (title != null) {
-			TextView dialogTitle = view.findViewById(R.id.dialog_title);
-			if (dialogTitle != null) dialogTitle.setText(title);
-		}
+		TextView dialogTitle = view.findViewById(R.id.dialog_title);
+		if (dialogTitle != null) dialogTitle.setText(R.string.video_options);
 
 		View optionEnqueue = view.findViewById(R.id.option_enqueue);
 		View optionDownload = view.findViewById(R.id.option_download);
@@ -625,6 +678,7 @@ public final class MainActivity extends AppCompatActivity {
 				queueRepository.remove(videoId);
 				Toast.makeText(this, "Removed from queue", Toast.LENGTH_SHORT).show();
 			} else {
+				Toast.makeText(this, "Added to queue", Toast.LENGTH_SHORT).show();
 				fetchAndEnqueue(url);
 			}
 			updateQueueUI();
@@ -658,13 +712,12 @@ public final class MainActivity extends AppCompatActivity {
 				item.setVideoId(details.getId());
 				item.setTitle(details.getTitle());
 				item.setAuthor(details.getAuthor());
-				item.setThumbnailUrl(details.getThumbnail());
-				item.setUrl(url);
+				item.setThumbnailUrl(details.getThumbnailUrl());
+				item.setVideoUrl(url);
 				queueRepository.add(item);
 				runOnUiThread(() -> {
 					player.refreshQueueNavigationAvailability();
 					updateQueueUI();
-					Toast.makeText(this, "Added to queue", Toast.LENGTH_SHORT).show();
 				});
 			} catch (Exception ignored) {}
 		});
@@ -684,14 +737,26 @@ public final class MainActivity extends AppCompatActivity {
 				PlaylistExtractor ex = NewPipe.getService(0).getPlaylistExtractor(clean);
 				ex.fetchPage();
 				String playlistName = ex.getName();
-				List<StreamInfoItem> items = new ArrayList<>();
+				List<PlaylistDownloadItem> dialogItems = new ArrayList<>();
 				InfoItemsPage<StreamInfoItem> p = ex.getInitialPage();
+				int index = 0;
 				while (p != null) {
-					items.addAll(p.getItems());
+					for (StreamInfoItem item : p.getItems()) {
+						String videoId = YoutubeExtractor.getVideoId(item.getUrl());
+						if (videoId == null) continue;
+						PlaylistDownloadItem dItem = new PlaylistDownloadItem(index++, videoId, item.getUrl());
+						dItem.setTitle(item.getName());
+						dItem.setAuthor(item.getUploaderName());
+						dItem.setThumbnailUrl(item.getThumbnails().isEmpty() ? null : item.getThumbnails().get(item.getThumbnails().size() - 1).getUrl());
+						dItem.setDurationSeconds(item.getDuration());
+						dItem.setAvailabilityStatus(PlaylistDownloadItem.AvailabilityStatus.READY);
+						dItem.setSelected(true);
+						dialogItems.add(dItem);
+					}
 					if (!Page.isValid(p.getNextPage())) break;
 					p = ex.getPage(p.getNextPage());
 				}
-				mainHandler.post(() -> new PlaylistDownloadDialog(this, items, playlistName, youtubeExtractor, downloadService).show());
+				mainHandler.post(() -> new PlaylistDownloadDialog(playlistName, dialogItems, null, null, this, youtubeExtractor, tabManager).show());
 			} catch (Exception e) {
 				mainHandler.post(() -> Toast.makeText(this, "Failed to load playlist", Toast.LENGTH_SHORT).show());
 			}
@@ -699,7 +764,7 @@ public final class MainActivity extends AppCompatActivity {
 	}
 
 	private void shareUrl(String url) {
-		Intent i = new Intent(Intent.ACTION_SEND);
+		final Intent i = new Intent(Intent.ACTION_SEND);
 		i.putExtra(Intent.EXTRA_TEXT, url);
 		i.setType("text/plain");
 		startActivity(Intent.createChooser(i, "Share Video"));
@@ -712,10 +777,25 @@ public final class MainActivity extends AppCompatActivity {
 					setEnabled(false); getOnBackPressedDispatcher().onBackPressed(); setEnabled(true); return;
 				}
 				if (player != null && player.isFullscreen()) { player.exitFullscreen(); return; }
-                if (expandedQueueContainer != null && expandedQueueContainer.getVisibility() == View.VISIBLE) {
-                    hideExpandedQueue();
-                    return;
-                }
+				if (expandedQueueContainer != null && expandedQueueContainer.getVisibility() == View.VISIBLE) {
+					hideExpandedQueue();
+					return;
+				}
+
+				boolean miniPlayerTriggered = false;
+				if (player != null && player.canSuspendWatch() && !player.isInAppMiniPlayer() && extensionManager.isEnabled(Constant.ENABLE_IN_APP_MINI_PLAYER)) {
+					player.enterInAppMiniPlayer();
+					miniPlayerTriggered = true;
+				}
+				
+				if (tabManager != null && tabManager.goBack()) {
+					updateNavBarVisibility();
+					updateQueueUI();
+					return;
+				}
+
+				if (miniPlayerTriggered) return;
+
 				final YoutubeWebview web = getWebview();
 				if (web != null && tabManager != null) {
 					tabManager.evaluateJavascript("window.dispatchEvent(new Event('onGoBack'));", null);

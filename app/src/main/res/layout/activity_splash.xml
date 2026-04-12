@@ -55,6 +55,28 @@
         app:layout_constraintTop_toBottomOf="@+id/app_name">
 
         <TextView
+            android:id="@+id/tagline_simple"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:alpha="0"
+            android:fontFamily="sans-serif-medium"
+            android:letterSpacing="0.30"
+            android:text="Simple"
+            android:textAllCaps="true"
+            android:textColor="@color/splash_secondary_text"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tagline_dot1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:alpha="0"
+            android:paddingHorizontal="6dp"
+            android:text="•"
+            android:textColor="@color/splash_secondary_text"
+            android:textSize="13sp" />
+
+        <TextView
             android:id="@+id/tagline_fast"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -67,7 +89,7 @@
             android:textSize="13sp" />
 
         <TextView
-            android:id="@+id/tagline_dot1"
+            android:id="@+id/tagline_dot2"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:alpha="0"
@@ -84,28 +106,6 @@
             android:fontFamily="sans-serif-medium"
             android:letterSpacing="0.30"
             android:text="Minimal"
-            android:textAllCaps="true"
-            android:textColor="@color/splash_secondary_text"
-            android:textSize="13sp" />
-
-        <TextView
-            android:id="@+id/tagline_dot2"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:alpha="0"
-            android:paddingHorizontal="6dp"
-            android:text="•"
-            android:textColor="@color/splash_secondary_text"
-            android:textSize="13sp" />
-
-        <TextView
-            android:id="@+id/tagline_simple"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:alpha="0"
-            android:fontFamily="sans-serif-medium"
-            android:letterSpacing="0.30"
-            android:text="Simple"
             android:textAllCaps="true"
             android:textColor="@color/splash_secondary_text"
             android:textSize="13sp" />

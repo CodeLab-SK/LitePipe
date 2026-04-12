@@ -7,6 +7,8 @@ import android.webkit.WebView;
 
 import com.tencent.mmkv.MMKV;
 
+import java.util.concurrent.Executors;
+
 import dagger.hilt.android.HiltAndroidApp;
 
 @HiltAndroidApp
@@ -22,7 +24,8 @@ public class App extends Application {
 				WebView.setDataDirectorySuffix(processName);
 			}
 		}
-		Constant.USER_AGENT = WebSettings.getDefaultUserAgent(this);
+
+		Executors.newSingleThreadExecutor().execute(() -> Constant.USER_AGENT = WebSettings.getDefaultUserAgent(this));
 	}
 
 }
