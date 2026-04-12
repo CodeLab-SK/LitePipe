@@ -66,8 +66,8 @@ public final class PlayerPreferences {
 		mmkv.encode("preferences:" + com.hhst.youtubelite.extension.Constant.DEFAULT_PLAYBACK_SPEED, String.format(Locale.US, "%.2fx", speed));
 	}
 
-	@NonNull
-	public String getQuality() {
+	@Nullable
+    public String getQuality() {
 		return mmkv.decodeString("preferences:" + com.hhst.youtubelite.extension.Constant.DEFAULT_QUALITY, "Auto");
 	}
 

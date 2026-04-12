@@ -19,24 +19,12 @@ import java.util.Map;
 @UnstableApi
 public final class PlayerUtils {
 
-	/**
-	 * Checks if the video should be played in portrait orientation based on its dimensions.
-	 *
-	 * @param engine The engine instance
-	 * @return True if video should be in portrait, false otherwise (landscape by default)
-	 */
 	public static boolean isPortrait(@NonNull final Engine engine) {
 		final int videoWidth = engine.getVideoSize().width;
 		final int videoHeight = engine.getVideoSize().height;
 		return videoWidth > 0 && videoHeight > 0 && videoHeight > videoWidth;
 	}
 
-	/**
-	 * Filters streams to keep only the best quality stream for each resolution.
-	 *
-	 * @param streams List of available video streams
-	 * @return Filtered and sorted list of video streams
-	 */
 	@NonNull
 	public static List<VideoStream> filterBestStreams(@Nullable final List<VideoStream> streams) {
 		if (streams == null || streams.isEmpty()) return new ArrayList<>();
@@ -60,14 +48,6 @@ public final class PlayerUtils {
 		return result;
 	}
 
-	/**
-	 * Determines if video stream s1 is better than s2.
-	 * Priority order: Codec Priority > FPS > Bitrate
-	 *
-	 * @param s1 First video stream to compare
-	 * @param s2 Second video stream to compare
-	 * @return True if s1 is better than s2
-	 */
 	public static boolean isBetterStream(@NonNull final VideoStream s1, @NonNull final VideoStream s2) {
 		final int p1 = getCodecPriority(s1.getCodec());
 		final int p2 = getCodecPriority(s2.getCodec());
@@ -77,15 +57,6 @@ public final class PlayerUtils {
 
 		return s1.getBitrate() > s2.getBitrate();
 	}
-
-	/**
-	 * Returns priority score for video codec.
-	 * Higher score means better compatibility/support.
-	 * Priority order: AVC/H264 > VP9/VP8 > H265 > AV01 > Others
-	 *
-	 * @param codec Codec string
-	 * @return Priority score (0-4)
-	 */
 	public static int getCodecPriority(@Nullable final String codec) {
 		if (codec == null) return 0;
 		final String lowerCodec = codec.toLowerCase(Locale.ROOT);
@@ -97,33 +68,22 @@ public final class PlayerUtils {
 		return 0;
 	}
 
-	/**
-	 * Selects the most appropriate video stream based on target resolution.
-	 *
-	 * @param streams   List of sorted video streams (highest resolution first)
-	 * @param targetRes Target resolution string (e.g., "1080p")
-	 * @return Selected video stream
-	 */
 	@Nullable
 	public static VideoStream selectVideoStream(@Nullable final List<VideoStream> streams, @Nullable final String targetRes) {
 		if (streams == null || streams.isEmpty()) return null;
-		if (targetRes == null) return streams.get(0);
 
-		for (final VideoStream s : streams) if (s.getResolution().equals(targetRes)) return s;
+		String res = targetRes;
+		if (res == null || "Auto".equalsIgnoreCase(res)) {
+			res = "1080p";
+		}
 
-		final int targetHeight = StringUtils.parseHeight(targetRes);
+		for (final VideoStream s : streams) if (s.getResolution().equals(res)) return s;
+
+		final int targetHeight = StringUtils.parseHeight(res);
 		for (final VideoStream s : streams) if (s.getHeight() <= targetHeight) return s;
-
-		return streams.get(0);
+		return streams.get(streams.size() - 1);
 	}
 
-	/**
-	 * Selects the most appropriate audio stream based on preferred track info.
-	 *
-	 * @param streams       List of available audio streams
-	 * @param preferredInfo Formatted preferred track info string
-	 * @return Selected audio stream
-	 */
 	@Nullable
 	public static AudioStream selectAudioStream(@Nullable final List<AudioStream> streams, @Nullable final String preferredInfo) {
 		if (streams == null || streams.isEmpty()) return null;

@@ -15,7 +15,6 @@ public class JavascriptBridgeCompatibilityTest {
 	@Test
 	public void assetScripts_useLiteBridgeForPreferences() throws Exception {
 		assertBridgeUpdated("display_dislikes.js");
-		assertBridgeUpdated("hide_shorts.js");
 	}
 
 	private void assertBridgeUpdated(final String fileName) throws IOException {

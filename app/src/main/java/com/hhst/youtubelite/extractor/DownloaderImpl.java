@@ -62,24 +62,27 @@ public final class DownloaderImpl extends Downloader {
 		ExtractionSession session = scope.get();
 		AuthContext auth = session != null ? session.getAuth() : null;
 
-		final String webViewCookies = CookieManager.getInstance().getCookie(url);
-		StringBuilder cookieBuilder = new StringBuilder();
-		if (webViewCookies != null) {
-			cookieBuilder.append(webViewCookies);
-		} else if (auth != null && auth.cookies() != null) {
-			cookieBuilder.append(auth.cookies());
-		}
+		final boolean isYoutube = url.contains("youtube.com") || url.contains("youtu.be");
+		String finalCookies = null;
 
-		if (url.contains("youtube.com") || url.contains("youtu.be")) {
-			String currentCookies = cookieBuilder.toString();
-			if (!currentCookies.contains("PREF=")) {
-				if (cookieBuilder.length() > 0) cookieBuilder.append("; ");
-				cookieBuilder.append(YOUTUBE_RESTRICTED_MODE_COOKIE);
+		if (isYoutube) {
+			final String webViewCookies = CookieManager.getInstance().getCookie(url);
+			if (webViewCookies != null && !webViewCookies.isEmpty()) {
+				finalCookies = webViewCookies;
+			} else if (auth != null && auth.cookies() != null) {
+				finalCookies = auth.cookies();
+			}
+
+			if (finalCookies == null || !finalCookies.contains("PREF=")) {
+				if (finalCookies == null || finalCookies.isEmpty()) {
+					finalCookies = YOUTUBE_RESTRICTED_MODE_COOKIE;
+				} else {
+					finalCookies = finalCookies + "; " + YOUTUBE_RESTRICTED_MODE_COOKIE;
+				}
 			}
 		}
 
-		String finalCookies = cookieBuilder.toString();
-		if (!finalCookies.isEmpty()) {
+		if (finalCookies != null && !finalCookies.isEmpty()) {
 			builder.header("Cookie", finalCookies);
 		}
 
@@ -93,14 +96,15 @@ public final class DownloaderImpl extends Downloader {
 			}
 		}
 
-		// Add YouTube specific auth headers from context
-		YoutubeAuth.Result authHeaders = YoutubeAuth.headers(url, auth, System.currentTimeMillis());
-		if (authHeaders.note() != null) {
-			Log.d(TAG, "Skipped YouTube auth headers: " + authHeaders.note());
-		}
-		for (Map.Entry<String, String> entry : authHeaders.headers().entrySet()) {
-			if (!hasHeader(headers, entry.getKey())) {
-				builder.header(entry.getKey(), entry.getValue());
+		if (YoutubeAuth.isWebApi(url)) {
+			YoutubeAuth.Result authHeaders = YoutubeAuth.headers(url, auth, System.currentTimeMillis());
+			if (authHeaders.note() != null) {
+				Log.d(TAG, "Skipped YouTube auth headers: " + authHeaders.note());
+			}
+			for (Map.Entry<String, String> entry : authHeaders.headers().entrySet()) {
+				if (!hasHeader(headers, entry.getKey())) {
+					builder.header(entry.getKey(), entry.getValue());
+				}
 			}
 		}
 

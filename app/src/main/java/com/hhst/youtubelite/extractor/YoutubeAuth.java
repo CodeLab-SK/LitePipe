@@ -22,6 +22,11 @@ public final class YoutubeAuth {
 	private YoutubeAuth() {
 	}
 
+	private static final Object cacheLock = new Object();
+	private static String lastAuthKey;
+	private static Result lastResult;
+	private static long lastTimeSeconds;
+
 	@NonNull
 	public static Result headers(@NonNull String url,
 	                      @Nullable AuthContext auth,
@@ -39,7 +44,15 @@ public final class YoutubeAuth {
 		}
 		Sync sync = sync(auth.dataSyncId());
 		String pageId = sync.pageId();
-		String authorization = authorization(cookies, origin, sync.userId(), nowMs / 1000L);
+		long nowSeconds = nowMs / 1000L;
+		String cacheKey = cookies + "|" + origin + "|" + sync.userId() + "|" + auth.sessionIndex() + "|" + pageId + "|" + auth.visitorData();
+		synchronized (cacheLock) {
+			if (nowSeconds == lastTimeSeconds && cacheKey.equals(lastAuthKey) && lastResult != null) {
+				return lastResult;
+			}
+		}
+
+		String authorization = authorization(cookies, origin, sync.userId(), nowSeconds);
 		if (authorization == null) {
 			return Result.skip("missing sid cookie");
 		}
@@ -57,7 +70,14 @@ public final class YoutubeAuth {
 			headers.put("X-Goog-PageId", pageId);
 		}
 		headers.put("X-Youtube-Bootstrap-Logged-In", "true");
-		return new Result(Map.copyOf(headers), null);
+		
+		Result result = new Result(Map.copyOf(headers), null);
+		synchronized (cacheLock) {
+			lastAuthKey = cacheKey;
+			lastResult = result;
+			lastTimeSeconds = nowSeconds;
+		}
+		return result;
 	}
 
 	public static boolean isWebApi(@NonNull String url) {
@@ -160,20 +180,25 @@ public final class YoutubeAuth {
 		return nowSeconds + "_" + sha1(input) + suffix;
 	}
 
-	@NonNull
-	private static String sha1(@NonNull String value) {
+	private static final ThreadLocal<MessageDigest> sha1Digest = ThreadLocal.withInitial(() -> {
 		try {
-			byte[] digest = MessageDigest.getInstance("SHA-1")
-							.digest(value.getBytes(StandardCharsets.UTF_8));
-			StringBuilder builder = new StringBuilder(digest.length * 2);
-			for (byte b : digest) {
-				builder.append(Character.forDigit((b >>> 4) & 0xf, 16));
-				builder.append(Character.forDigit(b & 0xf, 16));
-			}
-			return builder.toString();
+			return MessageDigest.getInstance("SHA-1");
 		} catch (NoSuchAlgorithmException e) {
 			throw new IllegalStateException("SHA-1 unavailable", e);
 		}
+	});
+
+	@NonNull
+	private static String sha1(@NonNull String value) {
+		MessageDigest digest = sha1Digest.get();
+		digest.reset();
+		byte[] bytes = digest.digest(value.getBytes(StandardCharsets.UTF_8));
+		StringBuilder builder = new StringBuilder(bytes.length * 2);
+		for (byte b : bytes) {
+			builder.append(Character.forDigit((b >>> 4) & 0xf, 16));
+			builder.append(Character.forDigit(b & 0xf, 16));
+		}
+		return builder.toString();
 	}
 
 	@Nullable

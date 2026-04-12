@@ -124,6 +124,7 @@ public final class YoutubeFragment extends Fragment {
 		webview.setPoTokenContextStore(poTokenContextStore);
 		webview.setUpdateVisitedHistory(u -> {
 			YoutubeFragment.this.url = u;
+			takeHistorySnapshot();
 			tabManager.onUrlChanged(this, u);
 		});
 		webview.setOnPageFinishedListener(u -> {
@@ -148,7 +149,6 @@ public final class YoutubeFragment extends Fragment {
 	public void onResume() {
 		super.onResume();
 		if (webview != null && !isHidden()) {
-			webview.setScriptActive(true);
 			webview.onResume();
 		}
 	}
@@ -158,7 +158,6 @@ public final class YoutubeFragment extends Fragment {
 		super.onPause();
 		if (webview != null && !isHidden()) {
 			if (getActivity() != null && getActivity().isInPictureInPictureMode()) return;
-			webview.setScriptActive(false);
 			webview.onPause();
 		}
 	}
@@ -167,11 +166,12 @@ public final class YoutubeFragment extends Fragment {
 	public void onHiddenChanged(final boolean hidden) {
 		super.onHiddenChanged(hidden);
 		if (webview != null) {
-			webview.setScriptActive(!hidden);
 			if (hidden) {
 				webview.onPause();
 			} else {
 				webview.onResume();
+				webview.setVisibility(View.INVISIBLE);
+				webview.setVisibility(View.VISIBLE);
 				webview.requestLayout();
 				webview.invalidate();
 			}

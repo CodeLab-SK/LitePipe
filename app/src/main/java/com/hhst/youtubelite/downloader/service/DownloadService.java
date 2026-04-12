@@ -7,12 +7,11 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.media.MediaScannerConnection;
 import android.os.Binder;
-import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -27,7 +26,7 @@ import com.hhst.youtubelite.downloader.core.history.DownloadHistoryRepository;
 import com.hhst.youtubelite.downloader.core.history.DownloadRecord;
 import com.hhst.youtubelite.downloader.core.history.DownloadStatus;
 import com.hhst.youtubelite.downloader.core.history.DownloadType;
-import com.hhst.youtubelite.extractor.StreamDetails;
+import com.hhst.youtubelite.extractor.PlaybackDetails;
 import com.hhst.youtubelite.extractor.YoutubeExtractor;
 import com.hhst.youtubelite.ui.MainActivity;
 import com.hhst.youtubelite.util.DownloadStorageUtils;
@@ -104,12 +103,10 @@ public class DownloadService extends Service {
 	}
 
 	private void createNotificationChannel() {
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-			NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Downloads", NotificationManager.IMPORTANCE_LOW);
-			channel.setSound(null, null);
-			if (notificationManager != null) notificationManager.createNotificationChannel(channel);
-		}
-	}
+        NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Downloads", NotificationManager.IMPORTANCE_LOW);
+        channel.setSound(null, null);
+        if (notificationManager != null) notificationManager.createNotificationChannel(channel);
+    }
 
 	@Nullable
 	@Override
@@ -126,7 +123,7 @@ public class DownloadService extends Service {
 	}
 
 	private void startTask(@NonNull Task task) {
-		final String taskId = task.vid();
+		final String taskId = task.videoId();
 		activeTasks.put(taskId, task);
 		activeTaskIds.add(taskId);
 		activeTaskNames.put(taskId, task.fileName());
@@ -155,14 +152,17 @@ public class DownloadService extends Service {
 
 		if (record == null) {
 			record = new DownloadRecord(taskId, taskId, type, DownloadStatus.RUNNING, 0,
-							task.fileName(), outPath, now, now, null, 0L, 0L, task.quality());
+							task.fileName(), outPath, now, now, null, 0L, 0L, task.parentId(), task.title(), task.thumbnailUrl(), 0, 0, 0, 0, false, task.quality());
 		} else {
 			record.setStatus(DownloadStatus.RUNNING);
 			record.setUpdatedAt(now);
 			record.setFileName(task.fileName());
 			record.setOutputPath(outPath);
 			record.setType(type);
+			record.setTitle(task.title());
+			record.setThumbnailUrl(task.thumbnailUrl());
 			record.setQuality(task.quality());
+			record.setParentId(task.parentId());
 		}
 		historyRepository.upsert(record);
 		broadcastRecordUpdated(taskId);
@@ -183,24 +183,28 @@ public class DownloadService extends Service {
 			public void onComplete(File file) {
 				final long fileSize = file.length();
 				try {
-					final String outputReference = DownloadStorageUtils.publishToDownloads(DownloadService.this, file, file.getName());
+					Task task = activeTasks.get(taskId);
+					String subFolder = task != null ? task.subFolder() : null;
+					final String outputReference = DownloadStorageUtils.publishToDownloads(DownloadService.this, file, file.getName(), subFolder);
 					markRecordCompleted(taskId, outputReference, fileSize);
 					onTaskCompleted(taskId, file.getName(), true);
 				} catch (Exception e) {
-					updateRecordProgress(taskId, -1, -1, -1, DownloadStatus.FAILED);
+					Log.e("DownloadService", "Post-download publish failed", e);
+					updateRecordStatus(taskId, DownloadStatus.FAILED);
 					onTaskCompleted(taskId, getTaskFileName(taskId), false);
 				}
 			}
 
 			@Override
 			public void onError(Exception error) {
-				updateRecordProgress(taskId, -1, -1, -1, DownloadStatus.FAILED);
+				Log.e("DownloadService", "Task error: " + taskId, error);
+				updateRecordStatus(taskId, DownloadStatus.FAILED);
 				onTaskCompleted(taskId, getTaskFileName(taskId), false);
 			}
 
 			@Override
 			public void onCancel() {
-				updateRecordProgress(taskId, -1, -1, -1, DownloadStatus.CANCELED);
+				updateRecordStatus(taskId, DownloadStatus.CANCELED);
 				onTaskCancelled(taskId);
 			}
 
@@ -265,25 +269,32 @@ public class DownloadService extends Service {
 
 	private void reExtractAndResume(DownloadRecord record) {
 		try {
-			StreamDetails si = youtubeExtractor.getStreamInfo("https://www.youtube.com/watch?v=" + record.getVid().split(":")[0]);
+			PlaybackDetails details = youtubeExtractor.getPlaybackDetails("https://www.youtube.com/watch?v=" + record.getVideoId(), null);
 			int vItag = itagPrefs.getInt(record.getTaskId() + "_v_itag", -1);
 			int aItag = itagPrefs.getInt(record.getTaskId() + "_a_itag", -1);
 
-			VideoStream video = si.getVideoStreams().stream()
+			VideoStream video = details.catalog().getVideoStreams().stream()
 							.filter(s -> s.getItag() == vItag)
 							.findFirst()
-							.orElse(si.getVideoStreams().isEmpty() ? null : si.getVideoStreams().get(0));
+							.orElse(null);
 
-			AudioStream audio = si.getAudioStreams().stream()
+			AudioStream audio = details.catalog().getAudioStreams().stream()
 							.filter(s -> s.getItag() == aItag)
 							.findFirst()
-							.orElse(si.getAudioStreams().isEmpty() ? null : si.getAudioStreams().get(0));
+							.orElse(null);
+
+			if (video == null && !details.catalog().getVideoStreams().isEmpty()) video = details.catalog().getVideoStreams().get(0);
+			if (audio == null && !details.catalog().getAudioStreams().isEmpty()) audio = details.catalog().getAudioStreams().get(0);
+
+			File outParent = new File(record.getOutputPath()).getParentFile();
+			if (outParent == null) outParent = new File(getExternalCacheDir(), "downloads");
 
 			Task newTask = new Task(record.getTaskId(), video, audio, null, null, record.getFileName(),
-							new File(record.getOutputPath()).getParentFile(), 4, record.getQuality());
+							outParent, 4, record.getTitle(), record.getThumbnailUrl(), record.getQuality(), record.getParentId(), null);
 
 			mainHandler.post(() -> startTask(newTask));
 		} catch (Exception e) {
+			Log.e("DownloadService", "Resume extraction failed", e);
 			mainHandler.post(() -> updateRecordStatus(record.getTaskId(), DownloadStatus.FAILED));
 		}
 	}
@@ -301,6 +312,15 @@ public class DownloadService extends Service {
 				cancel(vid);
 			}
 		}
+	}
+
+	public void upsertPlaylistRecord(DownloadRecord record) {
+		historyRepository.upsert(record);
+		broadcastRecordUpdated(record.getTaskId());
+	}
+
+	public void refreshPlaylistRecord(String taskId) {
+		broadcastRecordUpdated(taskId);
 	}
 
 	private synchronized void ensureForeground() {
@@ -402,8 +422,8 @@ public class DownloadService extends Service {
 
 	private void saveItags(Task t) {
 		SharedPreferences.Editor e = itagPrefs.edit();
-		if (t.video() != null) e.putInt(t.vid() + "_v_itag", t.video().getItag());
-		if (t.audio() != null) e.putInt(t.vid() + "_a_itag", t.audio().getItag());
+		if (t.video() != null) e.putInt(t.videoId() + "_v_itag", t.video().getItag());
+		if (t.audio() != null) e.putInt(t.videoId() + "_a_itag", t.audio().getItag());
 		e.apply();
 	}
 

@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
+import android.os.Looper;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
@@ -516,10 +517,6 @@ public class YoutubeWebview extends WebView {
 		});
 	}
 
-	public void setScriptActive(boolean active) {
-		postEvaluateJavascript("(function(){window.__liteActive=" + active + ";if(window.__liteSetActive){window.__liteSetActive(" + active + ");}})();");
-	}
-
 	private void injectJavaScript(@Nullable String url) {
 		if (UrlUtils.isGoogleAccountsUrl(url)) return;
 		for (String js : scripts) postEvaluateJavascript(js);
@@ -552,7 +549,15 @@ public class YoutubeWebview extends WebView {
 	}
 
 	private void postEvaluateJavascript(@NonNull String script) {
-		post(() -> evaluateJavascript(script, null));
+		if (Looper.myLooper() == Looper.getMainLooper()) {
+			try {
+				evaluateJavascript(script, null);
+			} catch (Exception e) {
+				Log.e("YoutubeWebview", "Error evaluating javascript", e);
+			}
+		} else {
+			post(() -> evaluateJavascript(script, null));
+		}
 	}
 
 	@Override

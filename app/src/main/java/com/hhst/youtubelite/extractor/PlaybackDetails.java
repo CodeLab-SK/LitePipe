@@ -1,13 +1,31 @@
 package com.hhst.youtubelite.extractor;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import androidx.annotation.NonNull;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class PlaybackDetails {
-	private VideoDetails videoDetails;
-	private StreamDetails streamDetails;
+import org.schabi.newpipe.extractor.stream.StreamSegment;
+import org.schabi.newpipe.extractor.stream.SubtitlesStream;
+
+import java.util.List;
+
+/**
+ * Aggregated playback data assembled from extraction results.
+ */
+public record PlaybackDetails(@NonNull VideoDetails video,
+                              @NonNull StreamCatalog catalog,
+                              @NonNull DeliveryCatalog deliveries,
+                              @NonNull PlaybackPlan plan,
+                              @NonNull List<StreamSegment> segments,
+                              @NonNull List<SubtitlesStream> subtitles) {
+
+	public VideoDetails getVideoDetails() {
+		return video;
+	}
+
+	public StreamCatalog getCatalog() {
+		return catalog;
+	}
+
+	public List<SubtitlesStream> getSubtitles() {
+		return subtitles;
+	}
 }

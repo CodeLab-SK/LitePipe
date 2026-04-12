@@ -110,6 +110,12 @@ public class StreamDownloaderImpl implements StreamDownloader {
 			int chunks = (!rangeSupported) ? 1 : (int) Math.min(64, Math.max(4, total / MIN_CHUNK_SIZE));
 			long partSize = total > 0 ? (total + chunks - 1) / chunks : total;
 
+			long savedTotal = mmkv.decodeLong(ctx.key + "_total", -1);
+			if (savedTotal != -1 && savedTotal != total) {
+				mmkv.removeValueForKey(ctx.key);
+			}
+			mmkv.encode(ctx.key + "_total", total);
+
 			byte[] saved = mmkv.decodeBytes(ctx.key);
 			BitSet bits = (rangeSupported && saved != null) ? BitSet.valueOf(saved) : new BitSet();
 			ctx.done.set(bits.cardinality());
@@ -124,8 +130,9 @@ public class StreamDownloaderImpl implements StreamDownloader {
 			}
 
 			raf = new RandomAccessFile(ctx.out, "rw");
-			if (total > 0) raf.setLength(total);
-			else raf.setLength(0);
+			if (total > 0) {
+                if (raf.length() > total) raf.setLength(total);
+            } else raf.setLength(0);
 
 			if (ctx.done.get() < chunks) {
 				final RandomAccessFile finalRaf = raf;
@@ -135,8 +142,13 @@ public class StreamDownloaderImpl implements StreamDownloader {
 						.toArray(CompletableFuture[]::new)).join();
 			}
 
+			if (total > 0 && ctx.out.length() != total) {
+				throw new IOException("File size mismatch after download: expected " + total + " but got " + ctx.out.length());
+			}
+
 			if (!ctx.isInactive()) {
 				mmkv.removeValueForKey(ctx.key);
+				mmkv.removeValueForKey(ctx.key + "_total");
 				tasks.remove(ctx.url);
 				ctx.future.complete(ctx.out);
 				if (ctx.cb != null) ctx.cb.onComplete(ctx.out);
@@ -163,13 +175,13 @@ public class StreamDownloaderImpl implements StreamDownloader {
 		}
 
 		try (Response resp = client.newCall(rb.build()).execute()) {
-			if (!resp.isSuccessful()) throw new IOException("GET " + resp.code());
+			if (!resp.isSuccessful()) throw new IOException("GET " + resp.code() + " for chunk " + idx);
 			try (InputStream is = resp.body().byteStream()) {
 				byte[] buf = new byte[16384];
 				int read;
 				long offset = chunkStart;
 				while ((read = is.read(buf)) != -1) {
-					if (ctx.isInactive()) throw new IOException("Stopped");
+					if (ctx.isInactive()) throw new IOException("Task inactive");
 					synchronized (ctx.lock) {
 						raf.seek(offset);
 						raf.write(buf, 0, read);
@@ -202,6 +214,7 @@ public class StreamDownloaderImpl implements StreamDownloader {
 			t.cancelled.set(true);
 			t.future.cancel(true);
 			mmkv.removeValueForKey(t.key);
+			mmkv.removeValueForKey(t.key + "_total");
 			if (t.cb != null) t.cb.onCancel();
 		}
 	}

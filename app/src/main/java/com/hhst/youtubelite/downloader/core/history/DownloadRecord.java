@@ -7,6 +7,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Persisted download history record.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -14,7 +17,7 @@ public class DownloadRecord {
 	@NonNull
 	private String taskId;
 	@NonNull
-	private String vid;
+	private String videoId;
 	@NonNull
 	private DownloadType type;
 	@NonNull
@@ -31,5 +34,24 @@ public class DownloadRecord {
 	private long downloadedSize;
 	private long totalSize;
 	@Nullable
+	private String parentId;
+	@Nullable
+	private String title;
+	@Nullable
+	private String thumbnailUrl;
+	private int itemCount;
+	private int doneCount;
+	private int failedCount;
+	private int runningCount;
+	private boolean sealed;
+	@Nullable
 	private String quality;
+
+	public String getVid() {
+		return videoId;
+	}
+
+	public void setVid(String vid) {
+		this.videoId = vid;
+	}
 }

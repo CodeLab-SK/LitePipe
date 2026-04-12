@@ -84,6 +84,9 @@ public class PlaybackService extends Service {
 		if (notificationManager != null) notificationManager.createNotificationChannel(channel);
 
 		mediaSession = new MediaSessionCompat(this, TAG);
+		mediaSession.setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
+				MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS);
+
 		final PlaybackStateCompat initialState = buildPlaybackState(
 				PlaybackStateCompat.STATE_NONE,
 				0L,
@@ -307,7 +310,8 @@ public class PlaybackService extends Service {
 		long actions = PlaybackStateCompat.ACTION_PLAY
 				| PlaybackStateCompat.ACTION_PAUSE
 				| PlaybackStateCompat.ACTION_PLAY_PAUSE
-				| PlaybackStateCompat.ACTION_SEEK_TO;
+				| PlaybackStateCompat.ACTION_SEEK_TO
+				| PlaybackStateCompat.ACTION_STOP;
 		if (shouldIncludeNextAction(availability)) {
 			actions |= PlaybackStateCompat.ACTION_SKIP_TO_NEXT;
 		}

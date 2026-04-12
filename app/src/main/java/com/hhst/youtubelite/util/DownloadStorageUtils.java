@@ -48,6 +48,11 @@ public final class DownloadStorageUtils {
 
 	@NonNull
 	public static String publishToDownloads(@NonNull final Context context, @NonNull final File sourceFile, @NonNull final String displayName) throws IOException {
+		return publishToDownloads(context, sourceFile, displayName, null);
+	}
+
+	@NonNull
+	public static String publishToDownloads(@NonNull final Context context, @NonNull final File sourceFile, @NonNull final String displayName, @Nullable String subFolder) throws IOException {
 		final String mimeType = guessMimeType(displayName);
 		final String customUriStr = MMKV.defaultMMKV().decodeString(Constant.DOWNLOAD_LOCATION);
 
@@ -56,16 +61,28 @@ public final class DownloadStorageUtils {
 				Uri treeUri = Uri.parse(customUriStr);
 				DocumentFile root = DocumentFile.fromTreeUri(context, treeUri);
 				if (root != null && root.canWrite()) {
-					DocumentFile file = root.createFile(mimeType != null ? mimeType : "application/octet-stream", displayName);
-					if (file != null) {
-						try (FileInputStream fis = new FileInputStream(sourceFile);
-						     OutputStream os = context.getContentResolver().openOutputStream(file.getUri())) {
-							if (os == null) throw new IOException("Failed to open output stream");
-							IOUtils.copy(fis, os);
-						} finally {
-							FileUtils.deleteQuietly(sourceFile);
+					DocumentFile targetDir = root;
+					if (subFolder != null && !subFolder.isBlank()) {
+						DocumentFile existing = root.findFile(subFolder);
+						if (existing != null && existing.isDirectory()) {
+							targetDir = existing;
+						} else {
+							targetDir = root.createDirectory(subFolder);
 						}
-						return file.getUri().toString();
+					}
+					
+					if (targetDir != null) {
+						DocumentFile file = targetDir.createFile(mimeType != null ? mimeType : "application/octet-stream", displayName);
+						if (file != null) {
+							try (FileInputStream fis = new FileInputStream(sourceFile);
+							     OutputStream os = context.getContentResolver().openOutputStream(file.getUri())) {
+								if (os == null) throw new IOException("Failed to open output stream");
+								IOUtils.copy(fis, os);
+							} finally {
+								FileUtils.deleteQuietly(sourceFile);
+							}
+							return file.getUri().toString();
+						}
 					}
 				}
 			} catch (Exception e) {
@@ -74,10 +91,14 @@ public final class DownloadStorageUtils {
 		}
 
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-			return publishToDownloadsMediaStore(context, sourceFile, displayName, mimeType);
+			return publishToDownloadsMediaStore(context, sourceFile, displayName, mimeType, subFolder);
 		}
 
-		final File targetDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), context.getString(R.string.app_name));
+		File targetDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), context.getString(R.string.app_name));
+		if (subFolder != null && !subFolder.isBlank()) {
+			targetDir = new File(targetDir, subFolder);
+		}
+		
 		if ((!targetDir.exists() && !targetDir.mkdirs()) && !targetDir.isDirectory()) {
 			throw new IOException("Unable to create downloads directory: " + targetDir.getAbsolutePath());
 		}
@@ -223,11 +244,17 @@ public final class DownloadStorageUtils {
 
 	@NonNull
 	@RequiresApi(Build.VERSION_CODES.Q)
-	private static String publishToDownloadsMediaStore(@NonNull final Context context, @NonNull final File sourceFile, @NonNull final String displayName, @Nullable final String mimeType) throws IOException {
+	private static String publishToDownloadsMediaStore(@NonNull final Context context, @NonNull final File sourceFile, @NonNull final String displayName, @Nullable final String mimeType, @Nullable String subFolder) throws IOException {
 		final ContentResolver resolver = context.getContentResolver();
 		final ContentValues values = new ContentValues();
 		values.put(MediaStore.MediaColumns.DISPLAY_NAME, displayName);
-		values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + File.separator + context.getString(R.string.app_name));
+		
+		String relativePath = Environment.DIRECTORY_DOWNLOADS + File.separator + context.getString(R.string.app_name);
+		if (subFolder != null && !subFolder.isBlank()) {
+			relativePath += File.separator + subFolder;
+		}
+		values.put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath);
+
 		values.put(MediaStore.MediaColumns.IS_PENDING, 1);
 		if (mimeType != null) values.put(MediaStore.MediaColumns.MIME_TYPE, mimeType);
 

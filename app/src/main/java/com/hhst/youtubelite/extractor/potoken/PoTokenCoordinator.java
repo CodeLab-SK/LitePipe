@@ -12,9 +12,9 @@ import com.hhst.youtubelite.extractor.ExtractionSessionScope;
 import com.tencent.mmkv.MMKV;
 import org.schabi.newpipe.extractor.services.youtube.PoTokenResult;
 import org.schabi.newpipe.extractor.services.youtube.YoutubeParsingHelper;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import okhttp3.MediaType;
@@ -33,8 +33,9 @@ public final class PoTokenCoordinator {
     private final OkHttpClient okHttpClient;
     private final MMKV kv;
     private final Object lock = new Object();
+    private final AtomicLong requestCounter = new AtomicLong();
     private PoTokenSession session;
-    private long requestCounter;
+    private volatile String cachedVisitorData;
 
     @Inject
     public PoTokenCoordinator(Gson gson, PoTokenBridge poTokenBridge, PoTokenHost poTokenHost, 
@@ -45,27 +46,31 @@ public final class PoTokenCoordinator {
         this.scope = scope;
         this.okHttpClient = okHttpClient;
         this.kv = kv;
+        this.cachedVisitorData = kv.decodeString("visitor_data");
     }
 
     @Nullable
     public PoTokenResult getWebClientPoToken(@NonNull String videoId) {
         if (Looper.myLooper() == Looper.getMainLooper()) return null;
+        if (!poTokenHost.awaitReady(4000L)) return null;
+        String visitorData = fetchVisitorData();
+        if (visitorData == null) return null;
+
+        PoTokenSession currentSession;
+        long hostGen;
         synchronized (lock) {
-            if (!poTokenHost.awaitReady(4000L)) return null;
-            long hostGeneration = poTokenHost.getGeneration();
-            if (session == null || !session.matches(hostGeneration) || session.isExpired(System.currentTimeMillis())) {
-                session = initializeSession(hostGeneration);
+            hostGen = poTokenHost.getGeneration();
+            if (session == null || !session.matches(hostGen) || session.isExpired(System.currentTimeMillis())) {
+                session = initializeSession(hostGen);
             }
-            if (session == null) return null;
-
-            String visitorData = fetchVisitorData();
-            if (visitorData == null) return null;
-
-            String playerPoToken = mintPoToken(hostGeneration, videoId);
-            if (playerPoToken == null) return null;
-            
-            return new PoTokenResult(visitorData, playerPoToken, playerPoToken);
+            currentSession = session;
         }
+        
+        if (currentSession == null) return null;
+        String playerPoToken = mintPoToken(hostGen, videoId);
+        if (playerPoToken == null) return null;
+        
+        return new PoTokenResult(visitorData, playerPoToken, playerPoToken);
     }
 
     @Nullable
@@ -83,14 +88,24 @@ public final class PoTokenCoordinator {
         ExtractionSession currentSession = scope.get();
         AuthContext auth = currentSession != null ? currentSession.getAuth() : null;
         if (auth != null && auth.visitorData() != null) return auth.visitorData();
+        
+        String visitorData = cachedVisitorData;
+        if (visitorData != null) return visitorData;
+
         try {
-            return YoutubeParsingHelper.getVisitorDataFromInnertube(
+            visitorData = YoutubeParsingHelper.getVisitorDataFromInnertube(
                 org.schabi.newpipe.extractor.services.youtube.InnertubeClientRequestInfo.ofWebClient(),
                 org.schabi.newpipe.extractor.localization.Localization.DEFAULT,
                 org.schabi.newpipe.extractor.localization.ContentCountry.DEFAULT,
                 YoutubeParsingHelper.getYouTubeHeaders(),
                 YoutubeParsingHelper.YOUTUBEI_V1_URL,
                 null, false);
+            
+            if (visitorData != null) {
+                cachedVisitorData = visitorData;
+                kv.encode("visitor_data", visitorData);
+            }
+            return visitorData;
         } catch (Exception e) { return null; }
     }
 
@@ -101,7 +116,7 @@ public final class PoTokenCoordinator {
         String createResponse = makeBotguardRequest("https://www.youtube.com/api/jnn/v1/Create", "[\"" + REQUEST_KEY + "\"]");
         if (createResponse == null) return null;
 
-        String requestId = "init-" + (++requestCounter);
+        String requestId = "init-" + requestCounter.incrementAndGet();
         CompletableFuture<String> future = poTokenBridge.prepare(requestId);
         poTokenHost.evaluateJavascript(hostGeneration, "window.__litePoToken.runInit(" + gson.toJson(createResponse) + ",\"" + requestId + "\")", 1000);
         
@@ -116,7 +131,7 @@ public final class PoTokenCoordinator {
 
     @Nullable
     private String mintPoToken(long hostGeneration, String identifier) {
-        String requestId = "mint-" + (++requestCounter);
+        String requestId = "mint-" + requestCounter.incrementAndGet();
         CompletableFuture<String> future = poTokenBridge.prepare(requestId);
         poTokenHost.evaluateJavascript(hostGeneration, "window.__litePoToken.mint(\"" + identifier + "\",\"" + requestId + "\")", 1000);
         try { return future.get(2000, TimeUnit.MILLISECONDS); } catch (Exception e) { return null; }

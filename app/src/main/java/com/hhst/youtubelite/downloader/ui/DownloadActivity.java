@@ -52,12 +52,9 @@ import com.hhst.youtubelite.downloader.service.DownloadService;
 import com.hhst.youtubelite.extractor.YoutubeExtractor;
 import com.hhst.youtubelite.util.DownloadStorageUtils;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.Locale;
@@ -79,7 +76,8 @@ public class DownloadActivity extends AppCompatActivity {
 	private DownloadRecordsAdapter adapter;
 	private DownloadService downloadService;
 	private boolean isBound;
-	private String filterFolder = null;
+	private String filterParentId = null;
+	private String filterTitle = null;
 	private MaterialToolbar toolbar;
 	private MaterialCheckBox selectAllCheckbox;
 	private View selectionHeader;
@@ -106,7 +104,8 @@ public class DownloadActivity extends AppCompatActivity {
 		EdgeToEdge.enable(this);
 		setContentView(R.layout.activity_download);
 
-		filterFolder = getIntent().getStringExtra("folder_name");
+		filterParentId = getIntent().getStringExtra("parent_id");
+		filterTitle = getIntent().getStringExtra("folder_name");
 		toolbar = findViewById(R.id.toolbar);
 		setSupportActionBar(toolbar);
 		toolbar.setNavigationOnClickListener(v -> {
@@ -131,7 +130,7 @@ public class DownloadActivity extends AppCompatActivity {
 		recyclerView.setLayoutManager(new LinearLayoutManager(this));
 		recyclerView.setItemAnimator(null);
 
-		adapter = new DownloadRecordsAdapter(actions, filterFolder == null);
+		adapter = new DownloadRecordsAdapter(actions, filterParentId == null);
 		recyclerView.setAdapter(adapter);
 
 		if (selectAllCheckbox != null) {
@@ -153,9 +152,9 @@ public class DownloadActivity extends AppCompatActivity {
 	private List<DownloadRecord> getCurrentlyDisplayedRecords() {
 		List<DownloadRecord> all = historyRepository.getAllSorted();
 		List<DownloadRecord> verifiedList = new ArrayList<>();
-		
+
 		for (DownloadRecord record : all) {
-			if (record.getStatus() == DownloadStatus.COMPLETED) {
+			if (record.getStatus() == DownloadStatus.COMPLETED && record.getType() != DownloadType.PLAYLIST) {
 				if (!DownloadStorageUtils.exists(this, record.getOutputPath())) {
 					historyRepository.remove(record.getTaskId());
 					continue;
@@ -164,14 +163,18 @@ public class DownloadActivity extends AppCompatActivity {
 			verifiedList.add(record);
 		}
 
-		if (filterFolder == null) return verifiedList;
-
 		List<DownloadRecord> filtered = new ArrayList<>();
-		for (DownloadRecord r : verifiedList) {
-			String fn = r.getFileName();
-			if (fn.startsWith("Playlist_") && fn.contains(" - ")) {
-				String folder = fn.substring(9, fn.indexOf(" - "));
-				if (folder.equals(filterFolder)) filtered.add(r);
+		if (filterParentId == null) {
+			for (DownloadRecord r : verifiedList) {
+				if (r.getParentId() == null) {
+					filtered.add(r);
+				}
+			}
+		} else {
+			for (DownloadRecord r : verifiedList) {
+				if (Objects.equals(r.getParentId(), filterParentId)) {
+					filtered.add(r);
+				}
 			}
 		}
 		return filtered;
@@ -187,7 +190,7 @@ public class DownloadActivity extends AppCompatActivity {
 		boolean isSelecting = !selectedIds.isEmpty();
 
 		if (!isSelecting) {
-			toolbar.setTitle(filterFolder != null ? filterFolder : getString(R.string.downloads_default_title));
+			toolbar.setTitle(filterTitle != null ? filterTitle : getString(R.string.downloads_default_title));
 			toolbar.setNavigationIcon(R.drawable.ic_arrow_back);
 			if (selectionHeader != null) selectionHeader.setVisibility(View.GONE);
 		} else {
@@ -322,7 +325,7 @@ public class DownloadActivity extends AppCompatActivity {
 
 		@Override
 		public void onRedownload(DownloadRecord r) {
-			String url = "https://m.youtube.com/watch?v=" + r.getVid().split(":")[0];
+			String url = "https://m.youtube.com/watch?v=" + getShortVideoId(r.getVideoId());
 			new DownloadDialog(url, DownloadActivity.this, youtubeExtractor).show();
 		}
 
@@ -352,23 +355,26 @@ public class DownloadActivity extends AppCompatActivity {
 		}
 
 		@Override
-		public void onOpenFolder(String f) {
+		public void onOpenFolder(DownloadRecord folderRecord) {
 			Intent i = new Intent(DownloadActivity.this, DownloadActivity.class);
-			i.putExtra("folder_name", f);
+			i.putExtra("parent_id", folderRecord.getTaskId());
+			i.putExtra("folder_name", folderRecord.getTitle());
 			startActivity(i);
 		}
 
 		@Override
-		public void onDeleteFolder(List<DownloadRecord> c) {
-			if (c.isEmpty()) return;
-			String prefix = "Playlist_" + c.get(0).getFileName().split(" - ")[0];
+		public void onDeleteFolder(DownloadRecord folderRecord) {
 			new MaterialAlertDialogBuilder(DownloadActivity.this).setTitle("Delete Folder").setMessage("Delete folder content?")
 							.setPositiveButton("Delete", (d, w) -> {
-								if (isBound) downloadService.cancelByPrefix(prefix);
-								for (DownloadRecord r : c) {
-									DownloadStorageUtils.delete(DownloadActivity.this, r.getOutputPath());
-									historyRepository.remove(r.getTaskId());
+								List<DownloadRecord> all = historyRepository.getAllSorted();
+								for (DownloadRecord r : all) {
+									if (Objects.equals(r.getParentId(), folderRecord.getTaskId())) {
+										if (isBound) downloadService.cancel(r.getTaskId());
+										DownloadStorageUtils.delete(DownloadActivity.this, r.getOutputPath());
+										historyRepository.remove(r.getTaskId());
+									}
 								}
+								historyRepository.remove(folderRecord.getTaskId());
 								loadRecords();
 							}).setNegativeButton("Cancel", null).show();
 		}
@@ -477,6 +483,12 @@ public class DownloadActivity extends AppCompatActivity {
 		}
 	};
 
+	private static String getShortVideoId(String videoId) {
+		if (videoId == null) return "";
+		int idx = videoId.indexOf(':');
+		return idx == -1 ? videoId : videoId.substring(0, idx);
+	}
+
 	private static class DownloadRecordsAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 		private static final int TYPE_ITEM = 0, TYPE_FOLDER = 1;
 		private final List<Object> displayItems = new ArrayList<>();
@@ -490,24 +502,16 @@ public class DownloadActivity extends AppCompatActivity {
 
 		void updateItems(List<DownloadRecord> records) {
 			List<Object> newList = new ArrayList<>();
-			if (!useGrouping) newList.addAll(records);
-			else {
-				Map<String, List<DownloadRecord>> groups = new LinkedHashMap<>();
-				List<DownloadRecord> individuals = new ArrayList<>();
+			if (!useGrouping) {
+				newList.addAll(records);
+			} else {
 				for (DownloadRecord r : records) {
-					String fn = r.getFileName();
-					if (fn.startsWith("Playlist_") && fn.contains(" - ")) {
-						String folder = fn.substring(9, fn.indexOf(" - "));
-						groups.computeIfAbsent(folder, k -> new ArrayList<>()).add(r);
+					if (r.getType() == DownloadType.PLAYLIST) {
+						newList.add(new FolderHeader(r));
 					} else {
-						individuals.add(r);
+						newList.add(r);
 					}
 				}
-				for (Map.Entry<String, List<DownloadRecord>> e : groups.entrySet()) {
-					if (e.getValue().size() > 1) newList.add(new FolderHeader(e.getKey(), e.getValue()));
-					else individuals.addAll(e.getValue());
-				}
-				newList.addAll(individuals);
 			}
 
 			DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new DiffUtil.Callback() {
@@ -525,10 +529,10 @@ public class DownloadActivity extends AppCompatActivity {
 				public boolean areItemsTheSame(int oldPos, int newPos) {
 					Object oldItem = displayItems.get(oldPos);
 					Object newItem = newList.get(newPos);
-					if (oldItem instanceof DownloadRecord && newItem instanceof DownloadRecord)
-						return ((DownloadRecord) oldItem).getTaskId().equals(((DownloadRecord) newItem).getTaskId());
-					if (oldItem instanceof FolderHeader && newItem instanceof FolderHeader)
-						return ((FolderHeader) oldItem).name.equals(((FolderHeader) newItem).name);
+					if (oldItem instanceof DownloadRecord or && newItem instanceof DownloadRecord nr)
+						return or.getTaskId().equals(nr.getTaskId());
+					if (oldItem instanceof FolderHeader ofh && newItem instanceof FolderHeader nfh)
+						return ofh.record.getTaskId().equals(nfh.record.getTaskId());
 					return false;
 				}
 
@@ -536,12 +540,11 @@ public class DownloadActivity extends AppCompatActivity {
 				public boolean areContentsTheSame(int oldPos, int newPos) {
 					Object oldItem = displayItems.get(oldPos);
 					Object newItem = newList.get(newPos);
-					if (oldItem instanceof DownloadRecord && newItem instanceof DownloadRecord)
-						return Objects.equals(oldItem, newItem) && actions.isSelected((DownloadRecord) oldItem) == actions.isSelected((DownloadRecord) newItem);
-					if (oldItem instanceof FolderHeader && newItem instanceof FolderHeader) {
-						FolderHeader oldF = (FolderHeader) oldItem;
-						FolderHeader newF = (FolderHeader) newItem;
-						return oldF.children.size() == newF.children.size();
+					if (oldItem instanceof DownloadRecord or && newItem instanceof DownloadRecord nr)
+						return Objects.equals(or, nr) && actions.isSelected(or) == actions.isSelected(nr);
+					if (oldItem instanceof FolderHeader ofh && newItem instanceof FolderHeader nfh) {
+						return ofh.record.getUpdatedAt() == nfh.record.getUpdatedAt() 
+										&& ofh.record.getItemCount() == nfh.record.getItemCount();
 					}
 					return false;
 				}
@@ -572,7 +575,7 @@ public class DownloadActivity extends AppCompatActivity {
 
 		@Override
 		public void onBindViewHolder(@NonNull RecyclerView.ViewHolder h, int p) {
-			if (h instanceof FolderVH) ((FolderVH) h).bind((FolderHeader) displayItems.get(p), actions);
+			if (h instanceof FolderVH fvh) fvh.bind((FolderHeader) displayItems.get(p), actions);
 			else ((ItemVH) h).bind((DownloadRecord) displayItems.get(p), actions);
 		}
 
@@ -582,12 +585,10 @@ public class DownloadActivity extends AppCompatActivity {
 		}
 
 		static class FolderHeader {
-			String name;
-			List<DownloadRecord> children;
+			DownloadRecord record;
 
-			FolderHeader(String n, List<DownloadRecord> c) {
-				name = n;
-				children = c;
+			FolderHeader(DownloadRecord r) {
+				record = r;
 			}
 		}
 
@@ -605,20 +606,20 @@ public class DownloadActivity extends AppCompatActivity {
 			}
 
 			void bind(FolderHeader f, Actions a) {
-				title.setText(f.name);
-				subtitle.setText(itemView.getContext().getString(R.string.videos_count, f.children.size()));
-				if (!f.children.isEmpty()) {
+				title.setText(f.record.getTitle());
+				subtitle.setText(itemView.getContext().getString(R.string.videos_count, f.record.getItemCount()));
+				if (f.record.getThumbnailUrl() != null) {
 					Glide.with(itemView.getContext())
-									.load("https://i.ytimg.com/vi/" + f.children.get(0).getVid().split(":")[0] + "/mqdefault.jpg")
+									.load(f.record.getThumbnailUrl())
 									.diskCacheStrategy(DiskCacheStrategy.ALL)
 									.into(icon);
 				}
-				itemView.setOnClickListener(v -> a.onOpenFolder(f.name));
+				itemView.setOnClickListener(v -> a.onOpenFolder(f.record));
 				more.setOnClickListener(v -> {
 					PopupMenu p = new PopupMenu(v.getContext(), v);
 					p.getMenu().add("Delete");
 					p.setOnMenuItemClickListener(i -> {
-						a.onDeleteFolder(f.children);
+						a.onDeleteFolder(f.record);
 						return true;
 					});
 					p.show();
@@ -628,7 +629,7 @@ public class DownloadActivity extends AppCompatActivity {
 
 		static class ItemVH extends RecyclerView.ViewHolder {
 			ShapeableImageView thumb;
-			TextView title, subtitle, size;
+			TextView title, statusChip, typeChip, size;
 			LinearProgressIndicator progress;
 			ImageButton more;
 			MaterialCheckBox checkBox;
@@ -639,7 +640,8 @@ public class DownloadActivity extends AppCompatActivity {
 				super(v);
 				thumb = v.findViewById(R.id.thumbnail);
 				title = v.findViewById(R.id.title);
-				subtitle = v.findViewById(R.id.subtitle);
+				statusChip = v.findViewById(R.id.status_chip);
+				typeChip = v.findViewById(R.id.type_chip);
 				size = v.findViewById(R.id.size_downloaded);
 				progress = v.findViewById(R.id.progress);
 				more = v.findViewById(R.id.more);
@@ -649,14 +651,14 @@ public class DownloadActivity extends AppCompatActivity {
 			void bind(DownloadRecord r, Actions a) {
 				this.currentRecord = r;
 				this.currentTaskId = r.getTaskId();
-				String fn = r.getFileName();
-				if (fn.startsWith("Playlist_") && fn.contains(" - ")) fn = fn.substring(fn.indexOf(" - ") + 3);
-				title.setText(fn);
+				title.setText(r.getFileName());
 				updateProgressUI(r);
-				Glide.with(itemView.getContext())
-								.load("https://i.ytimg.com/vi/" + r.getVid().split(":")[0] + "/mqdefault.jpg")
-								.diskCacheStrategy(DiskCacheStrategy.ALL)
-								.into(thumb);
+				if (r.getThumbnailUrl() != null) {
+					Glide.with(itemView.getContext())
+									.load(r.getThumbnailUrl())
+									.diskCacheStrategy(DiskCacheStrategy.ALL)
+									.into(thumb);
+				}
 
 				boolean selecting = a.isInSelectionMode();
 				checkBox.setVisibility(selecting ? View.VISIBLE : View.GONE);
@@ -714,7 +716,7 @@ public class DownloadActivity extends AppCompatActivity {
 								break;
 							case 5:
 								ClipboardManager cm = (ClipboardManager) v.getContext().getSystemService(Context.CLIPBOARD_SERVICE);
-								cm.setPrimaryClip(ClipData.newPlainText("vid", currentRecord.getVid().split(":")[0]));
+								cm.setPrimaryClip(ClipData.newPlainText("vid", getShortVideoId(currentRecord.getVideoId())));
 								Toast.makeText(v.getContext(), "ID Copied", Toast.LENGTH_SHORT).show();
 								break;
 							case 6:
@@ -730,10 +732,10 @@ public class DownloadActivity extends AppCompatActivity {
 				});
 			}
 
-			private String getStatusString(Context context, DownloadStatus status, int progress) {
+			private String getStatusString(Context context, DownloadStatus status) {
 				return switch (status) {
 					case QUEUED -> context.getString(R.string.status_queued);
-					case RUNNING -> context.getString(R.string.status_downloading, progress);
+					case RUNNING -> context.getString(R.string.status_downloading);
 					case MERGING -> context.getString(R.string.status_merging);
 					case COMPLETED -> context.getString(R.string.status_completed);
 					case FAILED -> context.getString(R.string.status_failed);
@@ -743,23 +745,26 @@ public class DownloadActivity extends AppCompatActivity {
 			}
 
 			private String getTypeString(Context context, DownloadType type, String quality) {
-				String typeStr = switch (type) {
-					case VIDEO -> context.getString(R.string.type_video);
+				return switch (type) {
+					case VIDEO -> context.getString(R.string.type_video) + (quality != null ? "(" + quality + ")" : "");
 					case AUDIO -> context.getString(R.string.type_audio);
 					case SUBTITLE -> context.getString(R.string.type_subtitle);
 					case THUMBNAIL -> context.getString(R.string.type_thumbnail);
+					case PLAYLIST -> context.getString(R.string.type_playlist);
 				};
-				return (type == DownloadType.VIDEO && quality != null) ? typeStr + " (" + quality + ")" : typeStr;
 			}
 
 			void updateProgressUI(DownloadRecord r) {
 				this.currentRecord = r;
 				Context context = itemView.getContext();
 				DownloadStatus s = r.getStatus();
-				subtitle.setText(context.getString(R.string.download_status_with_type, getStatusString(context, s, r.getProgress()), getTypeString(context, r.getType(), r.getQuality())));
-				if (s == DownloadStatus.COMPLETED) subtitle.setTextColor(Color.parseColor("#4CAF50"));
-				else if (s == DownloadStatus.FAILED) subtitle.setTextColor(Color.parseColor("#F44336"));
-				else subtitle.setTextColor(Color.LTGRAY);
+				
+				statusChip.setText(String.format("%s • %s", getStatusString(context, s), getTypeString(context, r.getType(), r.getQuality())));
+				typeChip.setVisibility(View.GONE);
+				
+				if (s == DownloadStatus.COMPLETED) statusChip.setTextColor(Color.parseColor("#4CAF50"));
+				else if (s == DownloadStatus.FAILED) statusChip.setTextColor(Color.parseColor("#F44336"));
+				else statusChip.setTextColor(Color.LTGRAY);
 				
 				if (r.getTotalSize() > 0) {
 					size.setText(context.getString(R.string.download_progress_with_total, formatMB(r.getDownloadedSize()), formatMB(r.getTotalSize()), r.getProgress()));
@@ -772,7 +777,7 @@ public class DownloadActivity extends AppCompatActivity {
 			}
 			
 			private String formatMB(long bytes) {
-				return String.format(Locale.getDefault(), "%.1f MB", bytes / 1048576.0);
+				return String.format(Locale.getDefault(), "%.1f", bytes / 1048576.0);
 			}
 		}
 
@@ -784,8 +789,8 @@ public class DownloadActivity extends AppCompatActivity {
 			void onRetry(DownloadRecord r);
 			void onRedownload(DownloadRecord r);
 			void onDelete(DownloadRecord r);
-			void onOpenFolder(String f);
-			void onDeleteFolder(List<DownloadRecord> c);
+			void onOpenFolder(DownloadRecord folderRecord);
+			void onDeleteFolder(DownloadRecord folderRecord);
 			void onLongClick(DownloadRecord r);
 			void onToggleSelection(DownloadRecord r);
 			boolean isSelected(DownloadRecord r);
