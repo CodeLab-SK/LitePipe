@@ -10,13 +10,17 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.verify.domain.DomainVerificationManager;
+import android.content.pm.verify.domain.DomainVerificationUserState;
 import android.content.res.Configuration;
 import android.graphics.drawable.Icon;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.provider.Settings;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -69,6 +73,7 @@ import com.hhst.youtubelite.ui.queue.QueueTouch;
 import com.hhst.youtubelite.util.DeviceUtils;
 import com.hhst.youtubelite.util.UrlUtils;
 import com.hhst.youtubelite.util.ViewUtils;
+import com.tencent.mmkv.MMKV;
 
 import org.schabi.newpipe.extractor.ListExtractor.InfoItemsPage;
 import org.schabi.newpipe.extractor.NewPipe;
@@ -139,6 +144,8 @@ public final class MainActivity extends AppCompatActivity {
 		super.onCreate(savedInstanceState);
 		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
 
+		UrlUtils.setYoutubePreferences(this);
+
 		final View mainView = findViewById(R.id.main);
 		ViewCompat.setOnApplyWindowInsetsListener(mainView, (v, insets) -> {
 			final Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -171,6 +178,7 @@ public final class MainActivity extends AppCompatActivity {
 		setupBackNavigation();
 		queueWarmer.warmItems(queueRepository.getItems());
 
+		checkOpenByDefault();
 		mainView.post(() -> handleIntent(getIntent()));
 	}
 
@@ -237,10 +245,10 @@ public final class MainActivity extends AppCompatActivity {
 		nextAction.setEnabled(nav.isNextActionEnabled());
 		actions.add(nextAction);
 
-		setPictureInPictureParams(new PictureInPictureParams.Builder()
-				.setActions(actions)
-				.build());
-	}
+        setPictureInPictureParams(new PictureInPictureParams.Builder()
+                .setActions(actions)
+                .build());
+    }
 
 	@Override
 	public void onConfigurationChanged(@NonNull final Configuration newConfig) {
@@ -256,6 +264,7 @@ public final class MainActivity extends AppCompatActivity {
 				if (player.isFullscreen()) player.exitFullscreen();
 			}
 		}
+
 	}
 
 	static boolean shouldEnterPictureInPictureOnUserLeaveHint(
@@ -401,6 +410,7 @@ public final class MainActivity extends AppCompatActivity {
 					if (DeviceUtils.isInPictureInPictureMode(MainActivity.this)) {
 						updatePictureInPictureActions();
 					}
+					updateQueueUI();
 				});
 			}
 
@@ -410,6 +420,7 @@ public final class MainActivity extends AppCompatActivity {
 					if (DeviceUtils.isInPictureInPictureMode(MainActivity.this)) {
 						updatePictureInPictureActions();
 					}
+					updateQueueUI();
 				});
 			}
 		});
@@ -557,7 +568,7 @@ public final class MainActivity extends AppCompatActivity {
 		YoutubeWebview webview = getWebview();
 		if (webview == null) return false;
 		String url = webview.getUrl();
-		return url != null && url.contains("/watch") && !url.contains("/shorts/");
+		return (url != null && url.contains("/watch") && !url.contains("/shorts/")) || player.getLoadedVideoId() != null;
 	}
 
 	public void setUiVisibility(boolean visible) {
@@ -625,7 +636,7 @@ public final class MainActivity extends AppCompatActivity {
 		return m.find() ? m.group() : null;
 	}
 
-	public void showVideoOptionsDialog(String url, @Nullable String title) {
+	public void showVideoOptionsDialog(String url) {
 		boolean hasVideoId = url.contains("v=") || url.contains("/watch")
 				|| url.contains("video_id=") || url.contains("/live/") || url.contains("youtu.be/");
 		boolean hasPlaylistId = url.contains("list=") || url.contains("/playlist");
@@ -634,12 +645,14 @@ public final class MainActivity extends AppCompatActivity {
 		boolean isPlaylist = hasPlaylistId && (!hasVideoId || url.contains("&list=") || url.contains("?list=")) && !isMix;
 
 		@SuppressLint("InflateParams") View view = LayoutInflater.from(this).inflate(R.layout.dialog_video_options, null);
-		AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+		final AlertDialog dialog = new MaterialAlertDialogBuilder(this)
 				.setView(view)
 				.create();
 
 		TextView dialogTitle = view.findViewById(R.id.dialog_title);
-		if (dialogTitle != null) dialogTitle.setText(R.string.video_options);
+		if (dialogTitle != null) {
+            dialogTitle.setText(R.string.video_options);
+		}
 
 		View optionEnqueue = view.findViewById(R.id.option_enqueue);
 		View optionDownload = view.findViewById(R.id.option_download);
@@ -824,6 +837,37 @@ public final class MainActivity extends AppCompatActivity {
 	private void requestPermissions() {
 		if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
 			ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_NOTIFICATION_CODE);
+	}
+
+	private void checkOpenByDefault() {
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+			MMKV kv = MMKV.defaultMMKV();
+			if (kv.getBoolean("asked_open_by_default", false)) return;
+
+			DomainVerificationManager manager = getSystemService(DomainVerificationManager.class);
+			try {
+				DomainVerificationUserState userState = manager.getDomainVerificationUserState(getPackageName());
+				if (userState != null && !userState.isLinkHandlingAllowed()) {
+					new MaterialAlertDialogBuilder(this)
+							.setTitle("Open YouTube Links")
+							.setMessage("To open YouTube links directly in YouTube Lite, you need to enable 'Open supported links' in app settings.")
+							.setPositiveButton("Settings", (d, w) -> {
+								kv.putBoolean("asked_open_by_default", true);
+								try {
+									Intent intent = new Intent(Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS,
+											Uri.parse("package:" + getPackageName()));
+									startActivity(intent);
+								} catch (Exception e) {
+									Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+											Uri.parse("package:" + getPackageName()));
+									startActivity(intent);
+								}
+							})
+							.setNegativeButton("Later", (d, w) -> kv.putBoolean("asked_open_by_default", true))
+							.show();
+				}
+			} catch (Exception ignored) {}
+		}
 	}
 
 	@Override protected void onStop() {

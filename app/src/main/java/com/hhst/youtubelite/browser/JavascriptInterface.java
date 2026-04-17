@@ -111,19 +111,19 @@ public final class JavascriptInterface {
 
     @android.webkit.JavascriptInterface
     public void showVideoOptions(@Nullable final String url) {
-        showVideoOptions(url, null);
-    }
-
-    @android.webkit.JavascriptInterface
-    public void showVideoOptions(@Nullable final String url, @Nullable final String title) {
         if (url != null) {
             handler.post(() -> {
                 MainActivity mainActivity = findMainActivity(context);
                 if (mainActivity != null) {
-                    mainActivity.showVideoOptionsDialog(url, title);
+                    mainActivity.showVideoOptionsDialog(url);
                 }
             });
         }
+    }
+
+    @android.webkit.JavascriptInterface
+    public void showVideoOptions(@Nullable final String url, @Nullable final String title) {
+        showVideoOptions(url);
     }
 
     private MainActivity findMainActivity(Context context) {

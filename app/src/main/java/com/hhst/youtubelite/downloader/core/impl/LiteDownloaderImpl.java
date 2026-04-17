@@ -91,12 +91,12 @@ public class LiteDownloaderImpl implements LiteDownloader {
 		long vSz = len(t.video()), aSz = len(t.audio());
 		Aggregator agg = new Aggregator(vSz, aSz, (p, d, tot) -> progress(t.videoId(), p, d, tot));
 
-		CompletableFuture<File> vFut = t.video() == null ? null : streamDL.download(t.video().getContent(), vF, createProgressAdapter(t.videoId(), p -> {
+		CompletableFuture<File> vFut = t.video() == null ? null : streamDL.download(t.videoId() + "_v", t.video().getContent(), vF, createProgressAdapter(t.videoId(), p -> {
 			if (aSz > 0) agg.updV(p);
 			else progress(t.videoId(), p, (long) (vSz * (p / 100.0)), vSz);
 		}));
 
-		CompletableFuture<File> aFut = t.audio() == null ? null : streamDL.download(t.audio().getContent(), aF, createProgressAdapter(t.videoId(), p -> {
+		CompletableFuture<File> aFut = t.audio() == null ? null : streamDL.download(t.videoId() + "_a", t.audio().getContent(), aF, createProgressAdapter(t.videoId(), p -> {
 			if (vSz > 0) agg.updA(p);
 			else progress(t.videoId(), p, (long) (aSz * (p / 100.0)), aSz);
 		}));
@@ -134,8 +134,8 @@ public class LiteDownloaderImpl implements LiteDownloader {
 	public void pause(@NonNull String videoId) {
 		Task t = tasks.get(videoId);
 		if (t != null) {
-			if (t.video() != null) streamDL.pause(t.video().getContent());
-			if (t.audio() != null) streamDL.pause(t.audio().getContent());
+			if (t.video() != null) streamDL.pause(videoId + "_v");
+			if (t.audio() != null) streamDL.pause(videoId + "_a");
 		}
 	}
 
@@ -143,8 +143,8 @@ public class LiteDownloaderImpl implements LiteDownloader {
 	public void resume(@NonNull String videoId) {
 		Task t = tasks.get(videoId);
 		if (t != null) {
-			if (t.video() != null) streamDL.resume(t.video().getContent());
-			if (t.audio() != null) streamDL.resume(t.audio().getContent());
+			if (t.video() != null) streamDL.resume(videoId + "_v");
+			if (t.audio() != null) streamDL.resume(videoId + "_a");
 			progress(videoId, -1, -1, -1);
 		}
 	}
@@ -154,8 +154,8 @@ public class LiteDownloaderImpl implements LiteDownloader {
 		Task t = tasks.remove(videoId);
 		try {
 			if (t == null) return;
-			if (t.video() != null) streamDL.cancel(t.video().getContent());
-			if (t.audio() != null) streamDL.cancel(t.audio().getContent());
+			if (t.video() != null) streamDL.cancel(videoId + "_v");
+			if (t.audio() != null) streamDL.cancel(videoId + "_a");
 			notify(videoId, ProgressCallback2::onCancel);
 			clean(t);
 		} finally {
@@ -178,7 +178,7 @@ public class LiteDownloaderImpl implements LiteDownloader {
 			invalidatePlaybackCacheIfLikelyExpiredStream(t, c);
 			if (tasks.containsKey(t.videoId())) {
 				notify(t.videoId(), cb -> cb.onError(c instanceof Exception ? (Exception) c : new Exception(c)));
-				clean(tasks.remove(t.videoId()));
+				tasks.remove(t.videoId());
 			}
 		} finally {
 			clearCallback(t.videoId());

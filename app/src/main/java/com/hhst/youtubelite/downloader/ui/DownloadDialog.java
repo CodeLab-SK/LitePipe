@@ -46,21 +46,26 @@ import org.schabi.newpipe.extractor.stream.VideoStream;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Pattern;
 
 @UnstableApi
 public class DownloadDialog {
     private static final String KEY_THREAD_COUNT = "download_thread_count";
     private static final String KEY_LAST_MODE = "last_download_mode";
     private static final String KEY_LAST_VIDEO_RES = "last_download_res";
-    private static final String KEY_LAST_AUDIO_BITRATE = "last_download_audio_bitrate";
-    private static final String KEY_LAST_VIDEO_AUDIO_BITRATE = "last_download_video_audio_bitrate";
+    private static final String KEY_LAST_AUDIO_TRACK = "last_download_audio_track";
+    private static final String KEY_LAST_VIDEO_AUDIO_TRACK = "last_download_video_audio_track";
     private static final String KEY_LAST_THUMB_SEL = "last_download_thumb_sel";
     private static final String KEY_LAST_SUB_SEL = "last_download_sub_sel";
     private static final String KEY_LAST_SUB_LANG = "last_download_sub_lang";
+    private static final String KEY_LAST_AUDIO_LANG = "last_audio_lang";
 
     private final Context context;
     private static final ExecutorService dialogExecutor = Executors.newFixedThreadPool(2);
@@ -72,7 +77,7 @@ public class DownloadDialog {
     private VideoDetails videoDetails;
     private StreamDetails streamDetails;
     private boolean thumbSel, subtitleSel;
-    private String mode = "video"; 
+    private String mode = "video";
     private VideoStream videoSelStream;
     private AudioStream audioSelStream;
     private AudioStream videoAudioStream;
@@ -96,7 +101,7 @@ public class DownloadDialog {
     public DownloadDialog(String url, Context context, YoutubeExtractor youtubeExtractor) {
         this.context = context;
         this.dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_download, new FrameLayout(context), false);
-        
+
         Intent serviceIntent = new Intent(context, DownloadService.class);
         context.startService(serviceIntent);
         context.bindService(serviceIntent, connection, Context.BIND_AUTO_CREATE);
@@ -113,6 +118,9 @@ public class DownloadDialog {
         dialogExecutor.execute(() -> {
             try {
                 streamDetails = youtubeExtractor.getStreamInfo(url);
+                if (streamDetails != null && streamDetails.getAudioStreams() != null) {
+                    sortAudioStreams(streamDetails.getAudioStreams());
+                }
                 updateUI();
             } catch (Exception e) {
                 mainHandler.post(() -> Toast.makeText(context, R.string.failed_to_load_video_details, Toast.LENGTH_SHORT).show());
@@ -133,7 +141,7 @@ public class DownloadDialog {
                             .load(videoDetails.getThumbnail())
                             .diskCacheStrategy(DiskCacheStrategy.ALL)
                             .into(imageView);
-                    
+
                     imageView.setOnClickListener(v -> {
                         Intent intent = new Intent(context, GalleryActivity.class);
                         ArrayList<String> urls = new ArrayList<>();
@@ -143,7 +151,7 @@ public class DownloadDialog {
                         context.startActivity(intent);
                     });
                 }
-                
+
                 if (editText != null && editText.getText().toString().isEmpty()) {
                     editText.setText(String.format("%s-%s", videoDetails.getTitle(), videoDetails.getAuthor()));
                 }
@@ -245,8 +253,8 @@ public class DownloadDialog {
                 kv.encode(KEY_LAST_THUMB_SEL, thumbSel);
                 kv.encode(KEY_LAST_SUB_SEL, subtitleSel);
                 if (videoSelStream != null) kv.encode(KEY_LAST_VIDEO_RES, videoSelStream.getResolution());
-                if (audioSelStream != null) kv.encode(KEY_LAST_AUDIO_BITRATE, audioSelStream.getAverageBitrate());
-                if (videoAudioStream != null) kv.encode(KEY_LAST_VIDEO_AUDIO_BITRATE, videoAudioStream.getAverageBitrate());
+                if (audioSelStream != null) kv.encode(KEY_LAST_AUDIO_TRACK, getTrackId(audioSelStream));
+                if (videoAudioStream != null) kv.encode(KEY_LAST_VIDEO_AUDIO_TRACK, getTrackId(videoAudioStream));
                 if (subtitleSelStream != null) kv.encode(KEY_LAST_SUB_LANG, subtitleSelStream.getLanguageTag());
 
                 String fName = videoDetails.getTitle();
@@ -266,7 +274,7 @@ public class DownloadDialog {
 
         View cancelBtn = dialogView.findViewById(R.id.button_cancel);
         if (cancelBtn != null) cancelBtn.setOnClickListener(v -> dialog.dismiss());
-        
+
         dialog.setOnDismissListener(di -> {
             if (isBound) {
                 context.unbindService(connection);
@@ -306,10 +314,10 @@ public class DownloadDialog {
         mode = kv.decodeString(KEY_LAST_MODE, "video");
         thumbSel = kv.decodeBool(KEY_LAST_THUMB_SEL, false);
         subtitleSel = kv.decodeBool(KEY_LAST_SUB_SEL, false);
-        
+
         String lastRes = kv.decodeString(KEY_LAST_VIDEO_RES, "");
-        int lastBitrate = kv.decodeInt(KEY_LAST_AUDIO_BITRATE, -1);
-        int lastVideoAudioBitrate = kv.decodeInt(KEY_LAST_VIDEO_AUDIO_BITRATE, -1);
+        String lastAudioTrack = kv.decodeString(KEY_LAST_AUDIO_TRACK, "");
+        String lastVideoAudioTrack = kv.decodeString(KEY_LAST_VIDEO_AUDIO_TRACK, "");
         String lastSubLang = kv.decodeString(KEY_LAST_SUB_LANG, "");
 
         for (VideoStream vs : streamDetails.getVideoStreams()) {
@@ -323,7 +331,7 @@ public class DownloadDialog {
         }
 
         for (AudioStream as : streamDetails.getAudioStreams()) {
-            if (as.getFormat() == MediaFormat.M4A && as.getAverageBitrate() == lastBitrate) {
+            if (Objects.equals(getTrackId(as), lastAudioTrack)) {
                 audioSelStream = as;
                 break;
             }
@@ -333,7 +341,7 @@ public class DownloadDialog {
         }
 
         for (AudioStream as : streamDetails.getAudioStreams()) {
-            if (as.getAverageBitrate() == lastVideoAudioBitrate) {
+            if (Objects.equals(getTrackId(as), lastVideoAudioTrack)) {
                 videoAudioStream = as;
                 break;
             }
@@ -359,6 +367,11 @@ public class DownloadDialog {
         });
     }
 
+    private String getTrackId(AudioStream s) {
+        String lang = s.getAudioLocale() != null ? s.getAudioLocale().getLanguage() : "und";
+        return lang + "_" + s.getAudioTrackName() + "_" + s.getAverageBitrate();
+    }
+
     private void showVideoQualityDialog(Button btn) {
         @SuppressLint("InflateParams") View v = LayoutInflater.from(context).inflate(R.layout.quality_selector, null);
         AlertDialog d = new MaterialAlertDialogBuilder(context).setTitle(R.string.video_quality).setView(v).create();
@@ -368,23 +381,33 @@ public class DownloadDialog {
             updateButtonStates(btn, dialogView.findViewById(R.id.button_audio));
             d.dismiss();
         });
-        setupVideoContainer(v, d, btn);
+        setupVideoContainer(v, d);
         d.show();
     }
 
-    private void setupVideoContainer(View viewRoot, AlertDialog d, Button btn) {
+    private void setupVideoContainer(View viewRoot, AlertDialog d) {
         LinearLayout container = viewRoot.findViewById(R.id.quality_container);
         ProgressBar loading = viewRoot.findViewById(R.id.loadingBar2);
         if (streamDetails == null || container == null) return;
 
         if (loading != null) loading.setVisibility(View.GONE);
         final CheckBox[] refs = new CheckBox[1];
-        long audioSize = streamDetails.getAudioStreams().isEmpty() ? 0 : streamDetails.getAudioStreams().get(0).getItagItem().getContentLength();
+        long audioSize = 0;
+        if (!streamDetails.getAudioStreams().isEmpty()) {
+            AudioStream firstAudio = streamDetails.getAudioStreams().get(0);
+            if (firstAudio.getItagItem() != null) {
+                audioSize = firstAudio.getItagItem().getContentLength();
+            }
+        }
 
         for (VideoStream s : streamDetails.getVideoStreams()) {
             if (s.getFormat() != MediaFormat.MPEG_4) continue;
             CheckBox cb = new CheckBox(context);
-            cb.setText(String.format(Locale.US, "%s (%s)", s.getResolution(), formatSize(s.getItagItem().getContentLength() + audioSize)));
+            long totalSize = audioSize;
+            if (s.getItagItem() != null) {
+                totalSize += s.getItagItem().getContentLength();
+            }
+            cb.setText(String.format(Locale.US, "%s (%s)", s.getResolution(), formatSize(totalSize)));
             cb.setOnCheckedChangeListener((view, is) -> {
                 if (is) {
                     if (refs[0] != null) refs[0].setChecked(false);
@@ -401,8 +424,9 @@ public class DownloadDialog {
 
         View confirm = viewRoot.findViewById(R.id.button_confirm);
         if (confirm != null) confirm.setOnClickListener(v1 -> {
-            if (videoSelStream != null && streamDetails.getAudioStreams().size() > 1) {
-                showAudioTrackSelectionForVideo(streamDetails.getAudioStreams(), d::dismiss);
+            List<AudioStream> uniqueAudio = getUniqueAudioStreams(streamDetails.getAudioStreams());
+            if (videoSelStream != null && uniqueAudio.size() > 1) {
+                showAudioTrackSelectionForVideo(uniqueAudio, d::dismiss);
             } else {
                 if (!streamDetails.getAudioStreams().isEmpty()) {
                     videoAudioStream = streamDetails.getAudioStreams().get(0);
@@ -419,16 +443,18 @@ public class DownloadDialog {
         d.show();
     }
 
-    private void setupAudioTrackSelection(View viewRoot, AlertDialog d, List<AudioStream> streams, Runnable onSelected) {
+    private void setupAudioTrackSelection(View viewRoot, AlertDialog d, List<AudioStream> displayTracks, Runnable onSelected) {
         LinearLayout container = viewRoot.findViewById(R.id.quality_container);
         View loading = viewRoot.findViewById(R.id.loadingBar2);
         if (container == null) return;
         if (loading != null) loading.setVisibility(View.GONE);
+        
         final CheckBox[] refs = new CheckBox[1];
-        for (AudioStream s : streams) {
+        
+        for (int i = 0; i < displayTracks.size(); i++) {
+            AudioStream s = displayTracks.get(i);
             CheckBox cb = new CheckBox(context);
-            String label = (s.getAudioTrackName() != null && !s.getAudioTrackName().isEmpty()) ? s.getAudioTrackName() + " - " : "";
-            cb.setText(String.format(Locale.US, "%s%dkbps (%s)", label, s.getAverageBitrate() / 1000, formatSize(s.getItagItem().getContentLength())));
+            cb.setText(getAudioTrackLabel(s, i, false));
             cb.setOnCheckedChangeListener((v1, is) -> {
                 if (is) {
                     if (refs[0] != null) refs[0].setChecked(false);
@@ -437,7 +463,7 @@ public class DownloadDialog {
                 }
             });
             container.addView(cb);
-            if (videoAudioStream != null && videoAudioStream.getAverageBitrate() == s.getAverageBitrate()) {
+            if (videoAudioStream != null && videoAudioStream.getContent().equals(s.getContent())) {
                 cb.setChecked(true);
                 refs[0] = cb;
             }
@@ -460,22 +486,25 @@ public class DownloadDialog {
             updateButtonStates(dialogView.findViewById(R.id.button_video), btn);
             d.dismiss();
         });
-        setupAudioContainer(v);
+        setupAudioContainer(v, d);
         d.show();
     }
 
-    private void setupAudioContainer(View dView) {
+    private void setupAudioContainer(View dView, AlertDialog d) {
         LinearLayout container = dView.findViewById(R.id.quality_container);
         ProgressBar loading = dView.findViewById(R.id.loadingBar2);
         if (streamDetails == null || container == null) return;
 
         if (loading != null) loading.setVisibility(View.GONE);
+        
+        final List<AudioStream> displayTracks = getUniqueAudioStreams(streamDetails.getAudioStreams());
         final CheckBox[] refs = new CheckBox[1];
-        for (AudioStream s : streamDetails.getAudioStreams()) {
+        
+        for (int i = 0; i < displayTracks.size(); i++) {
+            AudioStream s = displayTracks.get(i);
             if (s.getFormat() != MediaFormat.M4A) continue;
             CheckBox cb = new CheckBox(context);
-            String label = (s.getAudioTrackName() != null && !s.getAudioTrackName().isEmpty()) ? s.getAudioTrackName() + " - " : "";
-            cb.setText(String.format(Locale.US, "%s%dkbps (%s)", label, s.getAverageBitrate() / 1000, formatSize(s.getItagItem().getContentLength())));
+            cb.setText(getAudioTrackLabel(s, i, true));
             cb.setOnCheckedChangeListener((v, is) -> {
                 if (is) {
                     if (refs[0] != null) refs[0].setChecked(false);
@@ -484,13 +513,87 @@ public class DownloadDialog {
                 }
             });
             container.addView(cb);
-            if (audioSelStream != null && audioSelStream.getAverageBitrate() == s.getAverageBitrate()) {
+            if (audioSelStream != null && audioSelStream.getContent().equals(s.getContent())) {
                 cb.setChecked(true);
                 refs[0] = cb;
             }
         }
         View confirm = dView.findViewById(R.id.button_confirm);
-        if (confirm != null) confirm.setOnClickListener(v1 -> ((AlertDialog) dView.getTag()).dismiss());
+        if (confirm != null) confirm.setOnClickListener(v1 -> d.dismiss());
+    }
+
+    @NonNull
+    private String getAudioTrackLabel(AudioStream track, int i, boolean showSize) {
+        String name = track.getAudioTrackName();
+        String lang = track.getAudioLocale() != null ? track.getAudioLocale().getDisplayLanguage() : null;
+        boolean isOriginal = name != null && name.toLowerCase(Locale.ROOT).contains("original");
+
+        StringBuilder sb = new StringBuilder();
+        if (isOriginal) {
+            if (lang != null && !lang.isEmpty()) sb.append(lang).append(" (Original)");
+            else sb.append("Original");
+        } else if (lang != null && !lang.isEmpty()) {
+            sb.append(lang);
+            if (name != null && !name.isEmpty() && !name.equalsIgnoreCase(lang) && !name.toLowerCase(Locale.ROOT).contains("original")) {
+                String cleanName = name.replaceAll("(?i)\\b" + Pattern.quote(lang) + "\\b", "").replaceAll("[()]", "").trim();
+                if (!cleanName.isEmpty()) {
+                    sb.append(" (").append(cleanName).append(")");
+                }
+            }
+        } else if (name != null && !name.isEmpty()) {
+            sb.append(name);
+        } else {
+            sb.append("Audio Track ").append(i + 1);
+        }
+        
+        if (showSize && track.getItagItem() != null) {
+            sb.append(" (").append(formatSize(track.getItagItem().getContentLength())).append(")");
+        }
+        return sb.toString();
+    }
+
+    private List<AudioStream> getUniqueAudioStreams(List<AudioStream> streams) {
+        if (streams == null) return new ArrayList<>();
+        final Map<String, AudioStream> uniqueMap = new LinkedHashMap<>();
+        for (AudioStream s : streams) {
+            String langCode = s.getAudioLocale() != null ? s.getAudioLocale().getLanguage() : "und";
+            String name = s.getAudioTrackName();
+            boolean isOriginal = name != null && name.toLowerCase(Locale.ROOT).contains("original");
+            String key = langCode + "_" + name + "_" + isOriginal;
+            
+            AudioStream existing = uniqueMap.get(key);
+            if (existing == null || s.getAverageBitrate() > existing.getAverageBitrate()) {
+                uniqueMap.put(key, s);
+            }
+        }
+        return new ArrayList<>(uniqueMap.values());
+    }
+
+    private void sortAudioStreams(List<AudioStream> audioStreams) {
+        if (audioStreams == null || audioStreams.isEmpty()) return;
+        final String savedLanguage = kv.decodeString(KEY_LAST_AUDIO_LANG, "und");
+        audioStreams.sort((first, second) -> {
+            final int originalComparison = Boolean.compare(
+                    isOriginal(second),
+                    isOriginal(first));
+            if (originalComparison != 0) return originalComparison;
+
+            final int savedLanguageComparison = Boolean.compare(
+                    matchesLanguage(second, savedLanguage),
+                    matchesLanguage(first, savedLanguage));
+            if (savedLanguageComparison != 0) return savedLanguageComparison;
+
+            return Integer.compare((int) second.getAverageBitrate(), (int) first.getAverageBitrate());
+        });
+    }
+
+    private boolean isOriginal(AudioStream s) {
+        return s.getAudioTrackName() != null && s.getAudioTrackName().toLowerCase(Locale.ROOT).contains("original");
+    }
+
+    private boolean matchesLanguage(AudioStream s, String lang) {
+        String sLang = s.getAudioLocale() != null ? s.getAudioLocale().getLanguage() : "und";
+        return sLang.equalsIgnoreCase(lang);
     }
 
     private void showSubtitleSelectionDialog(Button btn) {
@@ -548,22 +651,24 @@ public class DownloadDialog {
     private List<Task> getTasks(String f) {
         List<Task> t = new ArrayList<>();
         File d = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), context.getString(R.string.app_name));
-        if (!d.exists()) d.mkdirs();
-        
+        if (!d.exists() && !d.mkdirs()) {
+            Log.e("DownloadDialog", "Failed to create directory: " + d.getAbsolutePath());
+        }
+
         if ("video".equals(mode) && videoSelStream != null) {
             AudioStream audio = (videoAudioStream != null) ? videoAudioStream : streamDetails.getAudioStreams().get(0);
-            t.add(new Task(videoDetails.getId() + ":v", videoSelStream, audio, null, null, f, d, threadCount, videoSelStream.getResolution()));
+            t.add(new Task(videoDetails.getId() + ":v", videoSelStream, audio, null, null, f, d, threadCount, videoDetails.getTitle(), videoDetails.getThumbnail(), videoSelStream.getResolution(), null, null));
         } else if ("audio".equals(mode) && audioSelStream != null) {
-            t.add(new Task(videoDetails.getId() + ":a", null, audioSelStream, null, null, f, d, threadCount, null));
+            t.add(new Task(videoDetails.getId() + ":a", null, audioSelStream, null, null, f, d, threadCount, videoDetails.getTitle(), videoDetails.getThumbnail(), null, null, null));
         }
-        
+
         if (subtitleSel && subtitleSelStream != null) {
-            t.add(new Task(videoDetails.getId() + ":s", null, null, subtitleSelStream, null, f, d, threadCount, null));
+            t.add(new Task(videoDetails.getId() + ":s", null, null, subtitleSelStream, null, f, d, threadCount, videoDetails.getTitle(), videoDetails.getThumbnail(), null, null, null));
         }
-        
+
         if (thumbSel)
-            t.add(new Task(videoDetails.getId() + ":t", null, null, null, videoDetails.getThumbnail(), f, d, threadCount, null));
-            
+            t.add(new Task(videoDetails.getId() + ":t", null, null, null, videoDetails.getThumbnail(), f, d, threadCount, videoDetails.getTitle(), videoDetails.getThumbnail(), null, null, null));
+
         return t;
     }
 }

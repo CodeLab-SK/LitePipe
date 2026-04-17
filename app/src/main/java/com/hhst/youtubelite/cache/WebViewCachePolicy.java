@@ -89,6 +89,14 @@ public final class WebViewCachePolicy {
 			URI uri = URI.create(url);
 			String host = uri.getHost();
 			if (host == null || "accounts.youtube.com".equalsIgnoreCase(host)) return false;
+			
+			String path = uri.getPath();
+			if (path != null) {
+				if (path.contains("/feed/") || path.contains("/history") || path.contains("/results")) {
+					return false;
+				}
+			}
+
 			String lowerHost = host.toLowerCase(Locale.US);
 			return lowerHost.equals(Constant.YOUTUBE_DOMAIN) || lowerHost.endsWith("." + Constant.YOUTUBE_DOMAIN);
 		} catch (RuntimeException ignored) {
@@ -108,7 +116,7 @@ public final class WebViewCachePolicy {
 
 	private boolean isHtmlLikeResponse(@NonNull Request request, @NonNull Response response) {
 		ResponseBody body = response.body();
-		MediaType contentType = body.contentType();
+		MediaType contentType = body != null ? body.contentType() : null;
 		if (contentType != null) {
 			String type = contentType.type();
 			String subtype = contentType.subtype();

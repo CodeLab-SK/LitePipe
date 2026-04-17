@@ -55,6 +55,7 @@ public final class YoutubeFragment extends Fragment {
 	@Nullable private YoutubeWebview webview;
 	@Nullable private SwipeRefreshLayout swipeRefreshLayout;
 	@Nullable private WebBackForwardList historySnapshot;
+	@Nullable private Bundle pendingRestoreState;
 
 	private final Handler handler = new Handler(Looper.getMainLooper());
 	private final Runnable refreshTimeoutRunnable = () -> {
@@ -133,8 +134,16 @@ public final class YoutubeFragment extends Fragment {
 			if (swipeRefreshLayout != null) swipeRefreshLayout.setRefreshing(false);
 		});
 		webview.init();
-		if (savedInstanceState != null) webview.restoreState(savedInstanceState);
-		else if (url != null) loadUrl(url);
+		
+		if (savedInstanceState != null) {
+			if (!isHidden()) {
+				webview.restoreState(savedInstanceState);
+			} else {
+				pendingRestoreState = savedInstanceState;
+			}
+		} else if (url != null) {
+			loadUrl(url);
+		}
 		
 		executor.execute(() -> {
 			if (tabManager != null) {
@@ -150,6 +159,7 @@ public final class YoutubeFragment extends Fragment {
 		super.onResume();
 		if (webview != null && !isHidden()) {
 			webview.onResume();
+			webview.evaluateJavascript("window.dispatchEvent(new Event('onTabShow'));", null);
 		}
 	}
 
@@ -170,6 +180,11 @@ public final class YoutubeFragment extends Fragment {
 				webview.onPause();
 			} else {
 				webview.onResume();
+				if (pendingRestoreState != null) {
+					webview.restoreState(pendingRestoreState);
+					pendingRestoreState = null;
+				}
+				webview.evaluateJavascript("window.dispatchEvent(new Event('onTabShow'));", null);
 				webview.setVisibility(View.INVISIBLE);
 				webview.setVisibility(View.VISIBLE);
 				webview.requestLayout();
@@ -195,7 +210,11 @@ public final class YoutubeFragment extends Fragment {
 	@Override
 	public void onSaveInstanceState(@NonNull final Bundle outState) {
 		super.onSaveInstanceState(outState);
-		if (webview != null) webview.saveState(outState);
+		if (webview != null) {
+			webview.saveState(outState);
+		} else if (pendingRestoreState != null) {
+			outState.putAll(pendingRestoreState);
+		}
 	}
 
 	@Nullable public String getUrl() { return url; }

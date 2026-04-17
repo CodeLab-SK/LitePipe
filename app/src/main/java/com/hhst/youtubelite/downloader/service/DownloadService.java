@@ -79,6 +79,7 @@ public class DownloadService extends Service {
 		itagPrefs = getSharedPreferences("download_itags", Context.MODE_PRIVATE);
 		createNotificationChannel();
 		cleanupOldFailedTemps();
+		resumeRunningTasks();
 	}
 
 	private void cleanupOldFailedTemps() {
@@ -87,12 +88,22 @@ public class DownloadService extends Service {
 			List<DownloadRecord> all = historyRepository.getAllSorted();
 			for (DownloadRecord r : all) {
 				if (r.getStatus() == DownloadStatus.FAILED && (now - r.getUpdatedAt() > FAILED_TEMP_CLEANUP_THRESHOLD)) {
-					liteDL.cancel(r.getTaskId());
 					String baseName = r.getFileName();
 					File cacheDir = getCacheDir();
 					deleteFile(new File(cacheDir, baseName + "_v.tmp"));
 					deleteFile(new File(cacheDir, baseName + "_a.tmp"));
 					deleteFile(new File(cacheDir, baseName + "_m.tmp"));
+				}
+			}
+		}).start();
+	}
+
+	private void resumeRunningTasks() {
+		new Thread(() -> {
+			List<DownloadRecord> all = historyRepository.getAllSorted();
+			for (DownloadRecord r : all) {
+				if (r.getStatus() == DownloadStatus.RUNNING || r.getStatus() == DownloadStatus.QUEUED || r.getStatus() == DownloadStatus.MERGING) {
+					mainHandler.post(() -> resume(r.getTaskId()));
 				}
 			}
 		}).start();
@@ -152,7 +163,7 @@ public class DownloadService extends Service {
 
 		if (record == null) {
 			record = new DownloadRecord(taskId, taskId, type, DownloadStatus.RUNNING, 0,
-							task.fileName(), outPath, now, now, null, 0L, 0L, task.parentId(), task.title(), task.thumbnailUrl(), 0, 0, 0, 0, false, task.quality());
+							task.fileName(), outPath, now, now, null, 0L, 0L, task.parentId(), task.title(), task.thumbnailUrl(), 0, 0, 0, 0, false, task.quality(), task.threadCount());
 		} else {
 			record.setStatus(DownloadStatus.RUNNING);
 			record.setUpdatedAt(now);
@@ -163,12 +174,15 @@ public class DownloadService extends Service {
 			record.setThumbnailUrl(task.thumbnailUrl());
 			record.setQuality(task.quality());
 			record.setParentId(task.parentId());
+			record.setThreadCount(task.threadCount());
 		}
 		historyRepository.upsert(record);
 		broadcastRecordUpdated(taskId);
 
 		attachCallback(taskId);
 		liteDL.download(task);
+		
+		updateNotificationForRemainingTasks();
 	}
 
 	private void attachCallback(final String taskId) {
@@ -272,6 +286,8 @@ public class DownloadService extends Service {
 			PlaybackDetails details = youtubeExtractor.getPlaybackDetails("https://www.youtube.com/watch?v=" + record.getVideoId(), null);
 			int vItag = itagPrefs.getInt(record.getTaskId() + "_v_itag", -1);
 			int aItag = itagPrefs.getInt(record.getTaskId() + "_a_itag", -1);
+			String aTrack = itagPrefs.getString(record.getTaskId() + "_a_track", null);
+			String aLang = itagPrefs.getString(record.getTaskId() + "_a_lang", null);
 
 			VideoStream video = details.catalog().getVideoStreams().stream()
 							.filter(s -> s.getItag() == vItag)
@@ -279,7 +295,16 @@ public class DownloadService extends Service {
 							.orElse(null);
 
 			AudioStream audio = details.catalog().getAudioStreams().stream()
-							.filter(s -> s.getItag() == aItag)
+							.filter(s -> {
+								if (s.getItag() != aItag) return false;
+								if (aTrack != null) {
+									return aTrack.equals(s.getAudioTrackName());
+								}
+								if (aLang != null) {
+									return s.getAudioLocale() != null && aLang.equals(s.getAudioLocale().getLanguage());
+								}
+								return true;
+							})
 							.findFirst()
 							.orElse(null);
 
@@ -289,8 +314,9 @@ public class DownloadService extends Service {
 			File outParent = new File(record.getOutputPath()).getParentFile();
 			if (outParent == null) outParent = new File(getExternalCacheDir(), "downloads");
 
+			int threads = record.getThreadCount() > 0 ? record.getThreadCount() : 4;
 			Task newTask = new Task(record.getTaskId(), video, audio, null, null, record.getFileName(),
-							outParent, 4, record.getTitle(), record.getThumbnailUrl(), record.getQuality(), record.getParentId(), null);
+							outParent, threads, record.getTitle(), record.getThumbnailUrl(), record.getQuality(), record.getParentId(), null);
 
 			mainHandler.post(() -> startTask(newTask));
 		} catch (Exception e) {
@@ -423,7 +449,15 @@ public class DownloadService extends Service {
 	private void saveItags(Task t) {
 		SharedPreferences.Editor e = itagPrefs.edit();
 		if (t.video() != null) e.putInt(t.videoId() + "_v_itag", t.video().getItag());
-		if (t.audio() != null) e.putInt(t.videoId() + "_a_itag", t.audio().getItag());
+		if (t.audio() != null) {
+			e.putInt(t.videoId() + "_a_itag", t.audio().getItag());
+			e.putString(t.videoId() + "_a_track", t.audio().getAudioTrackName());
+			if (t.audio().getAudioLocale() != null) {
+				e.putString(t.videoId() + "_a_lang", t.audio().getAudioLocale().getLanguage());
+			} else {
+				e.remove(t.videoId() + "_a_lang");
+			}
+		}
 		e.apply();
 	}
 

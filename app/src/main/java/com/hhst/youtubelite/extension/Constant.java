@@ -17,6 +17,16 @@ public class Constant {
 	public static final String DEFAULT_QUALITY = "default_quality";
 	public static final String DEFAULT_PLAYBACK_SPEED = "default_playback_speed";
 	public static final String ENABLE_PLAYER_GESTURES = "enable_player_gestures";
+
+    public static final String PLAYER_GESTURES = "player_gestures_group";
+    public static final String SHORTS_GESTURES = "shorts_gestures_group";
+    public static final String SHORTS_BUTTONS = "shorts_buttons_group";
+
+	public static final String PLAYER_GESTURE_BRIGHTNESS = "player_gesture_brightness";
+	public static final String PLAYER_GESTURE_VOLUME = "player_gesture_volume";
+	public static final String PLAYER_GESTURE_SEEK = "player_gesture_seek";
+	public static final String PLAYER_GESTURE_2X = "player_gesture_2x";
+	public static final String DOUBLE_TAP_SEEK_AMOUNT = "double_tap_seek_amount";
 	
 	public static final String NAV_BAR_ORDER = "nav_bar_order";
 	public static final String NAV_BAR_SHOW_HOME = "nav_bar_show_home";
@@ -42,8 +52,17 @@ public class Constant {
 	public static final String DEFAULT_ACTION_BAR_ORDER = "like_dislike,download,pip,share,remix,thanks,clip,save,report,ask_ai";
 
 	public static final String HIDE_SHORTS = "hide_shorts";
-	public static final String HIDE_COMMENTS = "hide_comments";
-	public static final String HIDE_RECOMMENDATIONS = "hide_recommendations";
+	public static final String HIDE_SHORTS_BUTTONS = "hide_shorts_buttons";
+	public static final String SHORTS_SHOW_LIKE = "shorts_show_like";
+	public static final String SHORTS_SHOW_DISLIKE = "shorts_show_dislike";
+	public static final String SHORTS_SHOW_COMMENTS = "shorts_show_comments";
+	public static final String SHORTS_SHOW_SHARE = "shorts_show_share";
+	public static final String SHORTS_SHOW_REMIX = "shorts_show_remix";
+	public static final String SHORTS_SHOW_SUBSCRIBE = "shorts_show_subscribe";
+
+	public static final String SHORTS_GESTURE_2X = "shorts_gesture_2x";
+	public static final String SHORTS_GESTURE_SEEK = "shorts_gesture_seek";
+	public static final String SHORTS_GESTURE_VOLUME = "shorts_gesture_volume";
 	public static final String CUSTOMIZE_PLAYER_BUTTONS = "player_internal_buttons";
 	public static final String PLAYER_SHOW_SPEED = "player_show_speed";
 	public static final String PLAYER_SHOW_QUALITY = "player_show_quality";
@@ -68,6 +87,11 @@ public class Constant {
 		DEFAULT_PREFERENCES.put(ENABLE_IN_APP_MINI_PLAYER, true);
 		DEFAULT_PREFERENCES.put(REMEMBER_RESIZE_MODE, false);
 		DEFAULT_PREFERENCES.put(ENABLE_PLAYER_GESTURES, true);
+		DEFAULT_PREFERENCES.put(PLAYER_GESTURE_BRIGHTNESS, true);
+		DEFAULT_PREFERENCES.put(PLAYER_GESTURE_VOLUME, true);
+		DEFAULT_PREFERENCES.put(PLAYER_GESTURE_SEEK, true);
+		DEFAULT_PREFERENCES.put(PLAYER_GESTURE_2X, true);
+		
 		DEFAULT_PREFERENCES.put(NAV_BAR_SHOW_HOME, true);
 		DEFAULT_PREFERENCES.put(NAV_BAR_SHOW_SHORTS, true);
 		DEFAULT_PREFERENCES.put(NAV_BAR_SHOW_SUBSCRIPTIONS, true);
@@ -86,8 +110,18 @@ public class Constant {
 		DEFAULT_PREFERENCES.put(ACTION_BAR_SHOW_ASK_AI, true);
 
 		DEFAULT_PREFERENCES.put(HIDE_SHORTS, false);
-		DEFAULT_PREFERENCES.put(HIDE_COMMENTS, false);
-		DEFAULT_PREFERENCES.put(HIDE_RECOMMENDATIONS, false);
+		DEFAULT_PREFERENCES.put(HIDE_SHORTS_BUTTONS, false);
+		DEFAULT_PREFERENCES.put(SHORTS_SHOW_LIKE, true);
+		DEFAULT_PREFERENCES.put(SHORTS_SHOW_DISLIKE, true);
+		DEFAULT_PREFERENCES.put(SHORTS_SHOW_COMMENTS, true);
+		DEFAULT_PREFERENCES.put(SHORTS_SHOW_SHARE, true);
+		DEFAULT_PREFERENCES.put(SHORTS_SHOW_REMIX, true);
+		DEFAULT_PREFERENCES.put(SHORTS_SHOW_SUBSCRIBE, true);
+
+		DEFAULT_PREFERENCES.put(SHORTS_GESTURE_2X, true);
+		DEFAULT_PREFERENCES.put(SHORTS_GESTURE_SEEK, true);
+		DEFAULT_PREFERENCES.put(SHORTS_GESTURE_VOLUME, true);
+
 		DEFAULT_PREFERENCES.put(PLAYER_SHOW_SPEED, true);
 		DEFAULT_PREFERENCES.put(PLAYER_SHOW_QUALITY, true);
 		DEFAULT_PREFERENCES.put(PLAYER_SHOW_SUBTITLES, true);

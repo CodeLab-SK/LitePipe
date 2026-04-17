@@ -11,59 +11,53 @@ public class EngineQueueRoutingTest {
 	@Test
 	public void next_entersQueueAtHeadWhenCurrentVideoIsMissing() {
 		final QueueNav availability =
-						Engine.resolveQueueNavigationAvailability(true, true, false, false, false);
+						QueueNav.from(true, true, false, false, false);
 
-		assertTrue(Engine.shouldUseQueueForNext(availability));
-		assertFalse(Engine.shouldUseWebPlaylistForNext(availability));
+		assertTrue(availability.usesQueueForNext());
 	}
 
 	@Test
 	public void shuffle_usesWholeQueueWhenCurrentVideoIsMissing() {
 		final QueueNav availability =
-						Engine.resolveQueueNavigationAvailability(true, true, false, false, false);
+						QueueNav.from(true, true, false, false, false);
 
-		assertTrue(Engine.shouldUseQueueForShuffle(availability));
-		assertFalse(Engine.shouldUseWebPlaylistForShuffle(availability));
+		assertTrue(availability.usesQueueForShuffle());
 	}
 
 	@Test
 	public void previous_isBlockedWhenCurrentVideoIsMissingButQueueIsActive() {
 		final QueueNav availability =
-						Engine.resolveQueueNavigationAvailability(true, true, false, false, false);
+						QueueNav.from(true, true, false, false, false);
 
-		assertFalse(Engine.shouldUseQueueForPrevious(availability));
-		assertFalse(Engine.shouldUseWebPlaylistForPrevious(availability));
+		assertFalse(availability.usesQueueForPrevious());
+		assertFalse(availability.hasPreviousFallback());
 	}
 
 	@Test
 	public void next_wrapsToQueueHeadWhenCurrentVideoIsAtQueueTail() {
 		final QueueNav availability =
-						Engine.resolveQueueNavigationAvailability(true, true, true, false, false);
+						QueueNav.from(true, true, true, false, false);
 
-		assertTrue(Engine.shouldUseQueueForNext(availability));
-		assertFalse(Engine.shouldUseWebPlaylistForNext(availability));
+		assertTrue(availability.usesQueueForNext());
 	}
 
 	@Test
 	public void previous_isBlockedWhenCurrentVideoIsAtQueueHead() {
 		final QueueNav availability =
-						Engine.resolveQueueNavigationAvailability(true, true, true, true, false);
+						QueueNav.from(true, true, true, true, false);
 
-		assertFalse(Engine.shouldUseQueueForPrevious(availability));
-		assertFalse(Engine.shouldUseWebPlaylistForPrevious(availability));
+		assertFalse(availability.usesQueueForPrevious());
+		assertFalse(availability.hasPreviousFallback());
 	}
 
 	@Test
-	public void inactiveAvailability_fallsBackToWebPlaylistNavigation() {
+	public void inactiveAvailability_isInactive() {
 		final QueueNav availability =
-						Engine.resolveQueueNavigationAvailability(false, true, true, false, false);
+						QueueNav.from(false, true, true, false, false);
 
-		assertFalse(Engine.shouldUseQueueForNext(availability));
-		assertFalse(Engine.shouldUseQueueForShuffle(availability));
-		assertFalse(Engine.shouldUseQueueForPrevious(availability));
-		assertTrue(Engine.shouldUseWebPlaylistForNext(availability));
-		assertTrue(Engine.shouldUseWebPlaylistForShuffle(availability));
-		assertTrue(Engine.shouldUseWebPlaylistForPrevious(availability));
+		assertFalse(availability.usesQueueForNext());
+		assertFalse(availability.usesQueueForShuffle());
+		assertFalse(availability.usesQueueForPrevious());
 	}
 
 	@Test
@@ -71,8 +65,8 @@ public class EngineQueueRoutingTest {
 		final QueueNav availability = watch();
 
 		assertTrue(availability.isPreviousActionEnabled());
-		assertFalse(Engine.shouldUseQueueForPrevious(availability));
-		assertFalse(Engine.shouldUseWebPlaylistForPrevious(availability));
+		assertFalse(availability.usesQueueForPrevious());
+		assertTrue(availability.hasPreviousFallback());
 	}
 
 	private static QueueNav watch() {

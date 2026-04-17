@@ -44,17 +44,20 @@ public class SettingsActivity extends AppCompatActivity {
         findViewById(R.id.category_general).setOnClickListener(v -> 
             openSubSettings(0, R.string.general));
 
+        findViewById(R.id.category_shorts).setOnClickListener(v -> 
+            openSubSettings(1, R.string.shorts));
+
         findViewById(R.id.category_player).setOnClickListener(v -> 
-            openSubSettings(1, R.string.player));
+            openSubSettings(2, R.string.player));
 
         findViewById(R.id.category_sponsorblock).setOnClickListener(v -> 
-            openSubSettings(2, R.string.sponsorblock));
+            openSubSettings(3, R.string.sponsorblock));
 
         findViewById(R.id.category_download).setOnClickListener(v -> 
-            openSubSettings(3, R.string.download));
+            openSubSettings(4, R.string.download));
 
         findViewById(R.id.category_miscellaneous).setOnClickListener(v -> 
-            openSubSettings(4, R.string.miscellaneous));
+            openSubSettings(5, R.string.miscellaneous));
 
         findViewById(R.id.reset_layout).setOnClickListener(v -> showResetConfirmation());
     }

@@ -46,6 +46,7 @@ public class DownloadRecord {
 	private boolean sealed;
 	@Nullable
 	private String quality;
+	private int threadCount;
 
 	public String getVid() {
 		return videoId;

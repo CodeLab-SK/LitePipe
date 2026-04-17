@@ -167,6 +167,12 @@ public class DownloadActivity extends AppCompatActivity {
 		if (filterParentId == null) {
 			for (DownloadRecord r : verifiedList) {
 				if (r.getParentId() == null) {
+					if (r.getType() == DownloadType.PLAYLIST) {
+						if (countChildren(r.getTaskId()) == 0) {
+							historyRepository.remove(r.getTaskId());
+							continue;
+						}
+					}
 					filtered.add(r);
 				}
 			}
@@ -178,6 +184,16 @@ public class DownloadActivity extends AppCompatActivity {
 			}
 		}
 		return filtered;
+	}
+
+	private int countChildren(String parentId) {
+		int count = 0;
+		for (DownloadRecord r : historyRepository.getAllSorted()) {
+			if (Objects.equals(r.getParentId(), parentId)) {
+				count++;
+			}
+		}
+		return count;
 	}
 
 	private void clearSelection() {

@@ -13,34 +13,34 @@
         android:paddingTop="12dp"
         android:paddingBottom="8dp">
 
-        <ImageButton
-            android:id="@+id/btn_close"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_alignParentStart="true"
-            android:layout_centerVertical="true"
-            android:layout_marginStart="8dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/close"
-            android:src="@drawable/ic_arrow_back"
-            app:tint="?attr/colorOnSurface"
-            tools:ignore="TouchTargetSizeCheck" />
-
         <TextView
             android:id="@+id/dialog_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_centerInParent="true"
-            android:layout_toEndOf="@id/btn_close"
-            android:layout_marginEnd="48dp"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:layout_marginStart="20dp"
+            android:layout_toStartOf="@id/btn_close"
             android:ellipsize="end"
             android:fontFamily="sans-serif-black"
             android:maxLines="1"
-            android:paddingHorizontal="12dp"
             android:text="@string/more_options"
             android:textAppearance="?attr/textAppearanceTitleMedium"
             android:textColor="?attr/colorOnSurface"
             android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/btn_close"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:layout_marginEnd="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/close"
+            android:src="@drawable/ic_close"
+            app:tint="?attr/colorOnSurface"
+            tools:ignore="TouchTargetSizeCheck" />
 
     </RelativeLayout>
 

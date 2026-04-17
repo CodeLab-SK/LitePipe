@@ -138,13 +138,25 @@ public final class OkHttpWebViewInterceptor {
 		if (cacheControl != null) builder.cacheControl(cacheControl);
 		builder.tag(WebViewCachePolicy.CacheRequestInfo.class, cachePolicy.classifyRequest(request.isForMainFrame(), url, request.getUrl().getPath()));
 
+		boolean hasAcceptLanguage = false;
 		for (final Map.Entry<String, String> header : request.getRequestHeaders().entrySet()) {
 			String name = header.getKey();
 			String value = header.getValue();
 			if (name == null || name.isEmpty() || value == null) continue;
-			if (Set.of("cache-control", "content-length", "cookie", "host", "if-modified-since", "if-none-match", "pragma").contains(name.toLowerCase(Locale.US)))
+			String lowerName = name.toLowerCase(Locale.US);
+			if (Set.of("cache-control", "content-length", "cookie", "host", "if-modified-since", "if-none-match", "pragma").contains(lowerName))
 				continue;
+			if ("accept-language".equals(lowerName)) {
+				hasAcceptLanguage = true;
+				if (UrlUtils.isAllowedUrl(url)) {
+					value = getAcceptLanguageHeader();
+				}
+			}
 			builder.header(name, value);
+		}
+
+		if (!hasAcceptLanguage && UrlUtils.isAllowedUrl(url)) {
+			builder.header("Accept-Language", getAcceptLanguageHeader());
 		}
 
 		String cookies = cookieAccessCoordinator.getCookie(url);
@@ -152,6 +164,11 @@ public final class OkHttpWebViewInterceptor {
 			builder.header("Cookie", Objects.requireNonNull(cookies));
 		}
 		return builder.build();
+	}
+
+	@NonNull
+	private String getAcceptLanguageHeader() {
+		return Locale.getDefault().toLanguageTag() + ",en;q=0.9";
 	}
 
 	@NonNull

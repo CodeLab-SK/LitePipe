@@ -104,10 +104,10 @@ public class LiteDownloaderImplTest {
 		final AtomicReference<File> audioTemp = new AtomicReference<>();
 		when(video.getContent()).thenReturn("video");
 		when(audio.getContent()).thenReturn("audio");
-		when(streamDownloader.download(anyString(), any(File.class), any(ProgressCallback.class)))
+		when(streamDownloader.download(anyString(), anyString(), any(File.class), any(ProgressCallback.class)))
 						.thenAnswer(invocation -> {
-							final String content = invocation.getArgument(0);
-							final File output = invocation.getArgument(1);
+							final String content = invocation.getArgument(1);
+							final File output = invocation.getArgument(2);
 							if ("video".equals(content)) videoTemp.set(output);
 							if ("audio".equals(content)) audioTemp.set(output);
 							FileUtils.writeByteArrayToFile(output, content.getBytes(StandardCharsets.UTF_8));
@@ -132,7 +132,7 @@ public class LiteDownloaderImplTest {
 	public void staleStreamFailure_invalidatesPlaybackCacheByVideoId() {
 		final VideoStream video = mock(VideoStream.class);
 		when(video.getContent()).thenReturn("video");
-		when(streamDownloader.download(anyString(), any(File.class), any(ProgressCallback.class)))
+		when(streamDownloader.download(anyString(), anyString(), any(File.class), any(ProgressCallback.class)))
 						.thenReturn(CompletableFuture.failedFuture(new IOException("GET 403")));
 
 		final String taskId = "video-id:v";
@@ -148,7 +148,7 @@ public class LiteDownloaderImplTest {
 	public void genericDownloadFailure_doesNotInvalidatePlaybackCache() {
 		final VideoStream video = mock(VideoStream.class);
 		when(video.getContent()).thenReturn("video");
-		when(streamDownloader.download(anyString(), any(File.class), any(ProgressCallback.class)))
+		when(streamDownloader.download(anyString(), anyString(), any(File.class), any(ProgressCallback.class)))
 						.thenReturn(CompletableFuture.failedFuture(new IOException("socket timeout")));
 
 		final String taskId = "video-id:v";
@@ -309,9 +309,9 @@ public class LiteDownloaderImplTest {
 	@Test
 	public void tmpFiles_areIsolatedByTaskIdWhenFileNamesMatch() throws Exception {
 		final List<File> tempFiles = new ArrayList<>();
-		when(streamDownloader.download(anyString(), any(File.class), any(ProgressCallback.class)))
+		when(streamDownloader.download(anyString(), anyString(), any(File.class), any(ProgressCallback.class)))
 						.thenAnswer(invocation -> {
-							tempFiles.add(invocation.getArgument(1));
+							tempFiles.add(invocation.getArgument(2));
 							return new CompletableFuture<>();
 						});
 		final VideoStream firstVideo = mock(VideoStream.class);
@@ -359,7 +359,7 @@ public class LiteDownloaderImplTest {
 	                  final SubtitlesStream subtitle,
 	                  final String thumbnail,
 	                  final String fileName) {
-		return new Task(taskId, video, audio, subtitle, thumbnail, fileName, destDir, 4, null);
+		return new Task(taskId, video, audio, subtitle, thumbnail, fileName, destDir, 4, null, null, null, null, null);
 	}
 
 	private ProgressCallback2 registerCallback(final String taskId) {
@@ -370,12 +370,12 @@ public class LiteDownloaderImplTest {
 
 	private void stubStreamDownloadsWriteRequestedContent(final List<File> tempFiles) throws Exception {
 		doAnswer(invocation -> {
-			final String content = invocation.getArgument(0);
-			final File output = invocation.getArgument(1);
+			final String content = invocation.getArgument(1);
+			final File output = invocation.getArgument(2);
 			tempFiles.add(output);
 			FileUtils.writeByteArrayToFile(output, content.getBytes(StandardCharsets.UTF_8));
 			return CompletableFuture.completedFuture(output);
-		}).when(streamDownloader).download(anyString(), any(File.class), any(ProgressCallback.class));
+		}).when(streamDownloader).download(anyString(), anyString(), any(File.class), any(ProgressCallback.class));
 	}
 
 	private File createSourceFile(final String prefix, final String content) throws IOException {

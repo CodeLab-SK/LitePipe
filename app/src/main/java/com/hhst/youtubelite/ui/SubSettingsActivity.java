@@ -221,6 +221,7 @@ public class SubSettingsActivity extends AppCompatActivity {
                 boolean isDownloadLocation = Constant.DOWNLOAD_LOCATION.equals(ext.key());
                 boolean isDefaultQuality = Constant.DEFAULT_QUALITY.equals(ext.key());
                 boolean isDefaultSpeed = Constant.DEFAULT_PLAYBACK_SPEED.equals(ext.key());
+                boolean isSeekAmount = Constant.DOUBLE_TAP_SEEK_AMOUNT.equals(ext.key());
 
                 if (isDownloadLocation) {
                     toggleHolder.description.setText(DownloadStorageUtils.getDownloadsLocationLabel(SubSettingsActivity.this));
@@ -242,6 +243,13 @@ public class SubSettingsActivity extends AppCompatActivity {
                     toggleHolder.checkbox.setVisibility(View.GONE);
                     toggleHolder.actionButton.setVisibility(View.VISIBLE);
                     toggleHolder.actionButton.setOnClickListener(v -> showSpeedSelector());
+                } else if (isSeekAmount) {
+                    String amount = MMKV.defaultMMKV().decodeString("preferences:" + Constant.DOUBLE_TAP_SEEK_AMOUNT, "10s");
+                    toggleHolder.description.setText(amount);
+                    toggleHolder.description.setVisibility(View.VISIBLE);
+                    toggleHolder.checkbox.setVisibility(View.GONE);
+                    toggleHolder.actionButton.setVisibility(View.VISIBLE);
+                    toggleHolder.actionButton.setOnClickListener(v -> showSeekAmountSelector());
                 } else {
                     toggleHolder.actionButton.setVisibility(View.GONE);
                     if (ext.helpText() != 0) {
@@ -270,6 +278,8 @@ public class SubSettingsActivity extends AppCompatActivity {
                         showQualitySelector();
                     } else if (isDefaultSpeed) {
                         showSpeedSelector();
+                    } else if (isSeekAmount) {
+                        showSeekAmountSelector();
                     } else if (ext.key() != null && (ext.key().equals(Constant.NAV_BAR_ORDER) || ext.key().equals(Constant.ACTION_BAR_ORDER))) {
                         Intent intent = new Intent(SubSettingsActivity.this, SubSettingsActivity.class);
                         if (ext.key().equals(Constant.NAV_BAR_ORDER)) intent.putExtra(EXTRA_NAV_BAR_MODE, true);
@@ -296,6 +306,18 @@ public class SubSettingsActivity extends AppCompatActivity {
                     .setTitle(R.string.default_quality)
                     .setItems(options, (d, w) -> {
                         MMKV.defaultMMKV().encode("preferences:" + Constant.DEFAULT_QUALITY, options[w]);
+                        notifyDataSetChanged();
+                    })
+                    .show();
+        }
+
+        @SuppressLint("NotifyDataSetChanged")
+        private void showSeekAmountSelector() {
+            String[] options = {"5s", "10s", "15s", "20s", "30s", "60s"};
+            new MaterialAlertDialogBuilder(SubSettingsActivity.this)
+                    .setTitle(R.string.double_tap_seek_amount)
+                    .setItems(options, (d, w) -> {
+                        MMKV.defaultMMKV().encode("preferences:" + Constant.DOUBLE_TAP_SEEK_AMOUNT, options[w]);
                         notifyDataSetChanged();
                     })
                     .show();

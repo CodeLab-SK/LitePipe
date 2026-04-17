@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Looper;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -195,16 +196,16 @@ public class YoutubeWebview extends WebView {
 	@Override
 	public void loadUrl(@NonNull final String url) {
 		if (isDestroyed) return;
-		final String resolvedUrl = sanitizeLoadUrl(url);
-		if (canLoad(resolvedUrl)) {
-			super.loadUrl(resolvedUrl);
+		final String resolvesUrl = UrlUtils.appendLanguage(sanitizeLoadUrl(url));
+		if (canLoad(resolvesUrl)) {
+			super.loadUrl(resolvesUrl);
 			return;
 		}
-		if (canOpenExternal(resolvedUrl)) {
-			openExternal(Uri.parse(resolvedUrl));
+		if (canOpenExternal(resolvesUrl)) {
+			openExternal(Uri.parse(resolvesUrl));
 			return;
 		}
-		Log.w("YoutubeWebview", "Blocked unauthorized URL: " + resolvedUrl);
+		Log.w("YoutubeWebview", "Blocked unauthorized URL: " + resolvesUrl);
 	}
 
 	static boolean canLoad(@NonNull final String url) {
@@ -300,6 +301,11 @@ public class YoutubeWebview extends WebView {
 		settings.setMediaPlaybackRequiresUserGesture(false);
 		settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
 		settings.setUserAgentString(com.hhst.youtubelite.Constant.USER_AGENT);
+
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+			boolean isDark = (getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES;
+			settings.setForceDark(isDark ? WebSettings.FORCE_DARK_ON : WebSettings.FORCE_DARK_OFF);
+		}
 
 		final JavascriptInterface jsInterface = new JavascriptInterface(this, youtubeExtractor, player, extensionManager, tabManager, poTokenProvider, queueRepository, queueWarmer);
 		addJavascriptInterface(jsInterface, "android");
