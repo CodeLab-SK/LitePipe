@@ -68,8 +68,8 @@ public class NavigationBar extends HorizontalScrollView {
         kv = MMKV.defaultMMKV();
         
         ViewCompat.setOnApplyWindowInsetsListener(this, (v, insets) -> {
-            Insets navInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), navInsets.bottom);
+            Insets navInsets = insets.getInsets(WindowInsetsCompat.Type.navigationBars());
+            v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), navInsets.bottom + dpToPx(2));
             return insets;
         });
     }
@@ -183,9 +183,6 @@ public class NavigationBar extends HorizontalScrollView {
         getContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true);
         int colorOnSurfaceVariant = typedValue.data;
 
-        getContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorSecondaryContainer, typedValue, true);
-        int colorSecondaryContainer = typedValue.data;
-
         int iconColor = isSelected ? colorOnSurface : colorOnSurfaceVariant;
         int textColor = isSelected ? colorOnSurface : colorOnSurfaceVariant;
 
@@ -198,13 +195,16 @@ public class NavigationBar extends HorizontalScrollView {
 
         if (isSelected) {
             View indicator = new View(getContext());
-            FrameLayout.LayoutParams indicatorParams = new FrameLayout.LayoutParams(containerWidth, containerHeight);
+            int indicatorHeight = dpToPx(3);
+            FrameLayout.LayoutParams indicatorParams = new FrameLayout.LayoutParams(dpToPx(24), indicatorHeight);
+            indicatorParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
+            indicatorParams.bottomMargin = dpToPx(-4);
             indicator.setLayoutParams(indicatorParams);
             
             GradientDrawable shape = new GradientDrawable();
             shape.setShape(GradientDrawable.RECTANGLE);
-            shape.setCornerRadius(dpToPx(14));
-            shape.setColor(colorSecondaryContainer);
+            shape.setCornerRadius(dpToPx(1));
+            shape.setColor(getContext().getColor(R.color.yt_red));
             indicator.setBackground(shape);
             iconContainer.addView(indicator);
         }
@@ -226,11 +226,12 @@ public class NavigationBar extends HorizontalScrollView {
             label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
             label.setGravity(Gravity.CENTER);
             label.setTextColor(textColor);
-            label.setPadding(dpToPx(4), 0, dpToPx(4), dpToPx(6));
+            label.setPadding(dpToPx(4), 0, dpToPx(4), dpToPx(4)); // Reduced bottom padding slightly to avoid cutoff if insets are applied
             label.setSingleLine(true);
             label.setEllipsize(TextUtils.TruncateAt.END);
             if (isSelected) {
                 label.setTypeface(null, Typeface.BOLD);
+                label.setTextColor(getContext().getColor(R.color.yt_red));
             } else {
                 label.setTypeface(null, Typeface.NORMAL);
             }

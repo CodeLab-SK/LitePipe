@@ -49,6 +49,15 @@ public final class QueueItem {
 	}
 
 	@Nullable
+	public String getVideoUrl() {
+		return url;
+	}
+
+	public void setVideoUrl(@Nullable final String url) {
+		this.url = url;
+	}
+
+	@Nullable
 	public String getTitle() {
 		return title;
 	}

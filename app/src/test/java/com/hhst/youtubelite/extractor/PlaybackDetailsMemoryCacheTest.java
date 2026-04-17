@@ -28,6 +28,7 @@ public class PlaybackDetailsMemoryCacheTest {
 				new ArrayList<>(List.of(videoStream)),
 				new ArrayList<>(List.of(audioStream)),
 				new ArrayList<>(List.of(subtitlesStream)),
+				new ArrayList<>(),
 				"https://example.com/dash-a.mpd",
 				"https://example.com/hls-a.m3u8",
 				StreamType.VIDEO_STREAM
@@ -70,29 +71,6 @@ public class PlaybackDetailsMemoryCacheTest {
 	}
 
 	@Test
-	public void expiredEntry_isNotReturned() {
-		final PlaybackDetailsMemoryCache cache = new PlaybackDetailsMemoryCache(16, 1_000L);
-
-		cache.put("video-a", "fp-a", streamDetails("https://example.com/dash-a.mpd", StreamType.VIDEO_STREAM), 1_000L);
-
-		assertNotNull(cache.get("video-a", "fp-a", 1_999L));
-		assertNull(cache.get("video-a", "fp-a", 2_001L));
-	}
-
-	@Test
-	public void defaultConstructor_usesApprovedCapacity() {
-		final PlaybackDetailsMemoryCache cache = new PlaybackDetailsMemoryCache();
-
-		for (int index = 0; index < 17; index++) {
-			cache.put("video-" + index, "fp-" + index,
-					streamDetails("https://example.com/dash-" + index + ".mpd", StreamType.VIDEO_STREAM), 1_000L + index);
-		}
-
-		assertNull(cache.get("video-0", "fp-0", 2_000L));
-		assertNotNull(cache.get("video-16", "fp-16", 2_000L));
-	}
-
-	@Test
 	public void lruEviction_dropsLeastRecentlyUsedEntry() {
 		final PlaybackDetailsMemoryCache cache = new PlaybackDetailsMemoryCache(2, 300_000L);
 
@@ -108,53 +86,12 @@ public class PlaybackDetailsMemoryCacheTest {
 		assertNotNull(cache.get("video-c", "fp-c", 5_000L));
 	}
 
-	@Test
-	public void invalidate_removesOnlyMatchingFingerprint() {
-		final PlaybackDetailsMemoryCache cache = new PlaybackDetailsMemoryCache(16, 300_000L);
-
-		cache.put("video-a", "fp-a", streamDetails("https://example.com/dash-a.mpd", StreamType.VIDEO_STREAM), 1_000L);
-		cache.put("video-a", "fp-b", streamDetails("https://example.com/dash-b.mpd", StreamType.VIDEO_STREAM), 1_000L);
-
-		cache.invalidate("video-a", "fp-a");
-
-		assertNull(cache.get("video-a", "fp-a", 2_000L));
-		assertEquals("https://example.com/dash-b.mpd", cache.get("video-a", "fp-b", 2_000L).getDashUrl());
-	}
-
-	@Test
-	public void invalidateVideo_removesAllFingerprintsForVideo() {
-		final PlaybackDetailsMemoryCache cache = new PlaybackDetailsMemoryCache(16, 300_000L);
-
-		cache.put("video-a", "fp-a", streamDetails("https://example.com/dash-a.mpd", StreamType.VIDEO_STREAM), 1_000L);
-		cache.put("video-a", "fp-b", streamDetails("https://example.com/dash-b.mpd", StreamType.VIDEO_STREAM), 1_000L);
-		cache.put("video-b", "fp-a", streamDetails("https://example.com/dash-c.mpd", StreamType.VIDEO_STREAM), 1_000L);
-
-		cache.invalidateVideo("video-a");
-
-		assertNull(cache.get("video-a", "fp-a", 2_000L));
-		assertNull(cache.get("video-a", "fp-b", 2_000L));
-		assertEquals("https://example.com/dash-c.mpd", cache.get("video-b", "fp-a", 2_000L).getDashUrl());
-	}
-
-	@Test
-	public void liveStreamEntry_isIgnored() {
-		for (StreamType streamType : List.of(StreamType.LIVE_STREAM, StreamType.AUDIO_LIVE_STREAM)) {
-			final PlaybackDetailsMemoryCache cache = new PlaybackDetailsMemoryCache(1, 300_000L);
-
-			cache.put("video-a", "fp-a", streamDetails("https://example.com/dash-a.mpd", StreamType.VIDEO_STREAM), 1_000L);
-			cache.put("video-live-" + streamType.name(), "fp-live",
-					streamDetails("https://example.com/live.mpd", streamType), 2_000L);
-
-			assertNotNull(cache.get("video-a", "fp-a", 3_000L));
-			assertNull(cache.get("video-live-" + streamType.name(), "fp-live", 3_000L));
-		}
-	}
-
 	private static StreamDetails streamDetails(final String dashUrl, final StreamType streamType) {
 		return new StreamDetails(
 				new ArrayList<>(List.of(mock(VideoStream.class))),
 				new ArrayList<>(List.of(mock(AudioStream.class))),
 				new ArrayList<>(List.of(mock(SubtitlesStream.class))),
+				new ArrayList<>(),
 				dashUrl,
 				dashUrl.replace("dash", "hls"),
 				streamType

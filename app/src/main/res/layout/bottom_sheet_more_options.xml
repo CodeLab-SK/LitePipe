@@ -38,7 +38,7 @@
             android:layout_marginEnd="16dp"
             android:contentDescription="@string/resize_mode"
             android:src="@drawable/ic_resize"
-            app:tint="?attr/colorControlNormal" />
+            app:tint="?attr/colorPrimary" />
 
         <TextView
             android:layout_width="0dp"
@@ -53,7 +53,7 @@
             android:contentDescription="@null"
             android:importantForAccessibility="no"
             android:src="@drawable/ic_chevron_right"
-            app:tint="?attr/colorControlNormal" />
+            app:tint="?attr/colorPrimary" />
     </LinearLayout>
 
     <LinearLayout
@@ -71,7 +71,7 @@
             android:layout_marginEnd="16dp"
             android:contentDescription="@string/audio_track"
             android:src="@drawable/ic_track"
-            app:tint="?attr/colorControlNormal" />
+            app:tint="?attr/colorPrimary" />
 
         <TextView
             android:layout_width="0dp"
@@ -86,10 +86,9 @@
             android:contentDescription="@null"
             android:importantForAccessibility="no"
             android:src="@drawable/ic_chevron_right"
-            app:tint="?attr/colorControlNormal" />
+            app:tint="?attr/colorPrimary" />
     </LinearLayout>
 
-    <!-- New Subtitle Style Option -->
     <LinearLayout
         android:id="@+id/option_subtitle_style"
         android:layout_width="match_parent"
@@ -105,7 +104,7 @@
             android:layout_marginEnd="16dp"
             android:contentDescription="@string/subtitles"
             android:src="@drawable/ic_subtitles_on"
-            app:tint="?attr/colorControlNormal" />
+            app:tint="?attr/colorPrimary" />
 
         <TextView
             android:layout_width="0dp"
@@ -120,7 +119,7 @@
             android:contentDescription="@null"
             android:importantForAccessibility="no"
             android:src="@drawable/ic_chevron_right"
-            app:tint="?attr/colorControlNormal" />
+            app:tint="?attr/colorPrimary" />
     </LinearLayout>
 
     <LinearLayout
@@ -138,7 +137,7 @@
             android:layout_marginEnd="16dp"
             android:contentDescription="@string/info"
             android:src="@drawable/ic_info"
-            app:tint="?attr/colorControlNormal" />
+            app:tint="?attr/colorPrimary" />
 
         <TextView
             android:layout_width="0dp"
@@ -153,7 +152,7 @@
             android:contentDescription="@null"
             android:importantForAccessibility="no"
             android:src="@drawable/ic_chevron_right"
-            app:tint="?attr/colorControlNormal" />
+            app:tint="?attr/colorPrimary" />
     </LinearLayout>
 
 </LinearLayout>

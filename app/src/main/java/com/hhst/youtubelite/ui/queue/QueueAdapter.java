@@ -134,8 +134,6 @@ public final class QueueAdapter extends RecyclerView.Adapter<QueueAdapter.ViewHo
 		@NonNull
 		private final TextView authorView;
 		@NonNull
-		private final TextView playingBadgeView;
-		@NonNull
 		private final ImageButton deleteButton;
 
 		ViewHolder(@NonNull final View itemView) {
@@ -143,7 +141,6 @@ public final class QueueAdapter extends RecyclerView.Adapter<QueueAdapter.ViewHo
 			thumbnailView = itemView.findViewById(R.id.queue_item_thumbnail);
 			titleView = itemView.findViewById(R.id.queue_item_title);
 			authorView = itemView.findViewById(R.id.queue_item_author);
-			playingBadgeView = itemView.findViewById(R.id.queue_item_playing_badge);
 			deleteButton = itemView.findViewById(R.id.queue_item_delete);
 		}
 
@@ -162,7 +159,6 @@ public final class QueueAdapter extends RecyclerView.Adapter<QueueAdapter.ViewHo
 			final boolean playing = isPlaying(item.getVideoId(), playingId);
 			itemView.setActivated(playing);
 			itemView.setAlpha(1.0f);
-			playingBadgeView.setVisibility(playing ? View.VISIBLE : View.GONE);
 			itemView.setOnClickListener(v -> actions.onPlayRequested(item.copy()));
 			deleteButton.setOnClickListener(v -> actions.onDeleteRequested(item.copy()));
 		}

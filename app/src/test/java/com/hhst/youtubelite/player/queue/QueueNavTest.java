@@ -69,7 +69,7 @@ public class QueueNavTest {
 		final QueueNav availability = watch();
 
 		assertFalse(availability.usesQueueForPrevious());
-		assertTrue(availability.hasPrevWatch());
+		assertTrue(availability.hasPreviousFallback());
 		assertTrue(availability.isPreviousActionEnabled());
 	}
 

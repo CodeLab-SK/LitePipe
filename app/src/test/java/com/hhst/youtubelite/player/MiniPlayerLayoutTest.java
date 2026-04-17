@@ -8,15 +8,15 @@ public class MiniPlayerLayoutTest {
 
 	@Test
 	public void computeWidthDp_usesExpectedBreakpointsAndClamps() {
-		assertEquals(198, MiniPlayerLayout.computeWidthDp(320));
-		assertEquals(276, MiniPlayerLayout.computeWidthDp(600));
-		assertEquals(322, MiniPlayerLayout.computeWidthDp(700));
+		assertEquals(220, MiniPlayerLayout.computeWidthDp(320));
+		assertEquals(360, MiniPlayerLayout.computeWidthDp(600));
+		assertEquals(385, MiniPlayerLayout.computeWidthDp(700));
 	}
 
 	@Test
 	public void minWidthDpForScreen_returnsMinimumResizableWidth() {
-		assertEquals(190, MiniPlayerLayout.minWidthDpForScreen(360));
-		assertEquals(240, MiniPlayerLayout.minWidthDpForScreen(700));
+		assertEquals(220, MiniPlayerLayout.minWidthDpForScreen(360));
+		assertEquals(280, MiniPlayerLayout.minWidthDpForScreen(700));
 	}
 
 	@Test
@@ -28,7 +28,7 @@ public class MiniPlayerLayoutTest {
 	@Test
 	public void computeSpec_returnsCompactAndInsetHeavyLayout() {
 		final MiniPlayerLayout.Spec compact = MiniPlayerLayout.computeSpec(360, 0);
-		assertEquals(223, compact.widthDp());
+		assertEquals(259, compact.widthDp());
 		assertEquals(12, compact.rightMarginDp());
 		assertEquals(68, compact.bottomMarginDp());
 		assertEquals(compact.widthDp() * 9 / 16, compact.heightDp());
@@ -40,25 +40,25 @@ public class MiniPlayerLayoutTest {
 	@Test
 	public void computeSpec_widthOverrideClampsAndKeepsAspectRatio() {
 		final MiniPlayerLayout.Spec minClamped = MiniPlayerLayout.computeSpec(360, 0, 120);
-		assertEquals(190, minClamped.widthDp());
-		assertEquals(190 * 9 / 16, minClamped.heightDp());
+		assertEquals(220, minClamped.widthDp());
+		assertEquals(220 * 9 / 16, minClamped.heightDp());
 
 		final MiniPlayerLayout.Spec maxClamped = MiniPlayerLayout.computeSpec(360, 0, 420);
-		assertEquals(320, maxClamped.widthDp());
-		assertEquals(320 * 9 / 16, maxClamped.heightDp());
+		assertEquals(360, maxClamped.widthDp());
+		assertEquals(360 * 9 / 16, maxClamped.heightDp());
 	}
 
 	@Test
 	public void clampTranslation_keepsMiniPlayerInsideParentBounds() {
-		assertEquals(-168.0f, MiniPlayerLayout.clampTranslation(-500.0f, 168, 180, 360), 0.0f);
-		assertEquals(-24.0f, MiniPlayerLayout.clampTranslation(-24.0f, 168, 180, 360), 0.0f);
-		assertEquals(12.0f, MiniPlayerLayout.clampTranslation(500.0f, 168, 180, 360), 0.0f);
+		assertEquals(-168.0f, MiniPlayerLayout.clampTranslation(-500.0f, 168, 180, 360, 0, 360), 0.0f);
+		assertEquals(-24.0f, MiniPlayerLayout.clampTranslation(-24.0f, 168, 180, 360, 0, 360), 0.0f);
+		assertEquals(12.0f, MiniPlayerLayout.clampTranslation(500.0f, 168, 180, 360, 0, 360), 0.0f);
 	}
 
 	@Test
 	public void clampTranslation_handlesSmallParentsWithoutInvertingBounds() {
-		assertEquals(-40.0f, MiniPlayerLayout.clampTranslation(-100.0f, 40, 200, 160), 0.0f);
-		assertEquals(-40.0f, MiniPlayerLayout.clampTranslation(20.0f, 40, 200, 160), 0.0f);
+		assertEquals(-40.0f, MiniPlayerLayout.clampTranslation(-100.0f, 40, 200, 160, 0, 160), 0.0f);
+		assertEquals(-40.0f, MiniPlayerLayout.clampTranslation(20.0f, 40, 200, 160, 0, 160), 0.0f);
 	}
 
 	@Test

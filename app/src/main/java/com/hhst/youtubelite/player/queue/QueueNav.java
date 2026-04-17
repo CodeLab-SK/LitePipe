@@ -70,4 +70,8 @@ public record QueueNav(boolean queue,
 	public boolean isPreviousActionEnabled() {
 		return qPrev || prev;
 	}
+
+	public boolean isAnyActionEnabled() {
+		return isNextActionEnabled() || isPreviousActionEnabled();
+	}
 }

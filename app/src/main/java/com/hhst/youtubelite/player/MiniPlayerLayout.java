@@ -1,17 +1,21 @@
 package com.hhst.youtubelite.player;
 
+/**
+ * Computes mini-player dimensions and spacing.
+ */
+@SuppressWarnings("SameParameterValue")
 public final class MiniPlayerLayout {
 
+	public static final int NO_WIDTH_OVER_DP = -1;
 	private static final int COMPACT_BREAKPOINT_DP = 600;
-	private static final float COMPACT_WIDTH_RATIO = 0.72f; // Increased from 0.62
-	private static final float LARGE_WIDTH_RATIO = 0.55f;  // Increased from 0.46
-	private static final int COMPACT_MIN_WIDTH_DP = 220; // Increased from 190
-	private static final int COMPACT_MAX_WIDTH_DP = 360; // Increased from 320
-	private static final int LARGE_MIN_WIDTH_DP = 280;   // Increased from 240
-	private static final int LARGE_MAX_WIDTH_DP = 480;   // Increased from 420
+	private static final float COMPACT_WIDTH_RATIO = 0.72f;
+	private static final float LARGE_WIDTH_RATIO = 0.55f;
+	private static final int COMPACT_MIN_WIDTH_DP = 220;
+	private static final int COMPACT_MAX_WIDTH_DP = 360;
+	private static final int LARGE_MIN_WIDTH_DP = 280;
+	private static final int LARGE_MAX_WIDTH_DP = 480;
 	private static final int OUTER_MARGIN_DP = 12;
 	private static final int MIN_BOTTOM_DOCK_DP = 56;
-	static final int NO_WIDTH_OVER_DP = -1;
 
 	private MiniPlayerLayout() {
 	}
@@ -79,19 +83,23 @@ public final class MiniPlayerLayout {
 	static float clampTranslation(final float translationPx,
 	                              final int layoutStartPx,
 	                              final int viewSizePx,
-	                              final int parentSizePx) {
-		final float minTranslation = -layoutStartPx;
-		final float maxTranslation = Math.max(minTranslation, parentSizePx - viewSizePx - layoutStartPx);
+	                              final int parentSizePx,
+                                  final int minCoord,
+                                  final int maxCoord) {
+		final float minTranslation = minCoord - layoutStartPx;
+		final float maxTranslation = Math.max(minTranslation, maxCoord - viewSizePx - layoutStartPx);
 		return Math.min(Math.max(translationPx, minTranslation), maxTranslation);
 	}
 
 	static float snapX(final float translationPx,
 	                   final int layoutStartPx,
 	                   final int viewSizePx,
-	                   final int parentSizePx) {
-		final float minTranslation = -layoutStartPx;
-		final float maxTranslation = Math.max(minTranslation, parentSizePx - viewSizePx - layoutStartPx);
-		final float clampedTranslation = clampTranslation(translationPx, layoutStartPx, viewSizePx, parentSizePx);
+	                   final int parentSizePx,
+                       final int minCoord,
+                       final int maxCoord) {
+		final float minTranslation = minCoord - layoutStartPx;
+		final float maxTranslation = Math.max(minTranslation, maxCoord - viewSizePx - layoutStartPx);
+		final float clampedTranslation = clampTranslation(translationPx, layoutStartPx, viewSizePx, parentSizePx, minCoord, maxCoord);
 		return Math.abs(clampedTranslation - minTranslation) <= Math.abs(maxTranslation - clampedTranslation)
 						? minTranslation
 						: maxTranslation;

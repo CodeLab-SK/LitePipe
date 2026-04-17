@@ -2,7 +2,6 @@ package com.hhst.youtubelite.player.controller.gesture;
 
 import android.app.Activity;
 import android.content.Context;
-import android.content.res.Configuration;
 import android.media.AudioManager;
 import android.os.Handler;
 import android.os.VibrationEffect;
@@ -19,6 +18,7 @@ import com.hhst.youtubelite.Constant;
 import com.hhst.youtubelite.player.LitePlayerView;
 import com.hhst.youtubelite.player.controller.Controller;
 import com.hhst.youtubelite.player.engine.Engine;
+import com.tencent.mmkv.MMKV;
 
 import java.util.Locale;
 
@@ -38,6 +38,7 @@ public class PlayerGestureListener extends GestureDetector.SimpleOnGestureListen
 	private final Controller controller;
 	private final Handler handler;
 	private final Runnable hideHintRunnable;
+	private final MMKV kv = MMKV.defaultMMKV();
 
 	private int gestureMode = 0;
 	private float bri = -1, preLongPressSpeed = 1.0f;
@@ -170,13 +171,19 @@ public class PlayerGestureListener extends GestureDetector.SimpleOnGestureListen
 
 	private void processSeek(boolean isLeft) {
 		handler.removeCallbacks(resetSeekRunnable);
-		long seekStep = 10000;
+		String seekAmountStr = kv.decodeString("preferences:" + com.hhst.youtubelite.extension.Constant.DOUBLE_TAP_SEEK_AMOUNT, "10s");
+		int seekSeconds = 10;
+		try {
+			seekSeconds = Integer.parseInt(seekAmountStr.replace("s", ""));
+		} catch (Exception ignored) {}
+		
+		long seekStep = seekSeconds * 1000L;
 		if (isLeft) {
-			cumulativeSeekAmount -= 10;
+			cumulativeSeekAmount -= seekSeconds;
 			engine.seekBy(-seekStep);
 			controller.showHint(cumulativeSeekAmount + "s", HINT_HIDE_FAST_MS);
 		} else {
-			cumulativeSeekAmount += 10;
+			cumulativeSeekAmount += seekSeconds;
 			engine.seekBy(seekStep);
 			controller.showHint("+" + cumulativeSeekAmount + "s", HINT_HIDE_FAST_MS);
 		}

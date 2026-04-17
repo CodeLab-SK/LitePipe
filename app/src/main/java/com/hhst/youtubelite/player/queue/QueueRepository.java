@@ -67,8 +67,18 @@ public final class QueueRepository {
 	public void add(@NonNull final QueueItem item) {
 		synchronized (this) {
 			final List<QueueItem> items = readItems();
-			items.removeIf(it -> sameVideo(it, item));
-			items.add(item.copy());
+			int existingIndex = -1;
+			for (int i = 0; i < items.size(); i++) {
+				if (sameVideo(items.get(i), item)) {
+					existingIndex = i;
+					break;
+				}
+			}
+			if (existingIndex != -1) {
+				items.set(existingIndex, item.copy());
+			} else {
+				items.add(item.copy());
+			}
 			writeItems(items);
 		}
 		notifyListeners();

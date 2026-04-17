@@ -1,6 +1,8 @@
 package com.hhst.youtubelite.util;
 
+import android.content.Context;
 import android.net.Uri;
+import android.webkit.CookieManager;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -147,5 +149,55 @@ public final class UrlUtils {
 			} : String.join("/", segments);
 			default -> String.join("/", segments);
 		};
+	}
+
+	@NonNull
+	public static String appendLanguage(@NonNull String url) {
+		if (!url.contains("youtube.com") && !url.contains("youtu.be")) return url;
+		try {
+			Uri uri = Uri.parse(url);
+			Uri.Builder builder = uri.buildUpon();
+			boolean changed = false;
+			Locale locale = Locale.getDefault();
+			String hl = locale.getLanguage();
+			String gl = locale.getCountry();
+
+			if (uri.getQueryParameter("hl") == null) {
+				builder.appendQueryParameter("hl", hl);
+				changed = true;
+			}
+			if (uri.getQueryParameter("gl") == null && gl != null && !gl.isEmpty()) {
+				builder.appendQueryParameter("gl", gl);
+				changed = true;
+			}
+			
+			if (uri.getQueryParameter("persist_hl") == null) {
+				builder.appendQueryParameter("persist_hl", "1");
+				changed = true;
+			}
+			if (uri.getQueryParameter("persist_gl") == null) {
+				builder.appendQueryParameter("persist_gl", "1");
+				changed = true;
+			}
+			return changed ? builder.build().toString() : url;
+		} catch (Exception e) {
+			return url;
+		}
+	}
+
+	public static void setYoutubePreferences(@NonNull Context context) {
+		CookieManager cookieManager = CookieManager.getInstance();
+		Locale locale = Locale.getDefault();
+		String lang = locale.getLanguage();
+		String country = locale.getCountry();
+		boolean isDark = (context.getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES;
+		
+		String prefValue = "hl=" + lang + (country.isEmpty() ? "" : "&gl=" + country) + (isDark ? "&f6=400" : "&f6=10000");
+		
+		String[] urls = {"https://www.youtube.com", "https://m.youtube.com", "https://youtube.com"};
+		for (String url : urls) {
+			cookieManager.setCookie(url, "PREF=" + prefValue + "; Domain=.youtube.com; Path=/; Secure; SameSite=None");
+		}
+		cookieManager.flush();
 	}
 }

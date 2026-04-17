@@ -41,6 +41,14 @@
             </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.card.MaterialCardView
+                android:id="@+id/category_shorts"
+                style="@style/AppCard">
+                <androidx.appcompat.widget.AppCompatTextView
+                    style="@style/AppCardItem"
+                    android:text="@string/shorts" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
                 android:id="@+id/category_player"
                 style="@style/AppCard">
                 <androidx.appcompat.widget.AppCompatTextView

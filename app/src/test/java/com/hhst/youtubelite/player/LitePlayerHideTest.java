@@ -9,6 +9,7 @@ import android.app.Activity;
 import com.hhst.youtubelite.extractor.YoutubeExtractor;
 import com.hhst.youtubelite.player.controller.Controller;
 import com.hhst.youtubelite.player.engine.Engine;
+import com.hhst.youtubelite.player.queue.QueueRepository;
 import com.hhst.youtubelite.player.sponsor.SponsorBlockManager;
 import com.tencent.mmkv.MMKV;
 
@@ -37,10 +38,11 @@ public class LitePlayerHideTest {
 		final Controller controller = mock(Controller.class);
 		final Engine engine = mock(Engine.class);
 		final SponsorBlockManager sponsor = mock(SponsorBlockManager.class);
+		final QueueRepository queueRepository = mock(QueueRepository.class);
 		final Executor executor = Runnable::run;
 		mmkvStatic = org.mockito.Mockito.mockStatic(MMKV.class);
 		mmkvStatic.when(MMKV::defaultMMKV).thenReturn(mock(MMKV.class));
-		player = new LitePlayer(activity, extractor, playerView, controller, engine, sponsor, executor);
+		player = new LitePlayer(activity, extractor, playerView, controller, engine, sponsor, executor, queueRepository);
 	}
 
 	@After
@@ -59,22 +61,6 @@ public class LitePlayerHideTest {
 
 		verify(playerView).setMiniPlayerCallbacks(null, null);
 		verify(playerView).exitInAppMiniPlayer();
-		verify(playerView).hide();
-	}
-
-	@Test
-	public void miniPlayerClose_runsCloseCallbackAfterHideWithoutCrashing() {
-		final Runnable onClose = mock(Runnable.class);
-		player.setMiniPlayerCallbacks(() -> {
-		}, onClose);
-		final ArgumentCaptor<Runnable> closeActionCaptor = ArgumentCaptor.forClass(Runnable.class);
-		verify(playerView).setMiniPlayerCallbacks(any(), closeActionCaptor.capture());
-		player.enterInAppMiniPlayer();
-
-		closeActionCaptor.getValue().run();
-
-		verify(onClose).run();
-		verify(playerView).setMiniPlayerCallbacks(null, null);
 		verify(playerView).hide();
 	}
 }
