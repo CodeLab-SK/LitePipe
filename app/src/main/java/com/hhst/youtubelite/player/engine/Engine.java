@@ -1,14 +1,19 @@
 package com.hhst.youtubelite.player.engine;
 
 import android.content.Context;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
+import android.webkit.MimeTypeMap;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.media3.common.AudioAttributes;
 import androidx.media3.common.C;
 import androidx.media3.common.Format;
+import androidx.media3.common.MediaItem;
+import androidx.media3.common.MediaMetadata;
+import androidx.media3.common.MimeTypes;
 import androidx.media3.common.PlaybackParameters;
 import androidx.media3.common.Player;
 import androidx.media3.common.TrackGroup;
@@ -19,13 +24,16 @@ import androidx.media3.common.text.CueGroup;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.datasource.cache.SimpleCache;
 import androidx.media3.exoplayer.DecoderCounters;
+import androidx.media3.exoplayer.DefaultLoadControl;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
 import androidx.media3.exoplayer.trackselection.AdaptiveTrackSelection;
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector;
 
 import com.hhst.youtubelite.Constant;
+import com.hhst.youtubelite.IncognitoManager;
 import com.hhst.youtubelite.browser.TabManager;
+import com.hhst.youtubelite.downloader.core.history.DownloadRecord;
 import com.hhst.youtubelite.extractor.Delivery;
 import com.hhst.youtubelite.extractor.DeliveryCatalog;
 import com.hhst.youtubelite.extractor.PlaybackDetails;
@@ -43,6 +51,7 @@ import com.hhst.youtubelite.player.queue.QueueItem;
 import com.hhst.youtubelite.player.queue.QueueNav;
 import com.hhst.youtubelite.player.queue.QueueRepository;
 import com.hhst.youtubelite.player.sponsor.SponsorBlockManager;
+import com.hhst.youtubelite.util.DownloadStorageUtils;
 import com.hhst.youtubelite.util.StringUtils;
 import com.hhst.youtubelite.util.UrlUtils;
 
@@ -55,7 +64,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
@@ -63,9 +72,6 @@ import javax.inject.Inject;
 import dagger.hilt.android.qualifiers.ApplicationContext;
 import dagger.hilt.android.scopes.ActivityScoped;
 
-/**
- * Coordinates playback state and queue navigation.
- */
 @UnstableApi
 @ActivityScoped
 public class Engine {
@@ -90,6 +96,8 @@ public class Engine {
 	private PlayerLoopMode loopMode = PlayerLoopMode.PLAYLIST_NEXT;
 	@Nullable
 	private String videoId;
+	@Nullable private OnSponsorDetectedListener sponsorListener;
+
 	private final Runnable onTimeUpdate = new Runnable() {
 		@Override
 		public void run() {
@@ -97,7 +105,9 @@ public class Engine {
 			long pos = player.getCurrentPosition();
 			long duration = player.getDuration();
 
-			if (videoId != null && duration > 0 && prefs.getExtensionManager().isEnabled(Constant.REMEMBER_LAST_POSITION)) {
+			if (videoId != null && duration > 0 
+					&& prefs.getExtensionManager().isEnabled(Constant.REMEMBER_LAST_POSITION)
+					&& !IncognitoManager.getInstance().isIncognito()) {
 				if (pos > SAFE_ZONE_MS && pos < duration - SAFE_ZONE_MS) {
 					prefs.persistProgress(videoId, pos, duration, TimeUnit.MILLISECONDS);
 				}
@@ -105,12 +115,17 @@ public class Engine {
 
 			if (duration > 0) {
 				playerView.updateSkipMarkers(duration, TimeUnit.MILLISECONDS);
+				playerView.updateRemainingTime(pos, duration, player.getPlaybackParameters().speed);
 			}
 
 			List<long[]> segments = sponsor.getSegments();
 			for (final long[] segment : segments) {
 				if (pos >= segment[0] && pos < segment[1]) {
-					player.seekTo(segment[1]);
+					if (sponsorListener != null) {
+						sponsorListener.onSponsorDetected(segment);
+					} else {
+						player.seekTo(segment[1]);
+					}
 					break;
 				}
 			}
@@ -119,9 +134,9 @@ public class Engine {
 	};
 	@Nullable
 	private VideoDetails videoDetails;
-	@Nullable
+	@NonNull
 	private List<StreamSegment> segments = List.of();
-	@Nullable
+	@NonNull
 	private List<SubtitlesStream> subtitles = List.of();
 	@Nullable
 	private StreamCatalog streamCatalog;
@@ -147,10 +162,12 @@ public class Engine {
 		this.queueRepository = queueRepository;
 		this.sources = new PlayerDataSource(simpleCache);
 		DefaultTrackSelector trackSelector = new DefaultTrackSelector(context, new AdaptiveTrackSelection.Factory());
-		trackSelector.setParameters(trackSelector.buildUponParameters().setTunnelingEnabled(false).build());
+		
+		DefaultLoadControl loadControl = PlayerLoadControl.create();
+
 		this.player = new ExoPlayer.Builder(context)
 						.setTrackSelector(trackSelector)
-						.setLoadControl(new androidx.media3.exoplayer.DefaultLoadControl())
+						.setLoadControl(loadControl)
 						.setAudioAttributes(new AudioAttributes.Builder()
 										.setUsage(C.USAGE_MEDIA)
 										.setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
@@ -183,6 +200,7 @@ public class Engine {
 					long duration = player.getDuration();
 					if (duration > 0) {
 						playerView.updateSkipMarkers(duration, TimeUnit.MILLISECONDS);
+						playerView.updateRemainingTime(player.getCurrentPosition(), duration, player.getPlaybackParameters().speed);
 					}
 				}
 			}
@@ -201,6 +219,22 @@ public class Engine {
 			@Override
 			public void onTracksChanged(@NonNull Tracks tracks) {
 				applyPreferredVideoTrack();
+			}
+
+			@Override
+			public void onPositionDiscontinuity(@NonNull Player.PositionInfo oldPosition, @NonNull Player.PositionInfo newPosition, int reason) {
+				long duration = player.getDuration();
+				if (duration > 0) {
+					playerView.updateRemainingTime(newPosition.positionMs, duration, player.getPlaybackParameters().speed);
+				}
+			}
+
+			@Override
+			public void onPlaybackParametersChanged(@NonNull PlaybackParameters playbackParameters) {
+				long duration = player.getDuration();
+				if (duration > 0) {
+					playerView.updateRemainingTime(player.getCurrentPosition(), duration, playbackParameters.speed);
+				}
 			}
 		});
 		playerView.setPlayer(this.player);
@@ -225,6 +259,22 @@ public class Engine {
 		return null;
 	}
 
+	private static long durationMs(@NonNull VideoDetails details) {
+		Long duration = details.getDuration();
+		if (duration == null || duration <= 0L) return 0L;
+		return TimeUnit.SECONDS.toMillis(duration);
+	}
+
+	@NonNull
+	private static DefaultTrackSelector.Parameters.Builder params(@NonNull DefaultTrackSelector trackSelector) {
+		return Objects.requireNonNull(trackSelector.buildUponParameters());
+	}
+
+	@NonNull
+	private DefaultTrackSelector trackSelector() {
+		return (DefaultTrackSelector) Objects.requireNonNull(player.getTrackSelector());
+	}
+
 	static boolean didNavigate(@Nullable String value) {
 		return "\"navigating\"".equals(value);
 	}
@@ -232,9 +282,10 @@ public class Engine {
 	@Nullable
 	private static StreamCandidate findAudioCandidate(@NonNull StreamCatalog catalog,
 	                                                  @NonNull AudioStream stream) {
+		String content = stream.getContent();
 		for (StreamCandidate candidate : catalog.getAudioCandidates()) {
 			if (candidate.getAudioStream() != null
-							&& stream.getContent().equals(candidate.getAudioStream().getContent())) {
+							&& content.equals(candidate.getAudioStream().getContent())) {
 				return candidate;
 			}
 		}
@@ -302,34 +353,32 @@ public class Engine {
 	}
 
 	public void play(@NonNull PlaybackDetails details) {
-		VideoDetails vi = details.video();
-		this.videoId = vi.getId();
-		this.videoDetails = vi;
+		VideoDetails video = details.video();
+		PlaybackPlan plan = details.plan();
+		List<SubtitlesStream> subtitles = details.subtitles();
+		this.videoId = video.getId();
+		this.videoDetails = video;
 		this.streamCatalog = details.catalog();
 		this.deliveries = details.deliveries();
+		this.playbackPlan = plan;
 		this.segments = details.segments();
-		this.subtitles = details.subtitles();
-
-		String preferredQuality = prefs.getQuality();
-		this.playbackPlan = PlaybackPlanner.plan(deliveries, preferredQuality, null);
+		this.subtitles = subtitles;
 		applyPlaybackTrackMode();
 
-		this.videoStream = selectedVideo(playbackPlan);
+		this.videoStream = selectedVideo(plan);
 		boolean enabled = this.prefs.isSubtitleEnabled();
 		setSubtitlesEnabled(enabled);
 		String saved = this.prefs.getSubtitleLanguage();
-		if (enabled && saved != null && !saved.isEmpty() && !this.subtitles.isEmpty()) {
+		if (enabled && saved != null && !saved.isEmpty() && !subtitles.isEmpty()) {
 			setSubtitleLanguage(saved);
 		}
 
-		long duration = vi.getDuration() * 1000;
-		this.player.setMediaSource(PlaybackRunner.create(sources, 
-						new PlaybackDetails(vi, streamCatalog, deliveries, playbackPlan, segments, subtitles), 
-						playbackPlan));
+		long duration = durationMs(video);
+		this.player.setMediaSource(PlaybackSourceFactory.create(sources, details, plan));
 		this.player.setPlaybackParameters(new PlaybackParameters(this.prefs.getSpeed()));
 
 
-		if (prefs.getExtensionManager().isEnabled(Constant.REMEMBER_LAST_POSITION)) {
+		if (prefs.getExtensionManager().isEnabled(Constant.REMEMBER_LAST_POSITION) && !IncognitoManager.getInstance().isIncognito()) {
 			long resumePos = prefs.getResumePosition(videoId);
 			if (resumePos > SAFE_ZONE_MS && resumePos < duration - SAFE_ZONE_MS) {
 				this.player.seekTo(resumePos);
@@ -338,6 +387,101 @@ public class Engine {
 
 		this.player.prepare();
 		this.player.setPlayWhenReady(true);
+	}
+
+	public void playLocal(@NonNull Uri uri, @Nullable String title, @Nullable List<DownloadRecord> subtitles) {
+		this.videoId = null;
+		this.videoDetails = null;
+		this.streamCatalog = null;
+		this.deliveries = null;
+		this.segments = List.of();
+		this.subtitles = List.of();
+		this.playbackPlan = null;
+		this.videoStream = null;
+
+		MediaItem.Builder builder = new MediaItem.Builder()
+				.setUri(uri)
+				.setMediaMetadata(new MediaMetadata.Builder()
+						.setTitle(title)
+						.build());
+		
+		if (subtitles != null && !subtitles.isEmpty()) {
+			List<MediaItem.SubtitleConfiguration> configs = new ArrayList<>();
+			for (DownloadRecord sub : subtitles) {
+				Uri subUri = DownloadStorageUtils.getOpenUri(playerView.getContext(), sub.getOutputPath());
+				if (subUri != null) {
+					String mime = inferSubtitleMime(sub.getFileName());
+					configs.add(new MediaItem.SubtitleConfiguration.Builder(subUri)
+							.setMimeType(mime)
+							.setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+							.setLabel(sub.getFileName())
+							.build());
+				}
+			}
+			builder.setSubtitleConfigurations(configs);
+		}
+		
+		this.player.setMediaItem(builder.build());
+		this.player.setPlaybackParameters(new PlaybackParameters(this.prefs.getSpeed()));
+		this.player.prepare();
+		this.player.setPlayWhenReady(true);
+	}
+
+	public void addLocalSubtitle(@NonNull Uri uri, @NonNull String label) {
+		MediaItem currentItem = player.getCurrentMediaItem();
+		if (currentItem == null) return;
+		
+		String mime = playerView.getContext().getContentResolver().getType(uri);
+		if (mime == null || mime.equals("application/octet-stream") || mime.equals("text/plain")) {
+			mime = inferSubtitleMime(label);
+		}
+		
+		MediaItem.SubtitleConfiguration subConfig = new MediaItem.SubtitleConfiguration.Builder(uri)
+				.setMimeType(mime)
+				.setLabel(label)
+				.setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+				.build();
+				
+		List<MediaItem.SubtitleConfiguration> subs = new ArrayList<>();
+		if (currentItem.localConfiguration != null) {
+			subs.addAll(currentItem.localConfiguration.subtitleConfigurations);
+		}
+		subs.add(subConfig);
+		
+		MediaItem newItem = currentItem.buildUpon()
+				.setSubtitleConfigurations(subs)
+				.build();
+		
+		long pos = player.getCurrentPosition();
+		boolean playWhenReady = player.getPlayWhenReady();
+		player.setMediaItem(newItem, false);
+		player.prepare();
+		player.seekTo(pos);
+		player.setPlayWhenReady(playWhenReady);
+		setSubtitlesEnabled(true);
+	}
+
+	private String inferSubtitleMime(String fileName) {
+		String lower = fileName.toLowerCase();
+		if (lower.endsWith(".srt")) return MimeTypes.APPLICATION_SUBRIP;
+		if (lower.endsWith(".vtt")) return MimeTypes.TEXT_VTT;
+		if (lower.endsWith(".ttml")) return MimeTypes.APPLICATION_TTML;
+		if (lower.endsWith(".xml")) return MimeTypes.APPLICATION_TTML;
+		
+		String ext = MimeTypeMap.getFileExtensionFromUrl(fileName);
+		if (ext != null) {
+			String mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext);
+			if (mime != null) return mime;
+		}
+		return MimeTypes.TEXT_VTT;
+	}
+
+	public boolean isLocalPlayback() {
+		return videoId == null && streamCatalog == null;
+	}
+
+	public void setSponsorDetectedListener(@Nullable OnSponsorDetectedListener listener) {
+		this.sponsorListener = listener;
 	}
 
 	public void play() {
@@ -377,11 +521,6 @@ public class Engine {
 		this.player.setTrackSelectionParameters(this.player.getTrackSelectionParameters().buildUpon()
 						.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !enabled)
 						.build());
-	}
-
-	@Nullable
-	public String getSubtitleLanguage() {
-		return this.prefs.getSubtitleLanguage();
 	}
 
 	public void setSubtitleLanguage(@Nullable String language) {
@@ -432,8 +571,7 @@ public class Engine {
 
 	public void skipToPrevious() {
 		boolean queueEnabled = queueRepository.isEnabled();
-		boolean hasQueueItems = queueRepository.hasItems();
-		String watchId = watchVideoId();
+		boolean hasQueueItems = queueRepository.hasItems(); String watchId = watchVideoId();
 		boolean inQueue = queueRepository.containsVideo(watchId);
 		boolean hasPlaylist = tabManager.watchHasPlaylist();
 		boolean canGoBack = tabManager.canGoBackInWatch();
@@ -598,18 +736,20 @@ public class Engine {
 	}
 
 	public void onQualitySelected(@Nullable String res) {
-		if (res == null || deliveries == null || playbackPlan == null || videoDetails == null || streamCatalog == null)
-			return;
+		if (res == null) return;
+		State state = state();
+		if (state == null) return;
 		prefs.setQuality(res);
-		this.playbackPlan = PlaybackPlanner.plan(deliveries, res, null);
-		Delivery delivery = playbackPlan.getDelivery();
-		if (isLiveMode(playbackPlan) && delivery != null && !delivery.isTrackLock()) {
+		PlaybackPlan plan = PlaybackPlanner.plan(state.deliveries(), res, null);
+		this.playbackPlan = plan;
+		Delivery delivery = plan.getDelivery();
+		if (isLiveMode(plan) && delivery != null && !delivery.isTrackLock()) {
 			applyPlaybackTrackMode();
 			return;
 		}
 		if (delivery != null && delivery.isTrackLock()) {
 			int actualHeight = StringUtils.parseHeight(res);
-			VideoStream match = selectedVideo(playbackPlan);
+			VideoStream match = selectedVideo(plan);
 			if (match != null) {
 				actualHeight = match.getHeight();
 			}
@@ -618,17 +758,17 @@ public class Engine {
 		}
 		long pos = this.player.getCurrentPosition();
 		float speed = this.player.getPlaybackParameters().speed;
-		play(new PlaybackDetails(videoDetails, streamCatalog, deliveries, playbackPlan, segments, subtitles));
-		if (playbackPlan.getMode() != PlaybackMode.LIVE_DASH
-						&& playbackPlan.getMode() != PlaybackMode.LIVE_HLS) {
+		play(new PlaybackDetails(state.video(), state.catalog(), state.deliveries(), plan, segments, subtitles));
+		if (plan.getMode() != PlaybackMode.LIVE_DASH
+						&& plan.getMode() != PlaybackMode.LIVE_HLS) {
 			this.player.seekTo(pos);
 		}
 		this.player.setPlaybackParameters(new PlaybackParameters(speed));
 	}
 
 	public void setVideoQuality(int height) {
-		DefaultTrackSelector trackSelector = (DefaultTrackSelector) this.player.getTrackSelector();
-		final DefaultTrackSelector.Parameters.Builder builder = trackSelector.buildUponParameters()
+		DefaultTrackSelector trackSelector = trackSelector();
+		final DefaultTrackSelector.Parameters.Builder builder = params(trackSelector)
 						.clearOverridesOfType(C.TRACK_TYPE_VIDEO)
 						.setForceHighestSupportedBitrate(false)
 						.setMaxVideoSize(Integer.MAX_VALUE, height)
@@ -646,7 +786,7 @@ public class Engine {
 			return;
 		}
 		String quality = prefs.getQuality();
-		if (quality.isEmpty()) {
+		if (quality == null || quality.isEmpty()) {
 			return;
 		}
 		int height = StringUtils.parseHeight(quality);
@@ -656,8 +796,8 @@ public class Engine {
 	}
 
 	private void applyPlaybackTrackMode() {
-		DefaultTrackSelector trackSelector = (DefaultTrackSelector) this.player.getTrackSelector();
-		final DefaultTrackSelector.Parameters.Builder builder = trackSelector.buildUponParameters()
+		DefaultTrackSelector trackSelector = trackSelector();
+		final DefaultTrackSelector.Parameters.Builder builder = params(trackSelector)
 						.clearOverridesOfType(C.TRACK_TYPE_VIDEO)
 						.setForceHighestSupportedBitrate(false);
 		PlaybackPlan plan = playbackPlan;
@@ -708,7 +848,7 @@ public class Engine {
 	}
 
 	public String getQuality() {
-
+		VideoStream videoStream = this.videoStream;
 		if (videoStream != null) return videoStream.getResolution();
 		Format format = getVideoFormat();
 		if (format != null && format.height > 0) {
@@ -770,22 +910,19 @@ public class Engine {
 	}
 
 	public List<StreamSegment> getSegments() {
-		if (this.segments != null && !this.segments.isEmpty())
+		if (!this.segments.isEmpty())
 			return this.segments;
 
 
 		List<StreamSegment> segments = new ArrayList<>();
-		if (this.videoDetails != null) segments.add(new StreamSegment(this.videoDetails.getTitle(), 0));
+		VideoDetails video = videoDetails;
+		if (video != null) segments.add(new StreamSegment(video.getTitle() != null ? video.getTitle() : "", 0));
 		return segments;
 	}
 
+	@Nullable
 	public String getThumbnailUrl() {
 		return videoDetails != null ? videoDetails.getThumbnailUrl() : null;
-	}
-
-	@Nullable
-	public StreamCatalog getStreamCatalog() {
-		return streamCatalog;
 	}
 
 	@Nullable
@@ -805,29 +942,33 @@ public class Engine {
 	}
 
 	public void setAudioTrack(@NonNull AudioStream stream) {
-		if (streamCatalog == null || deliveries == null || playbackPlan == null || videoDetails == null)
-			return;
-		AudioStream audio = selectedAudio(playbackPlan);
-		if (audio != null && audio.getContent().equals(stream.getContent())) return;
+		State state = state();
+		if (state == null) return;
+		PlaybackPlan plan = state.plan();
+		AudioStream audio = selectedAudio(plan);
+		String content = stream.getContent();
+		if (audio != null && content.equals(audio.getContent())) return;
 		long pos = player.getCurrentPosition();
 		boolean playWhenReady = player.getPlayWhenReady();
-		playbackPlan.setAudioCandidate(findAudioCandidate(streamCatalog, stream));
-		player.setMediaSource(PlaybackRunner.create(sources,
-						new PlaybackDetails(videoDetails, streamCatalog, deliveries, playbackPlan, segments, subtitles),
-						playbackPlan));
+		plan.setAudioCandidate(findAudioCandidate(state.catalog(), stream));
+		player.setMediaSource(PlaybackSourceFactory.create(sources,
+						new PlaybackDetails(state.video(), state.catalog(), state.deliveries(), plan, segments, subtitles),
+						plan));
 		player.seekTo(pos);
 		player.setPlayWhenReady(playWhenReady);
 		player.prepare();
 	}
 
-	public int getSelectedAudioTrackIndex() {
-		AudioStream selected = getAudioTrack();
-		if (selected == null || streamCatalog == null) return -1;
-		for (int i = 0; i < streamCatalog.getAudioStreams().size(); i++) {
-			if (streamCatalog.getAudioStreams().get(i).getContent().equals(selected.getContent()))
-				return i;
+	@Nullable
+	private State state() {
+		VideoDetails video = videoDetails;
+		StreamCatalog catalog = streamCatalog;
+		DeliveryCatalog deliveries = this.deliveries;
+		PlaybackPlan plan = playbackPlan;
+		if (video == null || catalog == null || deliveries == null || plan == null) {
+			return null;
 		}
-		return -1;
+		return new State(video, catalog, deliveries, plan);
 	}
 
 	private boolean isLiveMode(@Nullable PlaybackPlan plan) {
@@ -846,9 +987,15 @@ public class Engine {
 		this.player.release();
 	}
 
-/**
- * Value object for app logic.
- */
+	public interface OnSponsorDetectedListener {
+		void onSponsorDetected(long[] segment);
+	}
 	private record TrackOverride(@NonNull TrackGroup group, int track) {
+	}
+
+	private record State(@NonNull VideoDetails video,
+	                     @NonNull StreamCatalog catalog,
+	                     @NonNull DeliveryCatalog deliveries,
+	                     @NonNull PlaybackPlan plan) {
 	}
 }

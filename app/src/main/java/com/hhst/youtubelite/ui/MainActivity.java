@@ -8,24 +8,31 @@ import android.app.RemoteAction;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
-import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.verify.domain.DomainVerificationManager;
 import android.content.pm.verify.domain.DomainVerificationUserState;
 import android.content.res.Configuration;
+import android.database.Cursor;
+import android.graphics.Color;
 import android.graphics.drawable.Icon;
+import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.provider.OpenableColumns;
 import android.provider.Settings;
 import android.support.v4.media.session.PlaybackStateCompat;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -47,12 +54,21 @@ import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.hhst.youtubelite.Constant;
+import com.hhst.youtubelite.IncognitoManager;
 import com.hhst.youtubelite.PlaybackService;
 import com.hhst.youtubelite.R;
 import com.hhst.youtubelite.browser.TabManager;
 import com.hhst.youtubelite.browser.YoutubeWebview;
+import com.hhst.youtubelite.downloader.core.history.DownloadHistoryRepository;
+import com.hhst.youtubelite.downloader.core.history.DownloadRecord;
+import com.hhst.youtubelite.downloader.core.history.DownloadType;
+import com.hhst.youtubelite.downloader.core.history.DownloadStatus;
 import com.hhst.youtubelite.downloader.service.DownloadService;
 import com.hhst.youtubelite.downloader.ui.DownloadActivity;
 import com.hhst.youtubelite.downloader.ui.DownloadDialog;
@@ -110,8 +126,10 @@ public final class MainActivity extends AppCompatActivity {
 	@Inject YoutubeExtractor youtubeExtractor;
 	@Inject QueueRepository queueRepository;
 	@Inject QueueWarmer queueWarmer;
+	@Inject DownloadHistoryRepository historyRepository;
 
 	@Nullable private PlaybackService playbackService;
+	@Nullable private OnBackPressedCallback appBackCallback;
 
 	private View queueContainer;
 	private View expandedQueueContainer;
@@ -121,13 +139,29 @@ public final class MainActivity extends AppCompatActivity {
 	private int navigationBarHeight = 0;
 	private long lastBackTime = 0;
 	private boolean suppressNextUserLeaveHintPictureInPicture;
+    private boolean isActivityVisible = false;
+
+	private AlertDialog activeVideoOptionsDialog;
+
+	private final IncognitoManager.Listener incognitoListener = (isIncognito) -> applyIncognitoUi(isIncognito, true);
 
 	private final ServiceConnection playbackConnection = new ServiceConnection() {
 		@Override public void onServiceConnected(ComponentName n, IBinder s) {
 			playbackService = ((PlaybackService.PlaybackBinder) s).getService();
 			if (player != null) player.attachPlaybackService(playbackService);
+			if (playbackService != null) {
+				playbackService.setClipboardListener(url -> {
+					if (isActivityVisible) {
+						fetchTitleAndShowPopup(url);
+						return true;
+					}
+					return false;
+				});
+			}
 		}
-		@Override public void onServiceDisconnected(ComponentName n) { playbackService = null; }
+		@Override public void onServiceDisconnected(ComponentName n) { 
+			playbackService = null; 
+		}
 	};
 
 	private final ServiceConnection downloadConnection = new ServiceConnection() {
@@ -142,8 +176,6 @@ public final class MainActivity extends AppCompatActivity {
 		EdgeToEdge.enable(this);
 		setContentView(R.layout.activity_main);
 		super.onCreate(savedInstanceState);
-		setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
-
 		UrlUtils.setYoutubePreferences(this);
 
 		final View mainView = findViewById(R.id.main);
@@ -159,7 +191,7 @@ public final class MainActivity extends AppCompatActivity {
 		navBar = findViewById(R.id.custom_nav_bar);
 		navBar.setup(extensionManager, tabManager);
 		navBarDivider = findViewById(R.id.nav_bar_divider);
-		
+
 		navBar.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
 			if (navBar.getVisibility() == View.VISIBLE) {
 				int height = navBar.getHeight();
@@ -180,6 +212,33 @@ public final class MainActivity extends AppCompatActivity {
 
 		checkOpenByDefault();
 		mainView.post(() -> handleIntent(getIntent()));
+
+		IncognitoManager.getInstance().addListener(incognitoListener);
+        IncognitoManager.getInstance().resetOnStart(() -> {
+            applyIncognitoUi(false, false);
+            runOnUiThread(() -> {
+                YoutubeWebview web = getWebview();
+                if (web != null) web.reload();
+            });
+        });
+	}
+
+	private void applyIncognitoUi(boolean isIncognito, boolean showToast) {
+		runOnUiThread(() -> {
+			Window window = getWindow();
+			View banner = findViewById(R.id.incognito_banner);
+			if (isIncognito) {
+				window.setStatusBarColor(Color.parseColor("#212121"));
+				if (navBar != null) navBar.setBackgroundColor(Color.parseColor("#212121"));
+				if (banner != null) banner.setVisibility(View.VISIBLE);
+				if (showToast) Toast.makeText(this, R.string.incognito_on, Toast.LENGTH_SHORT).show();
+			} else {
+				window.setStatusBarColor(Color.TRANSPARENT);
+				if (navBar != null) navBar.setBackgroundColor(Color.TRANSPARENT);
+				if (banner != null) banner.setVisibility(View.GONE);
+				if (showToast) Toast.makeText(this, R.string.incognito_off, Toast.LENGTH_SHORT).show();
+			}
+		});
 	}
 
 	@Override
@@ -223,9 +282,7 @@ public final class MainActivity extends AppCompatActivity {
 
 	private void updatePictureInPictureActions() {
 		final List<RemoteAction> actions = new ArrayList<>();
-
 		final QueueNav nav = engine.getQueueNavigationAvailability();
-
 
 		final PendingIntent prevIntent = MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS);
 		final Icon prevIcon = Icon.createWithResource(this, R.drawable.ic_previous);
@@ -346,7 +403,7 @@ public final class MainActivity extends AppCompatActivity {
 		queueAdapter = new QueueAdapter(new QueueAdapter.Actions() {
 			@Override
 			public void onPlayRequested(@NonNull final QueueItem item) {
-				if (item.getVideoUrl() != null) player.play(item.getVideoUrl());
+				if (item.getVideoUrl() != null) tabManager.openTab(item.getVideoUrl(), UrlUtils.getPageClass(item.getVideoUrl()));
 			}
 
 			@Override
@@ -358,6 +415,13 @@ public final class MainActivity extends AppCompatActivity {
 						syncQueueExpandedUI(recyclerView, emptyView);
 					}
 				});
+			}
+
+			@Override
+			public void onDownloadRequested(@NonNull final QueueItem item) {
+				if (item.getVideoUrl() != null) {
+					triggerDownload(item.getVideoUrl());
+				}
 			}
 		});
 
@@ -388,6 +452,27 @@ public final class MainActivity extends AppCompatActivity {
 				final PlayerLoopMode newMode = player.getLoopMode().next();
 				player.setLoopMode(newMode);
 				renderLoop(orderButton, newMode);
+			});
+		}
+
+		final ImageButton downloadAllButton = findViewById(R.id.btn_queue_download);
+		if (downloadAllButton != null) {
+			downloadAllButton.setOnClickListener(v -> {
+				List<QueueItem> items = queueRepository.getItems();
+				if (items.isEmpty()) return;
+				List<PlaylistDownloadItem> dItems = new ArrayList<>();
+				for (int i = 0; i < items.size(); i++) {
+					QueueItem item = items.get(i);
+					if (item.getVideoId() == null || item.getVideoUrl() == null) continue;
+					PlaylistDownloadItem dItem = new PlaylistDownloadItem(i, item.getVideoId(), item.getVideoUrl());
+					dItem.setTitle(item.getTitle() != null ? item.getTitle() : item.getVideoId());
+					dItem.setAuthor(item.getAuthor());
+					dItem.setThumbnailUrl(item.getThumbnailUrl());
+					dItem.setAvailabilityStatus(PlaylistDownloadItem.AvailabilityStatus.READY);
+					dItem.setSelected(true);
+					dItems.add(dItem);
+				}
+				new PlaylistDownloadDialog(getString(R.string.Queue), dItems, null, null, this, youtubeExtractor, tabManager).show();
 			});
 		}
 
@@ -549,17 +634,7 @@ public final class MainActivity extends AppCompatActivity {
 
 			TextView titleText = findViewById(R.id.queue_title);
 			if (titleText != null && !queue.isEmpty()) {
-				String currentVideoId = player.getLoadedVideoId();
-				QueueItem active = null;
-				if (currentVideoId != null) {
-					for (QueueItem item : queue) {
-						if (currentVideoId.equals(item.getVideoId())) {
-							active = item;
-							break;
-						}
-					}
-				}
-				titleText.setText(active != null ? active.getTitle() : queue.get(0).getTitle());
+				titleText.setText(getString(R.string.queue_title_with_count, queue.size()));
 			}
 		});
 	}
@@ -581,8 +656,10 @@ public final class MainActivity extends AppCompatActivity {
 	@Override
 	protected void onResume() {
 		super.onResume();
+		isActivityVisible = true;
 		updateNavBarVisibility();
 		updateQueueUI();
+		if (player != null) player.refreshInternalButtonVisibility();
 		suppressNextUserLeaveHintPictureInPicture = false;
 		if (player != null && shouldRestoreMiniPlayerOnResume(player.isInAppMiniPlayer(), DeviceUtils.isInPictureInPictureMode(this))) {
 			player.restoreInAppMiniPlayerUiIfNeeded();
@@ -613,30 +690,128 @@ public final class MainActivity extends AppCompatActivity {
 		}
 		if ("PLAY_VIDEO".equals(action)) {
 			String url = intent.getStringExtra("url");
-			if (url != null) player.play(url);
+			if (url != null) tabManager.openTab(url, UrlUtils.getPageClass(url));
 			return;
 		}
-		String url = null;
-		if (Intent.ACTION_VIEW.equals(action) && intent.getData() != null) {
-			url = intent.getData().toString();
-		} else if (Intent.ACTION_SEND.equals(action)) {
-			String text = intent.getStringExtra(Intent.EXTRA_TEXT);
-			if (text != null) url = extractUrlFromText(text);
+		if ("SHOW_CLIPBOARD_DIALOG".equals(action)) {
+			String url = intent.getStringExtra("url");
+			if (url != null) fetchTitleAndShowPopup(url);
+			return;
 		}
-		if (url != null) {
+		if ("PLAY_LOCAL_VIDEO".equals(action)) {
+			Uri uri = intent.getParcelableExtra("uri");
+			String title = intent.getStringExtra("title");
+			String videoId = intent.getStringExtra("video_id");
+			if (uri != null) {
+                if (title == null) title = fetchLocalTitle(uri, false);
+                List<DownloadRecord> subs = null;
+                if (videoId != null) {
+                    subs = new ArrayList<>();
+                    for (DownloadRecord r : historyRepository.getAllSorted()) {
+                        if (Objects.equals(getShortVideoId(r.getVideoId()), getShortVideoId(videoId)) && r.getType() == DownloadType.SUBTITLE && r.getStatus() == DownloadStatus.COMPLETED) {
+                            subs.add(r);
+                        }
+                    }
+                }
+                player.playLocal(uri, title, subs);
+            }
+			return;
+		}
+
+		if (Intent.ACTION_VIEW.equals(action) && intent.getData() != null) {
+			Uri data = intent.getData();
+			String type = intent.getType();
+			if (type != null && type.startsWith("video/")) {
+				player.playLocal(data, fetchLocalTitle(data, false), null);
+				return;
+			}
+			String url = data.toString();
 			final String clean = url.replace(YOUTUBE_WWW_HOST, Constant.YOUTUBE_MOBILE_HOST);
 			if (tabManager != null) tabManager.openTab(clean, UrlUtils.getPageClass(clean));
+		} else if (Intent.ACTION_SEND.equals(action)) {
+			String text = intent.getStringExtra(Intent.EXTRA_TEXT);
+			if (text != null) {
+				String url = extractUrlFromText(text);
+				if (url != null) {
+					final String clean = url.replace(YOUTUBE_WWW_HOST, Constant.YOUTUBE_MOBILE_HOST);
+					if (tabManager != null) tabManager.openTab(clean, UrlUtils.getPageClass(clean));
+				}
+			}
 		} else if (tabManager != null && tabManager.getWebview() == null) {
 			tabManager.openTab(Constant.HOME_URL, UrlUtils.getPageClass(Constant.HOME_URL));
 		}
 	}
 
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+		super.onActivityResult(requestCode, resultCode, data);
+		if (requestCode == 1001 && resultCode == RESULT_OK && data != null) {
+			Uri uri = data.getData();
+			if (uri != null) {
+				getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+				String label = fetchLocalTitle(uri, true);
+				player.addLocalSubtitle(uri, label);
+			}
+		}
+	}
+
+    public void showMediaItemMenuDialog(@NonNull String payloadJson) {
+        try {
+            JsonObject payload = new Gson().fromJson(payloadJson, JsonObject.class);
+            if (payload == null || !payload.has("url")) return;
+            showVideoOptionsDialog(payload.get("url").getAsString());
+        } catch (Exception ignored) {}
+    }
+
+    private String fetchLocalTitle(Uri uri, boolean keepExtension) {
+        String name = null;
+        if ("content".equals(uri.getScheme())) {
+            try (Cursor cursor = getContentResolver().query(uri, null, null, null, null)) {
+                if (cursor != null && cursor.moveToFirst()) {
+                    int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                    if (nameIndex != -1) {
+                        name = cursor.getString(nameIndex);
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+        if (name == null || name.isEmpty()) {
+            name = uri.getLastPathSegment();
+        }
+
+        if (name == null || name.isEmpty()) {
+            try (MediaMetadataRetriever retriever = new MediaMetadataRetriever()) {
+                retriever.setDataSource(this, uri);
+                name = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
+            } catch (Exception ignored) {}
+        }
+
+        if (name != null) {
+            if (keepExtension) return name;
+            int dot = name.lastIndexOf('.');
+            if (dot > 0) {
+                return name.substring(0, dot);
+            }
+            return name;
+        }
+        return "Video";
+    }
+
 	private String extractUrlFromText(String text) {
+        if (text == null) return null;
 		Matcher m = Pattern.compile("https?://[\\w./?=&%#-]+", Pattern.CASE_INSENSITIVE).matcher(text);
-		return m.find() ? m.group() : null;
+		if (m.find()) {
+            String url = m.group();
+            if (url.contains("youtube.com") || url.contains("youtu.be")) return url;
+        }
+        return null;
 	}
 
 	public void showVideoOptionsDialog(String url) {
+		if (activeVideoOptionsDialog != null && activeVideoOptionsDialog.isShowing()) {
+			activeVideoOptionsDialog.dismiss();
+		}
+
 		boolean hasVideoId = url.contains("v=") || url.contains("/watch")
 				|| url.contains("video_id=") || url.contains("/live/") || url.contains("youtu.be/");
 		boolean hasPlaylistId = url.contains("list=") || url.contains("/playlist");
@@ -645,7 +820,7 @@ public final class MainActivity extends AppCompatActivity {
 		boolean isPlaylist = hasPlaylistId && (!hasVideoId || url.contains("&list=") || url.contains("?list=")) && !isMix;
 
 		@SuppressLint("InflateParams") View view = LayoutInflater.from(this).inflate(R.layout.dialog_video_options, null);
-		final AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+		activeVideoOptionsDialog = new MaterialAlertDialogBuilder(this)
 				.setView(view)
 				.create();
 
@@ -671,7 +846,7 @@ public final class MainActivity extends AppCompatActivity {
 		}
 
 		if (enqueueText != null) {
-			enqueueText.setText(initiallyInQueue ? "Remove from Queue" : "Add to Queue");
+			enqueueText.setText(initiallyInQueue ? R.string.remove_from_queue : R.string.add_to_queue);
 		}
 
 		if (isPlaylist) {
@@ -686,35 +861,35 @@ public final class MainActivity extends AppCompatActivity {
 
 		final boolean inQueue = initiallyInQueue;
 		optionEnqueue.setOnClickListener(v -> {
-			dialog.dismiss();
+			activeVideoOptionsDialog.dismiss();
 			if (inQueue) {
 				queueRepository.remove(videoId);
-				Toast.makeText(this, "Removed from queue", Toast.LENGTH_SHORT).show();
+				Toast.makeText(this, R.string.queue_item_removed, Toast.LENGTH_SHORT).show();
 			} else {
-				Toast.makeText(this, "Added to queue", Toast.LENGTH_SHORT).show();
+				Toast.makeText(this, R.string.queue_item_added, Toast.LENGTH_SHORT).show();
 				fetchAndEnqueue(url);
 			}
 			updateQueueUI();
 		});
 
 		optionDownload.setOnClickListener(v -> {
-			dialog.dismiss();
+			activeVideoOptionsDialog.dismiss();
 			triggerDownload(url);
 		});
 
 		optionPlaylist.setOnClickListener(v -> {
-			dialog.dismiss();
+			activeVideoOptionsDialog.dismiss();
 			triggerPlaylistDownload(url);
 		});
 
 		view.findViewById(R.id.option_share).setOnClickListener(v -> {
-			dialog.dismiss();
+			activeVideoOptionsDialog.dismiss();
 			shareUrl(url);
 		});
 
-		view.findViewById(R.id.btn_close).setOnClickListener(v -> dialog.dismiss());
+		view.findViewById(R.id.btn_close).setOnClickListener(v -> activeVideoOptionsDialog.dismiss());
 
-		dialog.show();
+		activeVideoOptionsDialog.show();
 	}
 
 	private void fetchAndEnqueue(String url) {
@@ -738,13 +913,13 @@ public final class MainActivity extends AppCompatActivity {
 
 	public void triggerDownload(String url) {
 		String clean = url.replace(Constant.YOUTUBE_MOBILE_HOST, YOUTUBE_WWW_HOST);
-		Toast.makeText(this, "Fetching details...", Toast.LENGTH_SHORT).show();
+		Toast.makeText(this, R.string.fetching_details, Toast.LENGTH_SHORT).show();
 		mainHandler.postDelayed(() -> new DownloadDialog(clean, this, youtubeExtractor).show(), 600);
 	}
 
 	private void triggerPlaylistDownload(String url) {
 		String clean = url.replace(Constant.YOUTUBE_MOBILE_HOST, YOUTUBE_WWW_HOST);
-		Toast.makeText(this, "Fetching playlist...", Toast.LENGTH_SHORT).show();
+		Toast.makeText(this, R.string.playlist_download_loading, Toast.LENGTH_SHORT).show();
 		executor.execute(() -> {
 			try {
 				PlaylistExtractor ex = NewPipe.getService(0).getPlaylistExtractor(clean);
@@ -771,7 +946,7 @@ public final class MainActivity extends AppCompatActivity {
 				}
 				mainHandler.post(() -> new PlaylistDownloadDialog(playlistName, dialogItems, null, null, this, youtubeExtractor, tabManager).show());
 			} catch (Exception e) {
-				mainHandler.post(() -> Toast.makeText(this, "Failed to load playlist", Toast.LENGTH_SHORT).show());
+				mainHandler.post(() -> Toast.makeText(this, R.string.playlist_download_failed_initial, Toast.LENGTH_SHORT).show());
 			}
 		});
 	}
@@ -780,55 +955,76 @@ public final class MainActivity extends AppCompatActivity {
 		final Intent i = new Intent(Intent.ACTION_SEND);
 		i.putExtra(Intent.EXTRA_TEXT, url);
 		i.setType("text/plain");
-		startActivity(Intent.createChooser(i, "Share Video"));
+		startActivity(Intent.createChooser(i, getString(R.string.share_video)));
 	}
 
 	private void setupBackNavigation() {
-		getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+		appBackCallback = new OnBackPressedCallback(true) {
 			@Override public void handleOnBackPressed() {
-				if (DeviceUtils.isInPictureInPictureMode(MainActivity.this)) {
-					setEnabled(false); getOnBackPressedDispatcher().onBackPressed(); setEnabled(true); return;
-				}
-				if (player != null && player.isFullscreen()) { player.exitFullscreen(); return; }
-				if (expandedQueueContainer != null && expandedQueueContainer.getVisibility() == View.VISIBLE) {
-					hideExpandedQueue();
-					return;
-				}
-
-				boolean miniPlayerTriggered = false;
-				if (player != null && player.canSuspendWatch() && !player.isInAppMiniPlayer() && extensionManager.isEnabled(Constant.ENABLE_IN_APP_MINI_PLAYER)) {
-					player.enterInAppMiniPlayer();
-					miniPlayerTriggered = true;
-				}
-				
-				if (tabManager != null && tabManager.goBack()) {
-					updateNavBarVisibility();
-					updateQueueUI();
-					return;
-				}
-
-				if (miniPlayerTriggered) return;
-
-				final YoutubeWebview web = getWebview();
-				if (web != null && tabManager != null) {
-					tabManager.evaluateJavascript("window.dispatchEvent(new Event('onGoBack'));", null);
-					if (web.canGoBack()) {
-						goBack();
-						return;
-					}
-				}
-				goBack();
+				handleAppBack();
 			}
-		});
+		};
+		getOnBackPressedDispatcher().addCallback(this, appBackCallback);
 	}
 
-	private void goBack() {
-		if (tabManager != null && !tabManager.goBack()) {
-			if (System.currentTimeMillis() - lastBackTime < DOUBLE_TAP_EXIT_INTERVAL_MS) finish();
-			else { lastBackTime = System.currentTimeMillis(); Toast.makeText(this, R.string.press_back_again_to_exit, Toast.LENGTH_SHORT).show(); }
+	public void handleAppBack() {
+		if (DeviceUtils.isInPictureInPictureMode(this)) {
+			if (appBackCallback != null) appBackCallback.setEnabled(false);
+			getOnBackPressedDispatcher().onBackPressed();
+			if (appBackCallback != null) appBackCallback.setEnabled(true);
+			return;
+		}
+		if (player != null && player.isFullscreen()) { player.exitFullscreen(); return; }
+		if (expandedQueueContainer != null && expandedQueueContainer.getVisibility() == View.VISIBLE) {
+			hideExpandedQueue();
+			return;
+		}
+
+		if (tabManager != null && getWebview() != null) {
+			tabManager.evaluateJavascript(
+					"(function() { " +
+							"  const closeBtn = document.querySelector('ytm-engagement-panel-renderer .engagement-panel-header-action-button, ytm-item-section-renderer[section-identifier=\"comment-item-section\"] .engagement-panel-header-action-button, .engagement-panel-container .engagement-panel-header-action-button, ytm-bottom-sheet-renderer .bottom-sheet-close-button, ytm-menu-renderer #close-button, .yt-spec-button-shape-next--size-m.yt-spec-button-shape-next--icon-only-btn[aria-label*=\"lose\"], .ytp-ad-overlay-close-button');" +
+							"  if (closeBtn && closeBtn.offsetParent !== null) { closeBtn.click(); return true; }" +
+							"  return false;" +
+							"})()",
+					value -> {
+						if ("true".equals(value)) return;
+						runOnUiThread(this::handleAppBackInternal);
+					}
+			);
 		} else {
-			updateNavBarVisibility();
-			updateQueueUI();
+			handleAppBackInternal();
+		}
+	}
+
+	private void handleAppBackInternal() {
+		boolean miniPlayerTriggered = false;
+		if (player != null && player.canSuspendWatch() && !player.isInAppMiniPlayer() && extensionManager.isEnabled(Constant.ENABLE_IN_APP_MINI_PLAYER)) {
+			player.enterInAppMiniPlayer();
+			miniPlayerTriggered = true;
+		}
+
+		if (tabManager != null) {
+			tabManager.evaluateJavascript("window.dispatchEvent(new Event('onGoBack'));", null);
+			YoutubeWebview web = getWebview();
+			if (web != null && web.fullscreen != null && web.fullscreen.getVisibility() == View.VISIBLE) {
+				tabManager.evaluateJavascript("document.exitFullscreen()", null);
+				return;
+			}
+			if (tabManager.goBack()) {
+				updateNavBarVisibility();
+				updateQueueUI();
+				return;
+			}
+		}
+
+		if (miniPlayerTriggered) return;
+
+		long time = System.currentTimeMillis();
+		if (time - lastBackTime < DOUBLE_TAP_EXIT_INTERVAL_MS) finish();
+		else {
+			lastBackTime = time;
+			Toast.makeText(this, R.string.press_back_again_to_exit, Toast.LENGTH_SHORT).show();
 		}
 	}
 
@@ -849,28 +1045,89 @@ public final class MainActivity extends AppCompatActivity {
 				DomainVerificationUserState userState = manager.getDomainVerificationUserState(getPackageName());
 				if (userState != null && !userState.isLinkHandlingAllowed()) {
 					new MaterialAlertDialogBuilder(this)
-							.setTitle("Open YouTube Links")
-							.setMessage("To open YouTube links directly in YouTube Lite, you need to enable 'Open supported links' in app settings.")
-							.setPositiveButton("Settings", (d, w) -> {
+							.setTitle(R.string.open_by_default_title)
+							.setMessage(R.string.open_by_default_message)
+							.setPositiveButton(R.string.open_by_default_settings, (d, w) -> {
 								kv.putBoolean("asked_open_by_default", true);
 								try {
-									Intent intent = new Intent(Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS,
-											Uri.parse("package:" + getPackageName()));
-									startActivity(intent);
+									startActivity(new Intent(Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS,
+											Uri.parse("package:" + getPackageName())));
 								} catch (Exception e) {
 									Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
 											Uri.parse("package:" + getPackageName()));
 									startActivity(intent);
 								}
 							})
-							.setNegativeButton("Later", (d, w) -> kv.putBoolean("asked_open_by_default", true))
+							.setNegativeButton(R.string.open_by_default_later, (d, w) -> kv.putBoolean("asked_open_by_default", true))
 							.show();
 				}
 			} catch (Exception ignored) {}
 		}
 	}
 
+	private void fetchTitleAndShowPopup(final String url) {
+		executor.execute(() -> {
+			try {
+				VideoDetails details = youtubeExtractor.getVideoInfo(url);
+				mainHandler.post(() -> showClipboardDownloadPopup(url, details.getTitle(), details.getThumbnail()));
+			} catch (Exception e) {
+				mainHandler.post(() -> showClipboardDownloadPopup(url, null, null));
+			}
+		});
+	}
+
+	private void showClipboardDownloadPopup(final String url, @Nullable String title, @Nullable String thumbnailUrl) {
+		@SuppressLint("InflateParams") View view = LayoutInflater.from(this).inflate(R.layout.dialog_clipboard_detected, null);
+		final AlertDialog dialog = new MaterialAlertDialogBuilder(this)
+				.setView(view)
+				.create();
+
+		TextView messageView = view.findViewById(R.id.dialog_message);
+		if (messageView != null) {
+			messageView.setText(title != null ? title : url);
+		}
+
+		ImageView imageView = view.findViewById(R.id.dialog_image);
+		if (imageView != null && thumbnailUrl != null) {
+			Glide.with(this)
+					.load(thumbnailUrl)
+					.diskCacheStrategy(DiskCacheStrategy.ALL)
+					.into(imageView);
+		}
+
+		view.findViewById(R.id.btn_close).setOnClickListener(v -> dialog.dismiss());
+		view.findViewById(R.id.btn_play).setOnClickListener(v -> {
+			tabManager.openTab(url, UrlUtils.getPageClass(url));
+			dialog.dismiss();
+		});
+		view.findViewById(R.id.btn_download).setOnClickListener(v -> {
+			if (url.contains("list=") && !url.contains("list=RD")) {
+				triggerPlaylistDownload(url);
+			} else {
+				triggerDownload(url);
+			}
+			dialog.dismiss();
+		});
+
+		Window window = dialog.getWindow();
+		if (window != null) {
+			WindowManager.LayoutParams lp = window.getAttributes();
+			lp.gravity = Gravity.CENTER;
+			lp.width = (int) (getResources().getDisplayMetrics().widthPixels * 0.95);
+			lp.y = ViewUtils.dpToPx(this, 100);
+			window.setAttributes(lp);
+		}
+
+		dialog.show();
+	}
+
+	@Override protected void onStart() {
+		super.onStart();
+		isActivityVisible = true;
+	}
+
 	@Override protected void onStop() {
+		isActivityVisible = false;
 		if (player != null && shouldSuspendMiniPlayerOnStop(player.isInAppMiniPlayer(), isChangingConfigurations(), DeviceUtils.isInPictureInPictureMode(this))) {
 			player.suspendInAppMiniPlayerUiIfNeeded();
 		}
@@ -878,10 +1135,17 @@ public final class MainActivity extends AppCompatActivity {
 	}
 
 	@Override protected void onDestroy() {
+		IncognitoManager.getInstance().removeListener(incognitoListener);
 		super.onDestroy();
 		if (playbackConnection != null) unbindService(playbackConnection);
 		if (downloadConnection != null) unbindService(downloadConnection);
 		if (player != null && shouldReleasePlayerOnDestroy(isChangingConfigurations())) player.release();
 		executor.shutdown();
+	}
+
+	private static String getShortVideoId(String videoId) {
+		if (videoId == null) return "";
+		int idx = videoId.indexOf(':');
+		return idx == -1 ? videoId : videoId.substring(0, idx);
 	}
 }

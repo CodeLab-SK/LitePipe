@@ -42,9 +42,6 @@ import java.util.regex.Pattern;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-/**
- * Contract for fetching extracted playback data by video id.
- */
 @FunctionalInterface
 interface Fetch {
 	ExtractedInfo fetch(@NonNull String videoId,
@@ -248,9 +245,8 @@ public final class YoutubeExtractor {
 		return details.video();
 	}
 
-	public void invalidatePlaybackCacheByVideoId(@NonNull String videoId) {
-		// Not implemented in simple InfoCache, but could be added.
-	}
+	public void invalidatePlaybackCacheByVideoId(@SuppressWarnings("unused") @NonNull String videoId) {
+		}
 
 	@NonNull
 	private PlaybackDetails load(@NonNull String videoId,
@@ -620,14 +616,14 @@ public final class YoutubeExtractor {
 	@Nullable
 	private String getBestImageUrl(@NonNull List<Image> images) {
 		if (images.isEmpty()) return null;
-		Map<Image.ResolutionLevel, Integer> priority = Map.of(
-						Image.ResolutionLevel.HIGH, 3,
-						Image.ResolutionLevel.MEDIUM, 2,
-						Image.ResolutionLevel.LOW, 1,
-						Image.ResolutionLevel.UNKNOWN, 0);
 		return images.stream()
-						.max(Comparator.comparingInt(img ->
-										priority.getOrDefault(img.getEstimatedResolutionLevel(), 0)))
+						.max(Comparator.comparingInt(img -> {
+							Image.ResolutionLevel res = img.getEstimatedResolutionLevel();
+							if (res == Image.ResolutionLevel.HIGH) return 3;
+							if (res == Image.ResolutionLevel.MEDIUM) return 2;
+							if (res == Image.ResolutionLevel.LOW) return 1;
+							return 0;
+						}))
 						.map(Image::getUrl)
 						.orElse(null);
 	}
@@ -810,9 +806,6 @@ public final class YoutubeExtractor {
 	}
 }
 
-/**
- * Value object that pairs StreamInfo with the optional YouTube extractor.
- */
 record ExtractedInfo(@NonNull StreamInfo info,
                      @Nullable YoutubeStreamExtractor youtube) {
 }

@@ -2,6 +2,7 @@ package com.hhst.youtubelite.player.controller;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.Color;
@@ -66,6 +67,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import javax.inject.Inject;
 
@@ -80,6 +82,7 @@ public class Controller {
 	private static final int HINT_PADDING_DP = 8;
 	private static final int HINT_TOP_MARGIN_DP = 24;
 	private static final int CONTROLS_HIDE_DELAY_MS = 1500;
+	private static final int UNDO_HIDE_DELAY_MS = 5000;
 	static final float DISABLED_BUTTON_ALPHA = 0.38f;
 
 	@NonNull
@@ -119,6 +122,8 @@ public class Controller {
 
 	@NonNull
 	private final Runnable hideControls = () -> setControlsVisible(false);
+	@NonNull
+	private final Runnable hideUndo = () -> updateVisibility(R.id.btn_undo_skip, false);
 
 	@Inject
 	public Controller(@NonNull final Activity activity,
@@ -163,6 +168,7 @@ public class Controller {
 		updateVisibility(R.id.btn_lock, extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_SHOW_LOCK));
 		updateVisibility(R.id.btn_next, extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_SHOW_NEXT));
 		updateVisibility(R.id.btn_prev, extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_SHOW_PREVIOUS));
+		updateVisibility(R.id.tv_remaining, stateMachine.isFullscreen() && extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_SHOW_REMAINING_DURATION));
 
 		updateSubtitleButtonState();
 		updateSegmentsButtonState();
@@ -487,6 +493,31 @@ public class Controller {
 	}
 
 	private void toggleSubtitles() {
+		if (engine.isLocalPlayback()) {
+			List<String> available = engine.getSubtitles();
+			List<String> options = new ArrayList<>(available);
+			options.add("Add Subtitles...");
+
+			String[] labels = options.toArray(new String[0]);
+			int checked = -1;
+			String selected = engine.getSelectedSubtitle();
+			if (selected != null) {
+				checked = available.indexOf(selected);
+			}
+
+			showSelectionPopup(playerView.findViewById(R.id.btn_subtitles), labels, checked, (index, label) -> {
+				if (index == available.size()) {
+					openSubtitlePicker();
+				} else {
+					engine.setSubtitlesEnabled(true);
+					engine.setSubtitleLanguage(label);
+					showHint(activity.getString(R.string.subtitles_on) + ": " + label, 1000);
+					updateSubtitleButtonState();
+				}
+			});
+			return;
+		}
+
 		if (engine.areSubtitlesEnabled()) {
 			engine.setSubtitlesEnabled(false);
 			showHint(activity.getString(R.string.subtitles_off), 1000);
@@ -514,29 +545,48 @@ public class Controller {
 		}
 	}
 
+	private void openSubtitlePicker() {
+		Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+		intent.addCategory(Intent.CATEGORY_OPENABLE);
+		intent.setType("*/*");
+		String[] mimeTypes = {
+				"application/x-subrip",
+				"text/vtt",
+				"application/ttml+xml",
+				"application/x-subtitle",
+				"text/plain",
+				"text/xml",
+				"application/xml"
+		};
+		intent.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes);
+		activity.startActivityForResult(intent, 1001);
+	}
+
 	public void updateSubtitleButtonState() {
 		ImageButton subBtn = playerView.findViewById(R.id.btn_subtitles);
 		if (subBtn == null) return;
-		if (!extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_SHOW_SUBTITLES)) {
-			subBtn.setVisibility(View.GONE);
-			return;
-		}
+		boolean isVisibleInSettings = extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_SHOW_SUBTITLES);
 		boolean hasSubtitles = !engine.getSubtitles().isEmpty();
 		boolean isEnabled = engine.areSubtitlesEnabled();
 		subBtn.setImageResource(isEnabled ? R.drawable.ic_subtitles_on : R.drawable.ic_subtitles_off);
-		subBtn.setAlpha(hasSubtitles ? 1.0f : DISABLED_BUTTON_ALPHA);
+		
+		if (engine.isLocalPlayback()) {
+			subBtn.setAlpha(1.0f);
+		} else {
+			subBtn.setAlpha(hasSubtitles ? 1.0f : DISABLED_BUTTON_ALPHA);
+		}
+
+		subBtn.setVisibility(isVisibleInSettings ? View.VISIBLE : View.GONE);
 	}
 
 	public void updateSegmentsButtonState() {
 		View segmentsBtn = playerView.findViewById(R.id.btn_segments);
 		if (segmentsBtn == null) return;
-		if (!extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_SHOW_SEGMENTS)) {
-			segmentsBtn.setVisibility(View.GONE);
-			return;
-		}
+		boolean isVisibleInSettings = extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_SHOW_SEGMENTS);
 		boolean hasSegments = !engine.getSegments().isEmpty();
 		segmentsBtn.setEnabled(hasSegments);
 		segmentsBtn.setAlpha(hasSegments ? 1.0f : DISABLED_BUTTON_ALPHA);
+		segmentsBtn.setVisibility(isVisibleInSettings ? View.VISIBLE : View.GONE);
 	}
 
 	private void showSegmentsPopup(@NonNull final View anchor) {
@@ -745,7 +795,10 @@ public class Controller {
 			sb.append(lang);
 
 			if (name != null && !name.isEmpty() && !name.equalsIgnoreCase(lang) && !name.toLowerCase(Locale.ROOT).contains("original")) {
-				sb.append(" (").append(name).append(")");
+                String cleanName = name.replaceAll("(?i)\\b" + Pattern.quote(lang) + "\\b", "").replaceAll("[()]", "").trim();
+                if (!cleanName.isEmpty()) {
+                    sb.append(" (").append(cleanName).append(")");
+                }
 			}
 		} else if (name != null && !name.isEmpty()) {
 			sb.append(name);
@@ -1012,6 +1065,9 @@ public class Controller {
 	}
 
 	public void setControlsVisible(boolean visible) {
+		if (stateMachine.isFullscreen()) {
+			ViewUtils.setFullscreen(activity.getWindow().getDecorView(), true);
+		}
 		stateMachine.setControlsVisible(visible);
 		handler.removeCallbacks(hideControls);
 		final ControllerMachine.RenderState renderState = stateMachine.currentRenderState(
@@ -1043,7 +1099,11 @@ public class Controller {
 			boolean show = renderState.showLockButton() && extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_SHOW_LOCK);
 			ViewUtils.animateViewAlpha(lockBtn, show ? 1.0f : 0.0f, View.GONE);
 		}
-		updateMiniControls(renderState.showMiniControls(), renderState.showMiniScrim());
+
+		boolean showRemaining = renderState.showRemainingDuration() && extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_SHOW_REMAINING_DURATION);
+		updateVisibility(R.id.tv_remaining, showRemaining);
+
+		updateMiniControls(renderState.showMiniControls(), renderState.showMiniScrim(), renderState.showMiniCloseRestore());
 		refreshPlaybackButtons();
 	}
 
@@ -1173,13 +1233,13 @@ public class Controller {
 		button.setAlpha(nextButtonAlpha(availability));
 	}
 
-	private void updateMiniControls(final boolean showControls, final boolean showScrim) {
+	private void updateMiniControls(final boolean showControls, final boolean showScrim, final boolean showCloseRestore) {
 		final View scrim = playerView.findViewById(R.id.mini_controller_scrim);
 		if (scrim != null) {
 			ViewUtils.animateViewAlpha(scrim, showScrim ? 1.0f : 0.0f, View.GONE);
 		}
-		updateVisibility(R.id.btn_mini_close, showControls);
-		updateVisibility(R.id.btn_mini_restore, showControls);
+		updateVisibility(R.id.btn_mini_close, showCloseRestore);
+		updateVisibility(R.id.btn_mini_restore, showCloseRestore);
 		updateVisibility(R.id.mini_bottom_controls, showControls);
 	}
 
@@ -1188,6 +1248,20 @@ public class Controller {
 		if (view != null) {
 			view.setVisibility(visible ? View.VISIBLE : View.GONE);
 		}
+	}
+
+	public void showUndoSkip(long[] segment, java.util.function.Consumer<long[]> onUndo) {
+		TextView btn = playerView.findViewById(R.id.btn_undo_skip);
+		if (btn == null) return;
+		btn.setOnClickListener(v -> {
+			onUndo.accept(segment);
+			updateVisibility(R.id.btn_undo_skip, false);
+			handler.removeCallbacks(hideUndo);
+		});
+		updateVisibility(R.id.btn_undo_skip, true);
+		ViewUtils.animateViewAlpha(btn, 1.0f, View.GONE);
+		handler.removeCallbacks(hideUndo);
+		handler.postDelayed(hideUndo, UNDO_HIDE_DELAY_MS);
 	}
 
 	private interface SelectionCallback {

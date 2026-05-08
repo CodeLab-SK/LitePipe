@@ -106,7 +106,7 @@ public final class YoutubeFragment extends Fragment {
 			swipeRefreshLayout.setColorSchemeResources(R.color.yt_red);
 			swipeRefreshLayout.setOnRefreshListener(() -> {
 				if (webview != null) {
-					webview.evaluateJavascript("window.dispatchEvent(new Event('onRefresh'));", null);
+					webview.reload();
 					handler.removeCallbacks(refreshTimeoutRunnable);
 					handler.postDelayed(refreshTimeoutRunnable, 8000);
 				}
@@ -114,7 +114,8 @@ public final class YoutubeFragment extends Fragment {
 			swipeRefreshLayout.setProgressViewOffset(true, 86, 196);
 		}
 
-		webview.setYoutubeExtractor(youtubeExtractor);
+        assert webview != null;
+        webview.setYoutubeExtractor(youtubeExtractor);
 		webview.setPlayer(player);
 		webview.setExtensionManager(extensionManager);
 		webview.setTabManager(tabManager);
@@ -158,6 +159,7 @@ public final class YoutubeFragment extends Fragment {
 	public void onResume() {
 		super.onResume();
 		if (webview != null && !isHidden()) {
+			webview.syncPreferences();
 			webview.onResume();
 			webview.evaluateJavascript("window.dispatchEvent(new Event('onTabShow'));", null);
 		}
@@ -179,6 +181,7 @@ public final class YoutubeFragment extends Fragment {
 			if (hidden) {
 				webview.onPause();
 			} else {
+				webview.syncPreferences();
 				webview.onResume();
 				if (pendingRestoreState != null) {
 					webview.restoreState(pendingRestoreState);

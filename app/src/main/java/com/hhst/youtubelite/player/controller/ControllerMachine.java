@@ -5,11 +5,21 @@ import androidx.annotation.DrawableRes;
 public final class ControllerMachine {
 
 	public enum State {
-		NORMAL,
-		FULLSCREEN_UNLOCKED,
-		FULLSCREEN_LOCKED,
-		MINI_PLAYER,
-		PIP;
+		NORMAL(ControllerState.Mode.NORMAL),
+		FULLSCREEN_UNLOCKED(ControllerState.Mode.FULLSCREEN_UNLOCK),
+		FULLSCREEN_LOCKED(ControllerState.Mode.FULLSCREEN_LOCK),
+		MINI_PLAYER(ControllerState.Mode.MINI_PLAYER),
+		PIP(ControllerState.Mode.PIP);
+
+		private final ControllerState.Mode mode;
+
+		State(ControllerState.Mode mode) {
+			this.mode = mode;
+		}
+
+		public ControllerState.Mode toMode() {
+			return mode;
+		}
 
 		public boolean isFullscreen() {
 			return this == FULLSCREEN_UNLOCKED || this == FULLSCREEN_LOCKED;
@@ -23,6 +33,7 @@ public final class ControllerMachine {
 					boolean showProgressBar,
 					boolean showResetButton,
 					boolean showLockButton,
+					boolean showRemainingDuration,
 					boolean showMiniControls,
 					boolean showMiniScrim,
                     boolean showMiniCloseRestore,
@@ -115,6 +126,7 @@ public final class ControllerMachine {
 						uiState.progressVisible(),
 						uiState.resetVisible(),
 						uiState.lockButtonVisible() && !lockButtonHiddenByUser,
+						uiState.remainingDurationVisible(),
 						uiState.miniControlsVisible(),
 						uiState.miniScrimVisible(),
                         uiState.miniCloseRestoreVisible(),

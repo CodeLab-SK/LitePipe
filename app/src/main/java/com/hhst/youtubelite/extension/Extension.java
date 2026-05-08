@@ -24,31 +24,23 @@ public record Extension(String key, int description, int helpText, List<Extensio
                 )),
 
                 new Extension(Constant.HIDE_NAV_BAR_LABELS, R.string.hide_nav_bar_labels, null),
-                new Extension(Constant.ENABLE_DISPLAY_DISLIKES, R.string.return_dislike, null)
+                new Extension(Constant.ENABLE_DISPLAY_DISLIKES, R.string.return_dislike, null),
+                new Extension(Constant.ENABLE_LONG_PRESS_MENU, R.string.long_press_context_menu, null),
+                new Extension(Constant.SHOW_SEARCH_SUGGESTIONS, R.string.show_search_suggestions, null)
             )),
 
             new Extension(null, R.string.shorts, List.of(
-                new Extension(Constant.HIDE_SHORTS_BUTTONS, R.string.hide_shorts_buttons, List.of(
-                    new Extension(Constant.SHORTS_SHOW_LIKE, R.string.shorts_show_like, null),
-                    new Extension(Constant.SHORTS_SHOW_DISLIKE, R.string.shorts_show_dislike, null),
-                    new Extension(Constant.SHORTS_SHOW_COMMENTS, R.string.shorts_show_comments, null),
-                    new Extension(Constant.SHORTS_SHOW_SHARE, R.string.shorts_show_share, null),
-                    new Extension(Constant.SHORTS_SHOW_REMIX, R.string.shorts_show_remix, null),
-                    new Extension(Constant.SHORTS_SHOW_SUBSCRIBE, R.string.shorts_show_subscribe, null)
-                )),
-                new Extension(Constant.SHORTS_GESTURES, R.string.shorts_gestures, List.of(
                     new Extension(Constant.SHORTS_GESTURE_2X, R.string.shorts_gesture_2x, null),
-                    new Extension(Constant.SHORTS_GESTURE_SEEK, R.string.shorts_gesture_seek, null),
-                    new Extension(Constant.SHORTS_GESTURE_VOLUME, R.string.shorts_gesture_volume, null)
-                )),
                     new Extension(Constant.SHOW_NAV_BAR_IN_SHORTS, R.string.show_nav_bar_in_shorts, null),
                     new Extension(Constant.HIDE_SHORTS, R.string.hide_shorts, null)
             )),
 
             new Extension(null, R.string.player, List.of(
                 new Extension(Constant.ACTION_BAR_ORDER, R.string.custom_action_bar, R.string.custom_action_bar_desc, List.of(
+                    new Extension(Constant.ACTION_BAR_SHOW_LIKE_DISLIKE, R.string.action_like_dislike, null),
                     new Extension(Constant.ACTION_BAR_SHOW_DOWNLOAD, R.string.action_download, null),
                     new Extension(ENABLE_PIP, R.string.pip, null),
+                    new Extension(Constant.ACTION_BAR_SHOW_CHAT, R.string.action_chat, null),
                     new Extension(Constant.ACTION_BAR_SHOW_SHARE, R.string.action_share, null),
                     new Extension(Constant.ACTION_BAR_SHOW_REMIX, R.string.action_remix, null),
                     new Extension(Constant.ACTION_BAR_SHOW_THANKS, R.string.action_thanks, null),
@@ -66,34 +58,37 @@ public record Extension(String key, int description, int helpText, List<Extensio
                     new Extension(Constant.PLAYER_SHOW_RELOAD, R.string.restart, null),
                     new Extension(Constant.PLAYER_SHOW_LOCK, R.string.lock_screen, null),
                     new Extension(Constant.PLAYER_SHOW_NEXT, R.string.action_next, null),
-                    new Extension(Constant.PLAYER_SHOW_PREVIOUS, R.string.action_previous, null)
+                    new Extension(Constant.PLAYER_SHOW_PREVIOUS, R.string.action_previous, null),
+                    new Extension(Constant.PLAYER_SHOW_REMAINING_DURATION, R.string.show_remaining_duration, null)
                 )),
                 new Extension(Constant.PLAYER_GESTURES, R.string.player_gestures, List.of(
                     new Extension(Constant.PLAYER_GESTURE_BRIGHTNESS, R.string.brightness, null),
                     new Extension(Constant.PLAYER_GESTURE_VOLUME, R.string.volume, null),
-                    new Extension(Constant.PLAYER_GESTURE_SEEK, R.string.shorts_gesture_seek, null),
+                    new Extension(Constant.PLAYER_GESTURE_SEEK, R.string.Seek, null),
                     new Extension(Constant.PLAYER_GESTURE_2X, R.string.shorts_gesture_2x, null),
-                    new Extension(Constant.DOUBLE_TAP_SEEK_AMOUNT, R.string.double_tap_seek_amount, null)
+                    new Extension(Constant.PLAYER_GESTURE_FULLSCREEN_SWIPE, R.string.gesture_fullscreen_swipe, null),
+                    new Extension(Constant.PLAYER_GESTURE_MINIPLAYER_SWIPE, R.string.gesture_miniplayer_swipe, null)
                 )),
                 new Extension(REMEMBER_LAST_POSITION, R.string.remember_last_position, null),
                 new Extension(Constant.DEFAULT_QUALITY, R.string.default_quality, null),
                 new Extension(Constant.DEFAULT_PLAYBACK_SPEED, R.string.default_playback_speed, null),
+                    new Extension(Constant.DOUBLE_TAP_SEEK_AMOUNT, R.string.double_tap_seek_amount, null),
                 new Extension(REMEMBER_RESIZE_MODE, R.string.remember_resize_mode, null),
                 new Extension(ENABLE_IN_APP_MINI_PLAYER, R.string.in_app_mini_player, null),
+                new Extension(ENABLE_PIP, R.string.pip ,null),
                 new Extension(ENABLE_BACKGROUND_PLAY, R.string.background_play, null)
             )),
 
-            new Extension(null, R.string.skip_sponsors, List.of(
-                new Extension(SKIP_SPONSORS, R.string.skip_sponsors, null),
+            new Extension(null, R.string.sponsorblock, List.of(
+                new Extension(SKIP_SPONSORS, R.string.skip_sponsored_segments, null),
                 new Extension(SKIP_SELF_PROMO, R.string.skip_sponsors_selfpromo, null),
                 new Extension(SKIP_POI_HIGHLIGHT, R.string.skip_sponsors_highlight, null)
             )),
 
             new Extension(null, R.string.download, List.of(
-                new Extension(Constant.DOWNLOAD_LOCATION, R.string.download_location, null)
-            )),
-
-            new Extension(null, R.string.miscellaneous, List.of(
+                new Extension(Constant.DOWNLOAD_LOCATION, R.string.download_location, null),
+                new Extension(Constant.DOWNLOAD_MAX_CONCURRENT, R.string.max_concurrent_downloads, null),
+                new Extension(Constant.DOWNLOAD_CLIPBOARD_DETECTION, R.string.download_clipboard_detection, null)
             ))
         );
     }

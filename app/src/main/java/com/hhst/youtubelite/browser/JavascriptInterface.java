@@ -5,12 +5,15 @@ import android.content.ContextWrapper;
 import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.media3.common.util.UnstableApi;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.hhst.youtubelite.Constant;
+import com.hhst.youtubelite.IncognitoManager;
 import com.hhst.youtubelite.R;
 import com.hhst.youtubelite.downloader.ui.DownloadActivity;
 import com.hhst.youtubelite.downloader.ui.DownloadDialog;
@@ -124,6 +127,18 @@ public final class JavascriptInterface {
     @android.webkit.JavascriptInterface
     public void showVideoOptions(@Nullable final String url, @Nullable final String title) {
         showVideoOptions(url);
+    }
+
+    @android.webkit.JavascriptInterface
+    public void showMediaItemMenu(@Nullable final String payloadJson) {
+        if (payloadJson != null) {
+            handler.post(() -> {
+                MainActivity mainActivity = findMainActivity(context);
+                if (mainActivity != null) {
+                    mainActivity.showMediaItemMenuDialog(payloadJson);
+                }
+            });
+        }
     }
 
     private MainActivity findMainActivity(Context context) {
@@ -264,5 +279,39 @@ public final class JavascriptInterface {
         if (url != null && tag != null) {
             handler.post(() -> tabManager.openTab(url, tag));
         }
+    }
+
+    @android.webkit.JavascriptInterface
+    public void goBack() {
+        handler.post(() -> {
+            MainActivity activity = findMainActivity(context);
+            if (activity != null) {
+                activity.handleAppBack();
+                return;
+            }
+            tabManager.evaluateJavascript("window.dispatchEvent(new Event('onGoBack'));", null);
+            tabManager.goBack();
+        });
+    }
+
+    @android.webkit.JavascriptInterface
+    public long getResumePosition(@Nullable String vid) {
+        return player.getResumePosition(vid);
+    }
+
+    @android.webkit.JavascriptInterface
+    public void toggleIncognito() {
+        handler.post(() -> IncognitoManager.getInstance().toggle(() -> handler.post(() -> {
+            tabManager.openTab(Constant.HOME_URL, Constant.PAGE_HOME);
+            YoutubeWebview web = tabManager.getWebview();
+            if (web != null) {
+                web.reload();
+            }
+        })));
+    }
+
+    @android.webkit.JavascriptInterface
+    public boolean isIncognito() {
+        return IncognitoManager.getInstance().isIncognito();
     }
 }

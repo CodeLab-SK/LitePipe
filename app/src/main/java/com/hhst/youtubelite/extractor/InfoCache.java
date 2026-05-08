@@ -76,9 +76,6 @@ public final class InfoCache {
 		kv.encode(key, gson.toJson(slot));
 	}
 
-	/**
-	 * Value object for app logic.
-	 */
 	private record Slot(long until, @NonNull String json) {
 	}
 }

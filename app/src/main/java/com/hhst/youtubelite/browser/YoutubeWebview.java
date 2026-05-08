@@ -8,6 +8,7 @@ import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Looper;
+import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
@@ -30,6 +31,7 @@ import androidx.media3.common.util.Consumer;
 import androidx.media3.common.util.UnstableApi;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import com.hhst.youtubelite.IncognitoManager;
 import com.hhst.youtubelite.R;
 import com.hhst.youtubelite.extension.ExtensionManager;
 import com.hhst.youtubelite.extractor.YoutubeExtractor;
@@ -40,7 +42,6 @@ import com.hhst.youtubelite.player.LitePlayer;
 import com.hhst.youtubelite.player.queue.QueueRepository;
 import com.hhst.youtubelite.player.queue.QueueWarmer;
 import com.hhst.youtubelite.ui.MainActivity;
-import com.hhst.youtubelite.util.StreamIOUtils;
 import com.hhst.youtubelite.util.ToastUtils;
 import com.hhst.youtubelite.util.UrlUtils;
 import com.hhst.youtubelite.util.ViewUtils;
@@ -139,6 +140,7 @@ public class YoutubeWebview extends WebView {
 	@Nullable
 	private volatile String poTokenDoneKey;
 	private boolean isDestroyed = false;
+	private volatile long prefVersion = -1L;
 
 	public YoutubeWebview(@NonNull final Context context) { this(context, null); }
 	public YoutubeWebview(@NonNull final Context context, @Nullable final AttributeSet attrs) { this(context, attrs, 0); }
@@ -197,6 +199,11 @@ public class YoutubeWebview extends WebView {
 	public void loadUrl(@NonNull final String url) {
 		if (isDestroyed) return;
 		final String resolvesUrl = UrlUtils.appendLanguage(sanitizeLoadUrl(url));
+		Uri external = UrlUtils.externalUri(resolvesUrl);
+		if (external != null) {
+			openExternal(external);
+			return;
+		}
 		if (canLoad(resolvesUrl)) {
 			super.loadUrl(resolvesUrl);
 			return;
@@ -209,6 +216,7 @@ public class YoutubeWebview extends WebView {
 	}
 
 	static boolean canLoad(@NonNull final String url) {
+		if (UrlUtils.externalUri(url) != null) return false;
 		if (UrlUtils.isAllowedUrl(url)) return true;
 		final String scheme = scheme(url);
 		return isScheme(scheme, "file")
@@ -218,6 +226,7 @@ public class YoutubeWebview extends WebView {
 	}
 
 	static boolean canOpenExternal(@NonNull final String url) {
+		if (UrlUtils.externalUri(url) != null) return true;
 		if (UrlUtils.isAllowedUrl(url)) return false;
 		final String scheme = scheme(url);
 		return isScheme(scheme, "http") || isScheme(scheme, "https");
@@ -257,7 +266,7 @@ public class YoutubeWebview extends WebView {
 		try {
 			final URI uri = URI.create(url);
 			final String rawQuery = uri.getRawQuery();
-			if (rawQuery == null || rawQuery.isEmpty()) return url;
+			if (TextUtils.isEmpty(rawQuery)) return url;
 			boolean removed = false;
 			final StringBuilder filteredQuery = new StringBuilder();
 			for (final String part : rawQuery.split("&")) {
@@ -284,6 +293,7 @@ public class YoutubeWebview extends WebView {
 		setFocusable(true);
 		setFocusableInTouchMode(true);
 		setLayerType(View.LAYER_TYPE_HARDWARE, null);
+		setOnLongClickListener(v -> true);
 
 		CookieManager.getInstance().setAcceptCookie(true);
 		CookieManager.getInstance().setAcceptThirdPartyCookies(this, true);
@@ -338,6 +348,12 @@ public class YoutubeWebview extends WebView {
 					return false;
 				}
 
+				Uri external = UrlUtils.externalUri(uri);
+				if (external != null) {
+					openExternal(external);
+					return true;
+				}
+
 				if (UrlUtils.isAllowedDomain(uri)) return false;
 				openExternal(uri);
 				return true;
@@ -383,8 +399,10 @@ public class YoutubeWebview extends WebView {
 			@Override
 			public void doUpdateVisitedHistory(@NonNull final WebView view, @NonNull final String url, final boolean isReload) {
 				if (isDestroyed) return;
+				if (IncognitoManager.getInstance().isIncognito()) return;
 				super.doUpdateVisitedHistory(view, url, isReload);
 				YoutubeWebview.this.postEvaluateJavascript("window.dispatchEvent(new Event('doUpdateVisitedHistory'));");
+				injectJavaScript(url);
 				if (updateVisitedHistory != null) updateVisitedHistory.accept(url);
 				post(YoutubeWebview.this::refreshPoTokenContext);
 			}
@@ -398,6 +416,7 @@ public class YoutubeWebview extends WebView {
 				frame.url = url;
 				poTokenInflightKey = null;
 				poTokenDoneKey = null;
+
 				injectJavaScript(url);
 				YoutubeWebview.this.postEvaluateJavascript("window.dispatchEvent(new Event('onPageStarted'));");
 			}
@@ -411,6 +430,7 @@ public class YoutubeWebview extends WebView {
 				injectJavaScript(url);
 				YoutubeWebview.this.postEvaluateJavascript("window.dispatchEvent(new Event('onPageFinished'));");
 				YoutubeWebview.this.postEvaluateJavascript("window.dispatchEvent(new Event('onProgressChangeFinish'));");
+
 				refreshPoTokenContext();
 				if (onPageFinishedListener != null) onPageFinishedListener.accept(url);
 				postDelayed(() -> {
@@ -424,6 +444,9 @@ public class YoutubeWebview extends WebView {
 			public void onReceivedError(@NonNull WebView view, @NonNull WebResourceRequest request, @NonNull WebResourceError error) {
 				if (request.isForMainFrame()) {
 					int errorCode = error.getErrorCode();
+					if (errorCode == ERROR_HOST_LOOKUP || errorCode == ERROR_CONNECT || errorCode == ERROR_TIMEOUT) {
+						return;
+					}
 					String failingUrl = request.getUrl().toString();
 					String description = error.getDescription().toString();
 
@@ -459,6 +482,9 @@ public class YoutubeWebview extends WebView {
 			@Override
 			public void onProgressChanged(@NonNull final WebView view, final int progress) {
 				if (isDestroyed) return;
+				if (progress > 10 && progress < 100 && progress % 20 == 0) {
+					injectJavaScript(frame.url);
+				}
 				if (progress >= 100) {
 					YoutubeWebview.this.postEvaluateJavascript("window.dispatchEvent(new Event('onProgressChangeFinish'));");
 				}
@@ -528,29 +554,44 @@ public class YoutubeWebview extends WebView {
 		for (String js : scripts) postEvaluateJavascript(js);
 	}
 
-	public void injectJavaScript(@NonNull final InputStream is) {
-		String js = StreamIOUtils.readInputStream(is);
-		if (js != null) post(() -> {
-			if (!isDestroyed) scripts.add(js);
-		});
+	public void injectJavaScriptContent(@NonNull String js) {
+		addScript(js);
 	}
 
-	public void injectCss(@NonNull final InputStream is) {
-		String css = StreamIOUtils.readInputStream(is);
-		if (css != null) {
-			String encoded = Base64.getEncoder().encodeToString(css.getBytes());
-			String js = String.format("""
-							(function(){
-							let style = document.createElement('style');
-							style.type = 'text/css';
-							style.textContent = window.atob('%s');
-							let target = document.head || document.documentElement;
-							if (target) target.appendChild(style);
-							})()
-							""", encoded);
-			post(() -> {
-				if (!isDestroyed) scripts.add(js);
-			});
+	public void injectCssContent(@NonNull String css) {
+		String encoded = Base64.getEncoder().encodeToString(css.getBytes());
+		String js = String.format("""
+						(function(){
+						let style = document.createElement('style');
+						style.type = 'text/css';
+						style.textContent = window.atob('%s');
+						let target = document.head || document.documentElement;
+						if (target) target.appendChild(style);
+						})()
+						""", encoded);
+		addScript(js);
+	}
+
+	public void syncPreferences() {
+		if (extensionManager == null) return;
+		long version = extensionManager.version();
+		if (version == prefVersion) return;
+		prefVersion = version;
+		evaluateJavascript("window.dispatchEvent(new Event('litePreferencesChanged'));", null);
+	}
+
+	private void addScript(@NonNull String js) {
+		Runnable task = () -> {
+			if (isDestroyed) return;
+			scripts.add(js);
+			if (frame.url != null && !UrlUtils.isGoogleAccountsUrl(frame.url)) {
+				evaluateJavascript(js, null);
+			}
+		};
+		if (Looper.myLooper() == Looper.getMainLooper()) {
+			task.run();
+		} else {
+			post(task);
 		}
 	}
 

@@ -20,6 +20,7 @@ import com.hhst.youtubelite.extension.ExtensionManager;
 import com.hhst.youtubelite.player.LitePlayer;
 import com.hhst.youtubelite.player.queue.QueueWarmer;
 import com.hhst.youtubelite.ui.MainActivity;
+import com.hhst.youtubelite.util.StreamIOUtils;
 import com.hhst.youtubelite.util.UrlUtils;
 
 import java.io.IOException;
@@ -29,6 +30,7 @@ import java.util.Arrays;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import javax.inject.Inject;
@@ -36,10 +38,6 @@ import javax.inject.Inject;
 import dagger.Lazy;
 import dagger.hilt.android.scopes.ActivityScoped;
 import lombok.Getter;
-
-/**
- * Manages the tabs (fragments) of the application.
- */
 
 @ActivityScoped
 @UnstableApi
@@ -49,16 +47,23 @@ public class TabManager {
 	private static final String SCRIPT_INIT = "init.js";
 	private static final String SCRIPT_INIT_MIN = "init.min.js";
 	private static final Set<String> NAV_TAGS = Set.of(Constant.PAGE_HOME, Constant.PAGE_SUBSCRIPTIONS, Constant.PAGE_LIBRARY);
+	
 	private final Activity activity;
 	private final Lazy<LitePlayer> player;
 	private final ExtensionManager extensionManager;
 	private final QueueWarmer queueWarmer;
 	private final Deque<YoutubeFragment> tabs = new LinkedList<>();
+	
 	@Getter
 	@Nullable
 	private YoutubeFragment tab;
 	@Nullable
 	private YoutubeFragment suspendedWatchFragment;
+	private boolean offlineMode = false;
+
+	private static final List<String> cachedScripts = new ArrayList<>();
+	private static final List<String> cachedStyles = new ArrayList<>();
+	private static boolean assetsLoaded = false;
 
 	@Inject
 	public TabManager(@NonNull final Activity activity,
@@ -71,10 +76,14 @@ public class TabManager {
 		this.queueWarmer = queueWarmer;
 	}
 
+	@NonNull
+	private LitePlayer litePlayer() {
+		return Objects.requireNonNull(player.get());
+	}
 
 	public void onUrlChanged(@NonNull final YoutubeFragment fragment, @NonNull final String url) {
-		if (fragment != tab) return;
-		final LitePlayer litePlayer = player.get();
+		if (fragment != tab || offlineMode) return;
+		final LitePlayer litePlayer = litePlayer();
 		final String pageClass = UrlUtils.getPageClass(url);
 		final boolean isWatch = Constant.PAGE_WATCH.equals(pageClass);
 
@@ -92,8 +101,11 @@ public class TabManager {
 	}
 
 	private void onTabChanged() {
-		if (tab == null || tab.getUrl() == null) return;
-		onUrlChanged(tab, tab.getUrl());
+		final YoutubeFragment tab = this.tab;
+		if (tab == null) return;
+		final String url = tab.getUrl();
+		if (url == null) return;
+		onUrlChanged(tab, url);
 	}
 
 	@NonNull
@@ -108,8 +120,10 @@ public class TabManager {
 
 	public void openTab(@NonNull final String url, @Nullable String tag) {
 		if (tag == null) tag = UrlUtils.getPageClass(url);
-		if (Constant.PAGE_WATCH.equals(tag) && openWatchTab(url)) return;
-		if (tab != null && (tag.equals(tab.getMTag()) && NAV_TAGS.contains(tag) || tag.equals(Constant.PAGE_SHORTS))) {
+		final String targetTag = tag;
+		final YoutubeFragment tab = this.tab;
+		if (Constant.PAGE_WATCH.equals(targetTag) && openWatchTab(url)) return;
+		if (tab != null && ((targetTag.equals(tab.getMTag()) && NAV_TAGS.contains(targetTag)) || targetTag.equals(Constant.PAGE_SHORTS))) {
 			if (!url.equals(tab.getUrl())) tab.loadUrl(url);
 			return;
 		}
@@ -118,12 +132,12 @@ public class TabManager {
 		final boolean suspendCurrentWatch = shouldSuspendCurrentWatch(
 						tab != null ? tab.getMTag() : null,
 						getFragmentPageClass(tab),
-						tag,
+						targetTag,
 						extensionManager.isEnabled(Constant.ENABLE_IN_APP_MINI_PLAYER),
-						player.get().canSuspendWatch());
+						litePlayer().canSuspendWatch());
 		if (suspendCurrentWatch) suspendCurrentWatch(ft);
 		else if (tab != null) ft.hide(tab);
-		if (!NAV_TAGS.contains(tag)) {
+		if (!NAV_TAGS.contains(targetTag)) {
 			final var first = tabs.peekFirst();
 			if (first == null || !Constant.PAGE_HOME.equals(first.getMTag())) {
 				final YoutubeFragment home = createFragment(Constant.HOME_URL, Constant.PAGE_HOME);
@@ -131,16 +145,17 @@ public class TabManager {
 				ft.add(R.id.fragment_container, home, Constant.PAGE_HOME);
 				ft.hide(home);
 			}
-			tab = createFragment(url, tag);
-			tabs.offer(tab);
-			ft.add(R.id.fragment_container, tab, tag);
+			final YoutubeFragment next = createFragment(url, targetTag);
+			this.tab = next;
+			tabs.offer(next);
+			ft.add(R.id.fragment_container, next, targetTag);
 		} else {
 			YoutubeFragment home = null;
 			YoutubeFragment nav = null;
 			for (final YoutubeFragment t : tabs) {
 				final String tTag = t.getMTag();
 				if (homeTag.equals(tTag)) home = t;
-				else if (tag.equals(tTag)) nav = t;
+				else if (targetTag.equals(tTag)) nav = t;
 				else ft.remove(t);
 			}
 			tabs.clear();
@@ -149,59 +164,78 @@ public class TabManager {
 				ft.add(R.id.fragment_container, home, homeTag);
 			}
 			tabs.offer(home);
-			if (homeTag.equals(tag)) tab = home;
-			else {
+			if (homeTag.equals(targetTag)) {
+				this.tab = home;
+			} else {
 				if (nav == null) {
-					nav = createFragment(url, tag);
-					ft.add(R.id.fragment_container, nav, tag);
+					nav = createFragment(url, targetTag);
+					ft.add(R.id.fragment_container, nav, targetTag);
 				}
 				tabs.offer(nav);
-				tab = nav;
+				this.tab = nav;
 			}
 		}
-		ft.show(tab);
+		final YoutubeFragment next = this.tab;
+		if (next == null) return;
+		ft.show(next);
 		commitAndRun(ft, () -> {
 			if (suspendCurrentWatch) enterMiniPlayer();
 			onTabChanged();
 		});
 	}
 
-	public void injectScripts(@NonNull final YoutubeWebview webview) {
+	private synchronized void loadAssets() {
+		if (assetsLoaded) return;
 		final AssetManager assetManager = activity.getAssets();
-		final List<String> resourceDirs = Arrays.asList("style", "script");
 		try {
-			for (final String dir : resourceDirs) {
-				final String[] list = assetManager.list(dir);
-				if (list == null) continue;
-				final List<String> resources = new ArrayList<>(Arrays.asList(list));
-				final String initScript = resources.contains(SCRIPT_INIT) ? SCRIPT_INIT : resources.contains(SCRIPT_INIT_MIN) ? SCRIPT_INIT_MIN : null;
-				if (initScript != null) {
-					try (final InputStream is = assetManager.open(dir + "/" + initScript)) {
-						webview.injectJavaScript(is);
-					}
-					resources.remove(initScript);
-				}
-				for (final String resourceName : resources) {
-					try (final InputStream stream = assetManager.open(dir + "/" + resourceName)) {
-						final String extension = getExtension(resourceName);
-						if ("js".equals(extension)) webview.injectJavaScript(stream);
-						else if ("css".equals(extension)) webview.injectCss(stream);
+			// Load Styles
+			String[] styles = assetManager.list("style");
+			if (styles != null) {
+				for (String style : styles) {
+					try (InputStream is = assetManager.open("style/" + style)) {
+						String content = StreamIOUtils.readInputStream(is);
+						if (content != null) cachedStyles.add(content);
 					}
 				}
 			}
+			// Load Scripts
+			String[] scripts = assetManager.list("script");
+			if (scripts != null) {
+				List<String> list = new ArrayList<>(Arrays.asList(scripts));
+				String initScript = list.contains(SCRIPT_INIT) ? SCRIPT_INIT : list.contains(SCRIPT_INIT_MIN) ? SCRIPT_INIT_MIN : null;
+				if (initScript != null) {
+					try (InputStream is = assetManager.open("script/" + initScript)) {
+						String content = StreamIOUtils.readInputStream(is);
+						if (content != null) cachedScripts.add(0, content);
+					}
+					list.remove(initScript);
+				}
+				for (String script : list) {
+					try (InputStream is = assetManager.open("script/" + script)) {
+						String content = StreamIOUtils.readInputStream(is);
+						if (content != null) cachedScripts.add(content);
+					}
+				}
+			}
+			assetsLoaded = true;
 		} catch (IOException e) {
-			Log.e(TAG, "Failed to load assets", e);
+			Log.e(TAG, "Failed to cache assets", e);
 		}
 	}
 
-	private String getExtension(String filename) {
-		if (filename == null) return null;
-		int index = filename.lastIndexOf('.');
-		return (index == -1) ? "" : filename.substring(index + 1);
+	public void injectScripts(@NonNull final YoutubeWebview webview) {
+		if (!assetsLoaded) loadAssets();
+		for (String css : cachedStyles) {
+			webview.injectCssContent(css);
+		}
+		for (String js : cachedScripts) {
+			webview.injectJavaScriptContent(js);
+		}
 	}
 
 	@Nullable
 	public YoutubeWebview getWebview() {
+		final YoutubeFragment tab = this.tab;
 		return tab != null ? tab.getWebview() : null;
 	}
 
@@ -221,7 +255,7 @@ public class TabManager {
 
 	public void playInWatch(@NonNull final String url) {
 		queueWarmer.prioritizeUrl(url);
-		player.get().play(url);
+		litePlayer().play(url);
 		final YoutubeWebview webview = resolveWatchWebview();
 		if (webview != null) {
 			webview.loadUrl(url);
@@ -235,11 +269,11 @@ public class TabManager {
 		return webview != null && webview.canGoBack();
 	}
 
-	public boolean goBackInWatch() {
+	public void goBackInWatch() {
 		final YoutubeWebview webview = resolveWatchWebview();
-		if (webview == null || !webview.canGoBack()) return false;
-		webview.goBack();
-		return true;
+		if (webview != null && webview.canGoBack()) {
+			webview.goBack();
+		}
 	}
 
 	public boolean watchHasPlaylist() {
@@ -249,10 +283,12 @@ public class TabManager {
 
 	@Nullable
 	public String getWatchUrl() {
-		if (isWatchTab(suspendedWatchFragment)) {
-			return suspendedWatchFragment != null ? suspendedWatchFragment.getUrl() : null;
+		final YoutubeFragment suspended = suspendedWatchFragment;
+		if (isWatchTab(suspended)) {
+			return suspended.getUrl();
 		}
-		return isWatchTab(tab) && tab != null ? tab.getUrl() : null;
+		final YoutubeFragment tab = this.tab;
+		return isWatchTab(tab) ? tab.getUrl() : null;
 	}
 
 	public void loadUrl(@NonNull final String url) {
@@ -262,16 +298,18 @@ public class TabManager {
 
 	@Nullable
 	private YoutubeWebview resolveWatchWebview() {
-		if (isWatchTab(suspendedWatchFragment)) {
-			final YoutubeWebview suspendedWebview = suspendedWatchFragment.getWebview();
-			if (suspendedWebview != null) {
-				return suspendedWebview;
+		final YoutubeFragment suspended = suspendedWatchFragment;
+		if (isWatchTab(suspended)) {
+			final YoutubeWebview webView = suspended.getWebview();
+			if (webView != null) {
+				return webView;
 			}
 		}
+		final YoutubeFragment tab = this.tab;
 		if (!isWatchTab(tab)) {
 			return null;
 		}
-		return tab != null ? tab.getWebview() : null;
+		return tab.getWebview();
 	}
 
 	private boolean isWatchTab(@Nullable final YoutubeFragment fragment) {
@@ -295,6 +333,7 @@ public class TabManager {
 	private boolean openWatchTab(@NonNull final String url) {
 		final YoutubeFragment watch = findWatchTab();
 		if (watch == null) return false;
+		final YoutubeFragment tab = this.tab;
 		if (watch == tab) {
 			if (!url.equals(watch.getUrl())) watch.loadUrl(url);
 			onUrlChanged(watch, url);
@@ -305,7 +344,7 @@ public class TabManager {
 		if (tab != null) ft.hide(tab);
 		tabs.remove(watch);
 		tabs.offerLast(watch);
-		tab = watch;
+		this.tab = watch;
 		if (restoringSuspendedWatch) {
 			suspendedWatchFragment = null;
 		}
@@ -313,7 +352,7 @@ public class TabManager {
 		ft.show(watch);
 		commitAndRun(ft, () -> {
 			if (restoringSuspendedWatch) {
-				final LitePlayer litePlayer = player.get();
+				final LitePlayer litePlayer = litePlayer();
 				litePlayer.exitInAppMiniPlayer();
 				litePlayer.setMiniPlayerCallbacks(null, null);
 			}
@@ -324,12 +363,17 @@ public class TabManager {
 
 	public void hidePlayer() {
 		if (suspendedWatchFragment != null) return;
-		player.get().hide();
+		litePlayer().hide();
 	}
 
 	public boolean goBack() {
+		if (offlineMode) {
+			litePlayer().hide();
+			return true;
+		}
+		final YoutubeFragment tab = this.tab;
 		if (tab == null) return false;
-		final YoutubeWebview webview = getWebview();
+		final YoutubeWebview webview = tab.getWebview();
 		final Page prev = prev(tab);
 		final boolean hasBackStack = tabs.size() > 1;
 		final boolean isMiniPlayerEnabled = extensionManager.isEnabled(Constant.ENABLE_IN_APP_MINI_PLAYER);
@@ -338,7 +382,7 @@ public class TabManager {
 						tab.getMTag(),
 						getFragmentPageClass(tab),
 						isMiniPlayerEnabled,
-						player.get().canSuspendWatch())) {
+						litePlayer().canSuspendWatch())) {
 
 			if (prev != null
 							&& !Constant.PAGE_WATCH.equals(prev.tag())
@@ -350,23 +394,14 @@ public class TabManager {
 			final YoutubeFragment prevTab = getPreviousTab();
 			final FragmentTransaction ft = getFm().beginTransaction();
 			suspendCurrentWatch(ft);
-			tab = prevTab != null ? prevTab : home(ft);
-			ft.show(tab);
+			final YoutubeFragment next = prevTab != null ? prevTab : home(ft);
+			this.tab = next;
+			ft.show(next);
 			commitAndRun(ft, () -> {
 				enterMiniPlayer();
 				onTabChanged();
 			});
 			return true;
-		}
-		
-		if (suspendedWatchFragment != null) {
-			if (goBackInWatch()) return true;
-			clearSuspendedWatch();
-			return true;
-		}
-
-		if (Constant.PAGE_WATCH.equals(getFragmentPageClass(tab)) && !isMiniPlayerEnabled) {
-			player.get().hide();
 		}
 
 		if (webview != null && webview.canGoBack()) {
@@ -374,9 +409,11 @@ public class TabManager {
 			return true;
 		} else if (hasBackStack) {
 			final FragmentTransaction ft = getFm().beginTransaction();
-			ft.remove(tabs.pollLast());
-			tab = tabs.peekLast();
-			if (tab != null) ft.show(tab);
+			final YoutubeFragment removed = tabs.pollLast();
+			if (removed != null) ft.remove(removed);
+			final YoutubeFragment next = tabs.peekLast();
+			this.tab = next;
+			if (next != null) ft.show(next);
 			commitAndRun(ft, this::onTabChanged);
 			return true;
 		}
@@ -384,6 +421,7 @@ public class TabManager {
 	}
 
 	private void suspendCurrentWatch(@NonNull final FragmentTransaction ft) {
+		final YoutubeFragment tab = this.tab;
 		if (tab == null) return;
 		suspendedWatchFragment = tab;
 		tabs.pollLast();
@@ -391,20 +429,22 @@ public class TabManager {
 	}
 
 	private void enterMiniPlayer() {
-		final LitePlayer litePlayer = player.get();
+		final LitePlayer litePlayer = litePlayer();
 		litePlayer.setMiniPlayerCallbacks(this::restoreSuspendedWatch, this::clearSuspendedWatch);
 		litePlayer.enterInAppMiniPlayer();
 	}
 
 	private void restoreSuspendedWatch() {
-		if (suspendedWatchFragment == null) return;
+		final YoutubeFragment suspended = suspendedWatchFragment;
+		if (suspended == null) return;
 		final FragmentTransaction ft = getFm().beginTransaction();
+		final YoutubeFragment tab = this.tab;
 		if (tab != null) ft.hide(tab);
-		tabs.offerLast(suspendedWatchFragment);
-		tab = suspendedWatchFragment;
+		tabs.offerLast(suspended);
+		this.tab = suspended;
 		suspendedWatchFragment = null;
-		ft.show(tab);
-		final LitePlayer litePlayer = player.get();
+		ft.show(suspended);
+		final LitePlayer litePlayer = litePlayer();
 		commitAndRun(ft, () -> {
 			litePlayer.exitInAppMiniPlayer();
 			litePlayer.setMiniPlayerCallbacks(null, null);
@@ -413,15 +453,39 @@ public class TabManager {
 	}
 
 	private void clearSuspendedWatch() {
-		final LitePlayer litePlayer = player.get();
-		if (suspendedWatchFragment != null) {
+		final LitePlayer litePlayer = litePlayer();
+		final YoutubeFragment suspended = suspendedWatchFragment;
+		if (suspended != null) {
 			final FragmentTransaction ft = getFm().beginTransaction();
-			ft.remove(suspendedWatchFragment);
+			ft.remove(suspended);
 			ft.commit();
 			suspendedWatchFragment = null;
 		}
 		litePlayer.exitInAppMiniPlayer();
 		litePlayer.setMiniPlayerCallbacks(null, null);
+	}
+
+	public void setOfflineMode(boolean offline) {
+		this.offlineMode = offline;
+		final FragmentTransaction ft = getFm().beginTransaction();
+		final YoutubeFragment tab = this.tab;
+		if (offline) {
+			if (tab != null) {
+				ft.hide(tab);
+			}
+			if (suspendedWatchFragment != null) {
+				ft.hide(suspendedWatchFragment);
+			}
+			loadUrl("file:///android_asset/page/offline.html");
+		} else {
+			if (tab != null) {
+				ft.show(tab);
+			}
+		}
+		ft.commitAllowingStateLoss();
+		if (activity instanceof MainActivity mainActivity) {
+			mainActivity.setUiVisibility(!offline);
+		}
 	}
 
 	private void commitAndRun(@NonNull final FragmentTransaction ft, @NonNull final Runnable afterCommit) {
