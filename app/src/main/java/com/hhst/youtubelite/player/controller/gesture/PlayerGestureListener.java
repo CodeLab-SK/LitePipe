@@ -4,8 +4,6 @@ import android.app.Activity;
 import android.content.Context;
 import android.media.AudioManager;
 import android.os.Handler;
-import android.os.VibrationEffect;
-import android.os.Vibrator;
 import android.provider.Settings;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
@@ -31,6 +29,8 @@ public class PlayerGestureListener extends GestureDetector.SimpleOnGestureListen
 	private static final float MINI_PLAYER_SWIPE_THRESHOLD_RATIO = 0.15f;
 	private static final float LEFT_ZONE_MAX_RATIO = 1f / 3f;
 	private static final float RIGHT_ZONE_MIN_RATIO = 2f / 3f;
+	private static final float GESTURE_VERTICAL_LIMIT_TOP = 0.2f;
+	private static final float GESTURE_VERTICAL_LIMIT_BOTTOM = 0.8f;
 
 	private final Activity activity;
 	private final LitePlayerView playerView;
@@ -67,7 +67,7 @@ public class PlayerGestureListener extends GestureDetector.SimpleOnGestureListen
 	}
 
 	private boolean isEnabled() {
-		return controller.getExtensionManager().isEnabled(com.hhst.youtubelite.extension.Constant.ENABLE_PLAYER_GESTURES);
+		return controller.getExtensionManager().isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_GESTURES);
 	}
 
 	public void onTouchRelease() {
@@ -193,14 +193,24 @@ public class PlayerGestureListener extends GestureDetector.SimpleOnGestureListen
 	@Override
 	public boolean onScroll(MotionEvent e1, @NonNull MotionEvent e2, float dx, float dy) {
 		if (!isEnabled() || e1 == null || e2.getPointerCount() > 1 || isLongPressing) return false;
+		
+		float x = e1.getX(), width = playerView.getWidth();
+		float y = e1.getY(), height = playerView.getHeight();
+
 		if (gestureMode == 0) {
-			if (Math.abs(dy) > Math.abs(dx)) gestureMode = 1;
-			else if (Math.abs(dx) > Math.abs(dy)) gestureMode = 2;
+			if (Math.abs(dy) > Math.abs(dx)) {
+				if ((x < width * 0.35f || x > width * 0.65f) && (y < height * GESTURE_VERTICAL_LIMIT_TOP || y > height * GESTURE_VERTICAL_LIMIT_BOTTOM)) {
+					return false;
+				}
+				gestureMode = 1;
+			} else if (Math.abs(dx) > Math.abs(dy)) {
+				gestureMode = 2;
+			}
 		}
+		
 		if (gestureMode == 1) {
 			isGesturing = true;
 			handler.removeCallbacks(hideHintRunnable);
-			float x = e1.getX(), width = playerView.getWidth();
 			if (x < width * 0.35f) {
 				if (controller.getExtensionManager().isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_GESTURE_BRIGHTNESS)) {
 					adjustBrightness(dy);
@@ -234,24 +244,31 @@ public class PlayerGestureListener extends GestureDetector.SimpleOnGestureListen
 	}
 
 	private void handleFullscreenVerticalGesture(float deltaY) {
-		if (fullscreenSwipeTriggered) return;
+		if (fullscreenSwipeTriggered || !controller.getExtensionManager().isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_GESTURE_FULLSCREEN_SWIPE)) return;
 		final float threshold = playerView.getHeight() * FULLSCREEN_SWIPE_THRESHOLD_RATIO;
 		if (Math.abs(deltaY) < threshold) return;
 
-		fullscreenSwipeTriggered = true;
 		if (deltaY > 0) {
+			fullscreenSwipeTriggered = true;
 			controller.exitFullscreen();
 		}
 	}
 
 	private void handlePortraitVerticalGesture(float deltaY) {
-		if (miniPlayerSwipeTriggered || playerView.isFs()) return;
+		if (playerView.isFs()) return;
 		final float threshold = playerView.getHeight() * MINI_PLAYER_SWIPE_THRESHOLD_RATIO;
-		if (deltaY < threshold) return;
+		if (Math.abs(deltaY) < threshold) return;
 
-		miniPlayerSwipeTriggered = true;
-		if (controller.getExtensionManager().isEnabled(Constant.ENABLE_IN_APP_MINI_PLAYER)) {
-			activity.onBackPressed();
+		if (deltaY > 0) {
+			if (miniPlayerSwipeTriggered || !controller.getExtensionManager().isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_GESTURE_MINIPLAYER_SWIPE)) return;
+			miniPlayerSwipeTriggered = true;
+			if (controller.getExtensionManager().isEnabled(Constant.ENABLE_IN_APP_MINI_PLAYER)) {
+				activity.onBackPressed();
+			}
+		} else {
+			if (fullscreenSwipeTriggered || !controller.getExtensionManager().isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_GESTURE_FULLSCREEN_SWIPE)) return;
+			fullscreenSwipeTriggered = true;
+			controller.enterFullscreen();
 		}
 	}
 
@@ -312,18 +329,10 @@ public class PlayerGestureListener extends GestureDetector.SimpleOnGestureListen
 		if (!isEnabled() || !engine.isPlaying()) return;
 		if (!controller.getExtensionManager().isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_GESTURE_2X)) return;
 
-		vibrate();
 		preLongPressSpeed = engine.getPlaybackRate();
 		isLongPressing = true;
 		engine.setPlaybackRate(2.0f);
 		controller.updateSpeedButtonUI(2.0f);
 		controller.showHint("2x", -1);
-	}
-
-	private void vibrate() {
-		Vibrator v = (Vibrator) activity.getSystemService(Context.VIBRATOR_SERVICE);
-		if (v != null && v.hasVibrator()) {
-			v.vibrate(VibrationEffect.createOneShot(15, VibrationEffect.DEFAULT_AMPLITUDE));
-		}
 	}
 }

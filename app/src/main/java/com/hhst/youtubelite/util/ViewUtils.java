@@ -6,35 +6,22 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
+import android.view.WindowManager;
 
 import androidx.annotation.NonNull;
 
-/**
- * Utility methods for View-related operations like DP/PX conversion and animations.
- */
 public final class ViewUtils {
 
 	private static final float ALPHA_VISIBLE = 1.0f;
 	private static final float ALPHA_INVISIBLE = 0.0f;
 	private static final int ANIMATION_DURATION_MS = 100;
-
-	/**
-	 * Converts DP to pixels.
-	 */
 	public static int dpToPx(@NonNull final Context context, final float dp) {
 		return (int) (dp * context.getResources().getDisplayMetrics().density);
 	}
 
-	/**
-	 * Gets the screen width in pixels.
-	 */
 	public static int getScreenWidth(@NonNull final Context context) {
 		return context.getResources().getDisplayMetrics().widthPixels;
 	}
-
-	/**
-	 * Animates a view's alpha.
-	 */
 	public static void animateViewAlpha(@NonNull final View v, final float alpha, final int visibilityIfGone) {
 		if (Float.compare(alpha, ALPHA_VISIBLE) == 0) {
 			v.animate().cancel();
@@ -53,9 +40,6 @@ public final class ViewUtils {
 		}
 	}
 
-	/**
-	 * Sets the system UI visibility for fullscreen mode.
-	 */
 	public static void setFullscreen(@NonNull final View view, final boolean fullscreen) {
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
 			WindowInsetsController controller = view.getWindowInsetsController();
@@ -67,19 +51,27 @@ public final class ViewUtils {
 					controller.show(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
 				}
 			}
-		} else {
-			if (fullscreen) {
-				view.setSystemUiVisibility(
-						View.SYSTEM_UI_FLAG_LOW_PROFILE
-								| View.SYSTEM_UI_FLAG_FULLSCREEN
-								| View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-								| View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-								| View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-								| View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-				);
-			} else {
-				view.setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
-			}
 		}
+		
+		if (fullscreen) {
+			view.setSystemUiVisibility(
+					View.SYSTEM_UI_FLAG_LOW_PROFILE
+							| View.SYSTEM_UI_FLAG_FULLSCREEN
+							| View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+							| View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+							| View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+							| View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+			);
+		} else {
+			view.setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE);
+		}
+	}
+	public static void setFullscreen(@NonNull final Window window, final boolean fullscreen) {
+		if (fullscreen) {
+			window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+		} else {
+			window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+		}
+		setFullscreen(window.getDecorView(), fullscreen);
 	}
 }

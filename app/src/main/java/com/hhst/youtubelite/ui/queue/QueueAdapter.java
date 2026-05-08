@@ -116,7 +116,6 @@ public final class QueueAdapter extends RecyclerView.Adapter<QueueAdapter.ViewHo
 		try {
 			task.run();
 		} catch (final NullPointerException ignored) {
-			// The JVM unit-test stub for RecyclerView.Adapter has no observer list until attached.
 		}
 	}
 
@@ -124,6 +123,8 @@ public final class QueueAdapter extends RecyclerView.Adapter<QueueAdapter.ViewHo
 		void onPlayRequested(@NonNull QueueItem item);
 
 		void onDeleteRequested(@NonNull QueueItem item);
+
+		void onDownloadRequested(@NonNull QueueItem item);
 	}
 
 	static final class ViewHolder extends RecyclerView.ViewHolder {
@@ -134,6 +135,8 @@ public final class QueueAdapter extends RecyclerView.Adapter<QueueAdapter.ViewHo
 		@NonNull
 		private final TextView authorView;
 		@NonNull
+		private final ImageButton downloadButton;
+		@NonNull
 		private final ImageButton deleteButton;
 
 		ViewHolder(@NonNull final View itemView) {
@@ -141,6 +144,7 @@ public final class QueueAdapter extends RecyclerView.Adapter<QueueAdapter.ViewHo
 			thumbnailView = itemView.findViewById(R.id.queue_item_thumbnail);
 			titleView = itemView.findViewById(R.id.queue_item_title);
 			authorView = itemView.findViewById(R.id.queue_item_author);
+			downloadButton = itemView.findViewById(R.id.queue_item_download);
 			deleteButton = itemView.findViewById(R.id.queue_item_delete);
 		}
 
@@ -160,6 +164,7 @@ public final class QueueAdapter extends RecyclerView.Adapter<QueueAdapter.ViewHo
 			itemView.setActivated(playing);
 			itemView.setAlpha(1.0f);
 			itemView.setOnClickListener(v -> actions.onPlayRequested(item.copy()));
+			downloadButton.setOnClickListener(v -> actions.onDownloadRequested(item.copy()));
 			deleteButton.setOnClickListener(v -> actions.onDeleteRequested(item.copy()));
 		}
 	}

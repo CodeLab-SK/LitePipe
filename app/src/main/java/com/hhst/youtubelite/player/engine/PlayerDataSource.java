@@ -30,7 +30,7 @@ import org.schabi.newpipe.extractor.services.youtube.dashmanifestcreators.Youtub
 final class PlayerDataSource {
 	private static final String TAG = "YTLPlayback";
 	private static final int MANIFEST_CACHE_SIZE = 500;
-	private static final int PROGRESSIVE_LOAD_INTERVAL_BYTES = 128 * 1024;
+	private static final int PROGRESSIVE_LOAD_INTERVAL_BYTES = 512 * 1024;
 
 	@Nullable
 	private final SimpleCache cache;

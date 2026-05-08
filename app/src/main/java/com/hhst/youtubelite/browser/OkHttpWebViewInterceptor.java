@@ -14,7 +14,6 @@ import com.hhst.youtubelite.util.UrlUtils;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
 import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -81,10 +80,14 @@ public final class OkHttpWebViewInterceptor {
 
 	public boolean canExecute(@Nullable WebResourceRequest request) {
 		if (request == null) return false;
-		String url = request.getUrl().toString();
-		return isInterceptableWebRequest(request.getMethod(), request.getRequestHeaders(), url) 
-						&& !UrlUtils.isGoogleAccountsUrl(url) 
-						&& UrlUtils.isAllowedUrl(url);
+		return shouldProxyRequest(request.getMethod(), request.getRequestHeaders(), request.getUrl().toString());
+	}
+
+	static boolean shouldProxyRequest(@Nullable String method, @Nullable Map<String, String> requestHeaders, @Nullable String url) {
+		return isInterceptableWebRequest(method, requestHeaders, url)
+						&& !UrlUtils.isGoogleAccountsUrl(url)
+						&& UrlUtils.isAllowedUrl(url)
+						&& UrlUtils.externalUri(url) == null;
 	}
 
 	@Nullable

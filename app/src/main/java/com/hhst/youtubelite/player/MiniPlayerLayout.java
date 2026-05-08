@@ -1,8 +1,5 @@
 package com.hhst.youtubelite.player;
 
-/**
- * Computes mini-player dimensions and spacing.
- */
 @SuppressWarnings("SameParameterValue")
 public final class MiniPlayerLayout {
 

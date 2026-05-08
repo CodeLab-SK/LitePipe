@@ -1,6 +1,7 @@
 package com.hhst.youtubelite.player;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
@@ -16,7 +17,6 @@ import com.tencent.mmkv.MMKV;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
 import java.util.concurrent.Executor;
@@ -59,7 +59,7 @@ public class LitePlayerHideTest {
 
 		player.hide();
 
-		verify(playerView).setMiniPlayerCallbacks(null, null);
+		verify(playerView).setMiniPlayerCallbacks(isNull(), isNull(), any(), any());
 		verify(playerView).exitInAppMiniPlayer();
 		verify(playerView).hide();
 	}

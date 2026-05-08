@@ -57,13 +57,14 @@ public final class PlayerUtils {
 
 		return s1.getBitrate() > s2.getBitrate();
 	}
+
 	public static int getCodecPriority(@Nullable final String codec) {
 		if (codec == null) return 0;
 		final String lowerCodec = codec.toLowerCase(Locale.ROOT);
-		if (lowerCodec.startsWith("avc") || lowerCodec.startsWith("h264")) return 4;
-		if (lowerCodec.contains("vp9") || lowerCodec.contains("vp8")) return 3;
-		if (lowerCodec.contains("h265")) return 2;
-		if (lowerCodec.contains("av01")) return 1;
+		if (lowerCodec.contains("av01")) return 5;
+		if (lowerCodec.contains("vp9")) return 4;
+		if (lowerCodec.startsWith("avc") || lowerCodec.startsWith("h264")) return 3;
+		if (lowerCodec.contains("h265") || lowerCodec.contains("hevc")) return 2;
 
 		return 0;
 	}
@@ -74,7 +75,7 @@ public final class PlayerUtils {
 
 		String res = targetRes;
 		if (res == null || "Auto".equalsIgnoreCase(res)) {
-			res = "1080p";
+			return streams.get(0);
 		}
 
 		for (final VideoStream s : streams) if (s.getResolution().equals(res)) return s;

@@ -70,7 +70,7 @@ public class NullFilteringHeadersMapTest {
 		assertThrows(NoSuchElementException.class, entries::next);
 		assertThrows(UnsupportedOperationException.class, entries::remove);
 
-		final Map.Entry<String, List<String>>[] typedEntries = headers.entrySet().toArray(new Map.Entry[0]);
+		final Map.Entry[] typedEntries = headers.entrySet().toArray(new Map.Entry[0]);
 		assertEquals(2, typedEntries.length);
 		assertEquals("Accept", typedEntries[0].getKey());
 		assertEquals("Cookie", typedEntries[1].getKey());

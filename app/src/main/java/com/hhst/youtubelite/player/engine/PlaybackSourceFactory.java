@@ -35,15 +35,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
-/**
- * Component that handles app logic.
- */
 @OptIn(markerClass = UnstableApi.class)
-class PlaybackRunner {
+class PlaybackSourceFactory {
 	private static final String TAG = "YTLPlayback";
 
-	private PlaybackRunner() {
+	private PlaybackSourceFactory() {
 	}
 
 	@NonNull

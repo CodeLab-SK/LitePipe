@@ -2,6 +2,7 @@ package com.hhst.youtubelite.player;
 
 import android.app.Activity;
 import android.graphics.Color;
+import android.net.Uri;
 import android.util.TypedValue;
 import android.view.View;
 
@@ -18,9 +19,15 @@ import androidx.media3.ui.SubtitleView;
 
 import com.hhst.youtubelite.PlaybackService;
 import com.hhst.youtubelite.R;
+import com.hhst.youtubelite.browser.TabManager;
+import com.hhst.youtubelite.downloader.core.history.DownloadRecord;
 import com.hhst.youtubelite.extractor.ExtractionSession;
+import com.hhst.youtubelite.extractor.PlaybackDetails;
+import com.hhst.youtubelite.extractor.PlaybackPlan;
+import com.hhst.youtubelite.extractor.PlaybackPlanner;
 import com.hhst.youtubelite.extractor.YoutubeExtractor;
 import com.hhst.youtubelite.player.common.PlayerLoopMode;
+import com.hhst.youtubelite.player.common.PlayerPreferences;
 import com.hhst.youtubelite.player.controller.Controller;
 import com.hhst.youtubelite.player.engine.Engine;
 import com.hhst.youtubelite.player.queue.QueueItem;
@@ -33,14 +40,16 @@ import com.hhst.youtubelite.util.DeviceUtils;
 import com.hhst.youtubelite.util.ToastUtils;
 import com.tencent.mmkv.MMKV;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 
+import dagger.Lazy;
 import dagger.hilt.android.scopes.ActivityScoped;
 import lombok.Getter;
 
@@ -69,9 +78,11 @@ public class LitePlayer {
 	@NonNull
 	private final SponsorBlockManager sponsor;
 	@NonNull
-	private final Executor executor;
-	@NonNull
 	private final QueueRepository queueRepository;
+	@NonNull
+	private final PlayerPreferences prefs;
+	@NonNull
+	private final Lazy<TabManager> tabManager;
 
 	private final MMKV kv = MMKV.defaultMMKV();
 
@@ -93,6 +104,7 @@ public class LitePlayer {
 	@Getter
 	private boolean inAppMiniPlayer;
 	private boolean wasInPictureInPicture;
+	private final Set<long[]> ignoredSponsorSegments = new HashSet<>();
 
 	@Inject
 	public LitePlayer(@NonNull final Activity activity,
@@ -101,16 +113,18 @@ public class LitePlayer {
 	                  @NonNull final Controller controller,
 	                  @NonNull final Engine engine,
 	                  @NonNull final SponsorBlockManager sponsor,
-	                  @NonNull final Executor executor,
-	                  @NonNull final QueueRepository queueRepository) {
+	                  @NonNull final QueueRepository queueRepository,
+	                  @NonNull final PlayerPreferences prefs,
+	                  @NonNull final Lazy<TabManager> tabManager) {
 		this.activity = activity;
 		this.extractor = extractor;
 		this.playerView = playerView;
 		this.controller = controller;
 		this.engine = engine;
 		this.sponsor = sponsor;
-		this.executor = executor;
 		this.queueRepository = queueRepository;
+		this.prefs = prefs;
+		this.tabManager = tabManager;
 
 		playerView.setup();
 		setupEngineListeners();
@@ -141,7 +155,7 @@ public class LitePlayer {
 
 			@Override
 			public void onPlayerError(@NonNull PlaybackException error) {
-				invalidatePlaybackCacheIfSourceOpenFailure(error);
+				invalidatePlaybackCacheIfSourceOpenFailure();
 				
 				if (isCodecError(error)) {
 					handleCodecError(error);
@@ -158,6 +172,18 @@ public class LitePlayer {
 				}
 				ErrorDialog.show(activity, error.getMessage(), error);
 			}
+		});
+
+		engine.setSponsorDetectedListener(segment -> {
+			if (ignoredSponsorSegments.contains(segment)) return;
+
+			activity.runOnUiThread(() -> {
+				engine.seekTo(segment[1]);
+				controller.showUndoSkip(segment, s -> {
+					engine.seekTo(s[0]);
+					ignoredSponsorSegments.add(s);
+				});
+			});
 		});
 	}
 
@@ -296,7 +322,7 @@ public class LitePlayer {
 	}
 
 	public void refreshInternalButtonVisibility() {
-		controller.refreshInternalButtonVisibility();
+		activity.runOnUiThread(controller::refreshInternalButtonVisibility);
 	}
 
 	public void reload() {
@@ -318,6 +344,7 @@ public class LitePlayer {
 		this.vid = videoId;
 		activity.runOnUiThread(() -> {
 			if (inAppMiniPlayer) exitInAppMiniPlayer();
+			tabManager.get().setOfflineMode(false);
 			engine.clear();
 			playerView.setTitle(null);
 			final SponsorOverlayView layer = playerView.findViewById(R.id.sponsor_overlay);
@@ -353,7 +380,11 @@ public class LitePlayer {
 
 			playerView.updateSkipMarkers(er.video().getDuration(), TimeUnit.SECONDS);
 
-			engine.play(er);
+			String preferredQuality = prefs.getQuality();
+			PlaybackPlan plan = PlaybackPlanner.plan(er.deliveries(), preferredQuality, null);
+			PlaybackDetails details = new PlaybackDetails(er.video(), er.catalog(), er.deliveries(), plan, er.segments(), er.subtitles());
+
+			engine.play(details);
 			if (initialPositionMs >= 0L) {
 				engine.seekTo(initialPositionMs);
 			}
@@ -377,24 +408,41 @@ public class LitePlayer {
 		});
 	}
 
+	public void playLocal(@NonNull Uri uri, @Nullable String title, @Nullable List<DownloadRecord> subtitles) {
+		this.vid = null;
+		this.currentUrl = null;
+		cancelCurrentExtraction();
+		activity.runOnUiThread(() -> {
+			if (inAppMiniPlayer) exitInAppMiniPlayer();
+			tabManager.get().setOfflineMode(true);
+			engine.clear();
+			playerView.setTitle(title);
+			playerView.show();
+			engine.playLocal(uri, title, subtitles);
+			controller.syncRotation(DeviceUtils.isRotateOn(activity), activity.getResources().getConfiguration().orientation);
+		});
+	}
+
+	public void addLocalSubtitle(@NonNull Uri uri, @NonNull String label) {
+		engine.addLocalSubtitle(uri, label);
+	}
+
 	public void hide() {
 		this.vid = null;
 		this.loadedVideoId = null;
 		cancelCurrentExtraction();
 		activity.runOnUiThread(() -> {
+			playerView.hide();
+			tabManager.get().setOfflineMode(false);
 			engine.clear();
 			controller.clearRotation();
+			playerView.disableAutoPiP();
 			exitInAppMiniPlayer();
 			setMiniPlayerCallbacks(null, null);
-			playerView.hide();
 			if (playbackService != null) {
 				playbackService.hideNotification();
 			}
 		});
-	}
-
-	public boolean isPlaying() {
-		return engine.isPlaying();
 	}
 
 	public void pause() {
@@ -412,6 +460,10 @@ public class LitePlayer {
 		if (videoId == null || !Objects.equals(loadedVideoId, videoId)) return false;
 		seekToIfLoaded(positionMs);
 		return true;
+	}
+
+	public long getResumePosition(@Nullable String videoId) {
+		return prefs.getResumePosition(videoId);
 	}
 
 	public boolean isFullscreen() {
@@ -471,7 +523,9 @@ public class LitePlayer {
 		onMiniPlayerClose = onClose;
 		playerView.setMiniPlayerCallbacks(
 						onRestore != null ? this::dispatchMiniPlayerRestore : null,
-						onClose != null ? this::dispatchMiniPlayerClose : null);
+						onClose != null ? this::dispatchMiniPlayerClose : null,
+                engine::play,
+                engine::pause);
 	}
 
 	public boolean shouldAutoEnterPictureInPicture() {
@@ -480,7 +534,8 @@ public class LitePlayer {
 
 	public void onPictureInPictureModeChanged(final boolean isInPiP) {
 		controller.onPictureInPictureModeChanged(isInPiP);
-		playerView.onPiPModeChanged(isInPiP);
+		playerView.onPiPModeChanged();
+		if (!isInPiP) playerView.disableAutoPiP();
 		if (wasInPictureInPicture && !isInPiP && inAppMiniPlayer && onMiniPlayerRestore != null) {
 			dispatchMiniPlayerRestore();
 		}
@@ -515,7 +570,10 @@ public class LitePlayer {
 		wasInPictureInPicture = false;
 		onMiniPlayerRestore = null;
 		onMiniPlayerClose = null;
-		activity.runOnUiThread(() -> playerView.setMiniPlayerCallbacks(null, null));
+		activity.runOnUiThread(() -> {
+			playerView.disableAutoPiP();
+			playerView.setMiniPlayerCallbacks(null, null, null, null);
+		});
 		inAppMiniPlayer = false;
 		engine.release();
 	}
@@ -531,7 +589,7 @@ public class LitePlayer {
 		onClose.run();
 	}
 
-	void invalidatePlaybackCacheIfSourceOpenFailure(@NonNull final PlaybackException error) {
+	void invalidatePlaybackCacheIfSourceOpenFailure() {
 
 	}
 

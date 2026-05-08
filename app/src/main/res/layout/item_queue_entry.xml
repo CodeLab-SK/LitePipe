@@ -50,14 +50,25 @@
     </LinearLayout>
 
     <ImageButton
+        android:id="@+id/queue_item_download"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="8dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/download"
+        android:padding="8dp"
+        android:src="@drawable/ic_download"
+        app:tint="?attr/colorOnSurface" />
+
+    <ImageButton
         android:id="@+id/queue_item_delete"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:layout_marginStart="8dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/remove_queue_item"
         android:padding="8dp"
         android:src="@drawable/ic_close"
-        app:tint="?attr/colorOnSurfaceVariant" />
+        app:tint="?attr/colorOnSurface" />
 
 </LinearLayout>

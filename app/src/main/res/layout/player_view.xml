@@ -79,7 +79,8 @@
                     android:padding="4dp"
                     android:scaleType="fitCenter"
                     android:alpha="0.92"
-                    android:src="@drawable/ic_refresh" />
+                    android:src="@drawable/ic_refresh"
+                    app:tint="@android:color/white" />
 
                 <ImageButton
                     android:id="@+id/btn_segments"
@@ -91,7 +92,8 @@
                     android:padding="4dp"
                     android:scaleType="fitCenter"
                     android:alpha="0.92"
-                    android:src="@drawable/ic_segment" />
+                    android:src="@drawable/ic_segment"
+                    app:tint="@android:color/white" />
 
                 <ImageButton
                     android:id="@+id/btn_subtitles"
@@ -103,7 +105,8 @@
                     android:padding="4dp"
                     android:scaleType="fitCenter"
                     android:alpha="0.92"
-                    android:src="@drawable/ic_subtitles_off" />
+                    android:src="@drawable/ic_subtitles_off"
+                    app:tint="@android:color/white" />
 
                 <ImageButton
                     android:id="@+id/btn_loop"
@@ -115,7 +118,8 @@
                     android:padding="4dp"
                     android:scaleType="fitCenter"
                     android:alpha="0.92"
-                    android:src="@drawable/ic_playback_end_next" />
+                    android:src="@drawable/ic_playback_end_next"
+                    app:tint="@android:color/white" />
 
                 <ImageButton
                     android:id="@+id/btn_more"
@@ -127,7 +131,8 @@
                     android:padding="4dp"
                     android:scaleType="fitCenter"
                     android:alpha="0.92"
-                    android:src="@drawable/ic_more" />
+                    android:src="@drawable/ic_more"
+                    app:tint="@android:color/white" />
             </LinearLayout>
 
             <Space
@@ -170,7 +175,7 @@
                     android:paddingHorizontal="8dp">
 
                     <TextView
-                        android:id="@+id/exo_position"
+                        android:id="@id/exo_position"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textColor="@android:color/white"
@@ -185,9 +190,17 @@
                         tools:ignore="HardcodedText" />
 
                     <TextView
-                        android:id="@+id/exo_duration"
+                        android:id="@id/exo_duration"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:textColor="@android:color/white"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:id="@+id/tv_remaining"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
                         android:textColor="@android:color/white"
                         android:textSize="11sp" />
 
@@ -234,7 +247,8 @@
                         android:padding="4dp"
                         android:scaleType="fitCenter"
                         android:alpha="0.92"
-                        android:src="@drawable/ic_fullscreen" />
+                        android:src="@drawable/ic_fullscreen"
+                        app:tint="@android:color/white" />
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>
@@ -256,6 +270,7 @@
             android:padding="12dp"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_previous"
+            app:tint="@android:color/white"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/play_pause_container"
             app:layout_constraintHorizontal_chainStyle="packed"
@@ -280,7 +295,8 @@
                 android:contentDescription="@string/action_play"
                 android:padding="12dp"
                 android:scaleType="fitCenter"
-                android:src="@drawable/ic_play" />
+                android:src="@drawable/ic_play"
+                app:tint="@android:color/white" />
 
             <ImageButton
                 android:id="@+id/btn_pause"
@@ -290,7 +306,8 @@
                 android:contentDescription="@string/action_pause"
                 android:padding="12dp"
                 android:scaleType="fitCenter"
-                android:src="@drawable/ic_pause" />
+                android:src="@drawable/ic_pause"
+                app:tint="@android:color/white" />
         </FrameLayout>
 
         <ImageButton
@@ -302,6 +319,7 @@
             android:padding="12dp"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_next"
+            app:tint="@android:color/white"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toEndOf="@+id/play_pause_container"
@@ -313,11 +331,11 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|center_horizontal"
-        android:layout_marginBottom="80dp"
-        android:background="?attr/colorSurfaceVariant"
-        android:padding="8dp"
+        android:layout_marginBottom="40dp"
+        android:background="@drawable/bg_gesture_hint"
+        android:textColor="@android:color/white"
+        android:textSize="12sp"
         android:text="@string/reset"
-        android:textColor="?attr/colorOnSurface"
         android:visibility="gone" />
 
     <ImageButton
@@ -330,6 +348,20 @@
         android:contentDescription="@string/unlock_screen"
         android:padding="12dp"
         android:src="@drawable/ic_unlock"
+        app:tint="@android:color/white"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/btn_undo_skip"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="120dp"
+        android:background="@drawable/bg_gesture_hint"
+        android:padding="12dp"
+        android:text="@string/undo_skip"
+        android:textColor="@android:color/white"
+        android:textStyle="bold"
         android:visibility="gone" />
 
     <com.google.android.material.card.MaterialCardView
@@ -356,6 +388,7 @@
         android:contentDescription="@string/close"
         android:padding="16dp"
         android:src="@drawable/ic_close"
+        app:tint="@android:color/white"
         android:visibility="gone" />
 
     <ImageButton
@@ -367,6 +400,7 @@
         android:contentDescription="@string/action_restore_watch"
         android:padding="16dp"
         android:src="@drawable/ic_fullscreen"
+        app:tint="@android:color/white"
         android:visibility="gone" />
 
     <LinearLayout
@@ -377,6 +411,11 @@
         android:gravity="center"
         android:orientation="horizontal"
         android:visibility="gone">
+
+        <Space
+            android:id="@+id/mini_controls_space_start"
+            android:layout_width="0dp"
+            android:layout_height="0dp" />
 
         <FrameLayout
             android:layout_width="56dp"
@@ -389,7 +428,8 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/action_play"
                 android:padding="10dp"
-                android:src="@drawable/ic_play" />
+                android:src="@drawable/ic_play"
+                app:tint="@android:color/white" />
 
             <ImageButton
                 android:id="@+id/btn_mini_pause"
@@ -398,8 +438,14 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/action_pause"
                 android:padding="10dp"
-                android:src="@drawable/ic_pause" />
+                android:src="@drawable/ic_pause"
+                app:tint="@android:color/white" />
         </FrameLayout>
+
+        <Space
+            android:id="@+id/mini_controls_space_end"
+            android:layout_width="0dp"
+            android:layout_height="0dp" />
 
     </LinearLayout>
 

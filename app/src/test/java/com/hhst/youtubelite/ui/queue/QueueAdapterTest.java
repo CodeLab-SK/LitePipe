@@ -68,6 +68,10 @@ public class QueueAdapterTest {
 			@Override
 			public void onDeleteRequested(@NonNull final QueueItem item) {
 			}
+
+			@Override
+			public void onDownloadRequested(@NonNull final QueueItem item) {
+			}
 		});
 	}
 
