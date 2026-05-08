@@ -13,9 +13,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
-import java.security.MessageDigest;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.BitSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -37,11 +39,9 @@ import okhttp3.Response;
 @Singleton
 public class StreamDownloaderImpl implements StreamDownloader {
 	private static final String TAG = "StreamDownloader";
-	private static final long BLOCK_SIZE = 512 * 1024;
-	private static final int MAX_PARALLEL_CHUNKS = 1024;
-	private static final int DOWNLOAD_MAX_REQUESTS = 16;
-	private static final int DOWNLOAD_MAX_REQUESTS_PER_HOST = 8;
-	
+	private static final long BLOCK_SIZE = 1024 * 1024;
+	private static final int DOWNLOAD_MAX_REQUESTS = 64;
+	private static final int DOWNLOAD_MAX_REQUESTS_PER_HOST = 32;
 	private static final long TIMEOUT_SECONDS = 30L;
 
 	private final OkHttpClient client;
@@ -59,7 +59,7 @@ public class StreamDownloaderImpl implements StreamDownloader {
 						.readTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
 						.build();
 		this.mmkv = mmkv;
-		this.executor = new ThreadPoolExecutor(4, 8, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), r -> new Thread(r, "dl-worker"));
+		this.executor = new ThreadPoolExecutor(4, 16, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), r -> new Thread(r, "dl-worker"));
 		this.executor.allowCoreThreadTimeOut(true);
 	}
 
@@ -80,142 +80,165 @@ public class StreamDownloaderImpl implements StreamDownloader {
 	}
 
 	private void runTask(TaskContext ctx) {
-		RandomAccessFile raf = null;
-		try {
-			final long total;
-			final boolean rangeSupported;
-
-			try (Response head = client.newCall(new Request.Builder().url(ctx.url).head().build()).execute()) {
-				if (!head.isSuccessful() && head.code() != 405) {
-					throw new IOException("Probing failed: " + head.code());
-				}
-				total = Long.parseLong(head.header("Content-Length", "-1"));
-				rangeSupported = total > 0 && (head.code() == 206 
-								|| "bytes".equalsIgnoreCase(head.header("Accept-Ranges")) 
-								|| ctx.url.contains("googlevideo.com"));
-			}
+		final String stateKey = "dl_state_" + ctx.key;
+		try (RandomAccessFile raf = new RandomAccessFile(ctx.out, "rw");
+			 FileChannel channel = raf.getChannel()) {
+			
+			long total = mmkv.decodeLong(stateKey + "_total", -1);
+			boolean rangeSupported = mmkv.decodeBool(stateKey + "_range", false);
 
 			if (total <= 0) {
-				throw new IOException("Invalid content length");
+				Request probeRequest = new Request.Builder().url(ctx.url).header("Range", "bytes=0-0").build();
+				try (Response resp = client.newCall(probeRequest).execute()) {
+					if (resp.isSuccessful() && resp.code() == 206) {
+						rangeSupported = true;
+						String cr = resp.header("Content-Range");
+						if (cr != null) total = Long.parseLong(cr.substring(cr.lastIndexOf('/') + 1));
+					} else if (resp.code() == 403 || resp.code() == 410) {
+						throw new IOException("URL expired");
+					}
+				}
+
+				if (total <= 0) {
+					try (Response resp = client.newCall(new Request.Builder().url(ctx.url).build()).execute()) {
+						if (!resp.isSuccessful()) throw new IOException("Probing failed: " + resp.code());
+						String cl = resp.header("Content-Length");
+						total = Long.parseLong(cl != null ? cl : "-1");
+						if (!rangeSupported) {
+							rangeSupported = "bytes".equalsIgnoreCase(resp.header("Accept-Ranges")) || ctx.url.contains("googlevideo.com");
+						}
+					}
+				}
+
+				if (total <= 0) throw new IOException("Invalid content length");
+				mmkv.encode(stateKey + "_total", total);
+				mmkv.encode(stateKey + "_range", rangeSupported);
 			}
 
-			int numBlocks = (int) ((total + BLOCK_SIZE - 1) / BLOCK_SIZE);
-			if (numBlocks > MAX_PARALLEL_CHUNKS) {
-			}
-
-			String stateKey = "dl_state_" + ctx.key;
-			long savedTotal = mmkv.decodeLong(stateKey + "_total", -1);
-			if (savedTotal != -1 && savedTotal != total) {
-				Log.w(TAG, "Content length changed for " + ctx.key + ", restarting");
-				mmkv.removeValueForKey(stateKey + "_bits");
-			}
-			mmkv.encode(stateKey + "_total", total);
-
+			final long finalTotal = total;
+			final boolean finalRangeSupported = rangeSupported;
+			final int numBlocks = (int) ((finalTotal + BLOCK_SIZE - 1) / BLOCK_SIZE);
 			byte[] savedBits = mmkv.decodeBytes(stateKey + "_bits");
-			BitSet bits = (rangeSupported && savedBits != null) ? BitSet.valueOf(savedBits) : new BitSet();
+			final BitSet bits = (finalRangeSupported && savedBits != null) ? BitSet.valueOf(savedBits) : new BitSet();
 			
-			long initialDownloaded = calculateDownloaded(bits, numBlocks, total);
+			long initialDownloaded = calculateDownloaded(stateKey, bits, numBlocks, finalTotal);
 			ctx.downloadedBytes.set(initialDownloaded);
-			reportProgress(ctx, total);
+			ctx.startTime.set(System.currentTimeMillis());
+			reportProgress(ctx, finalTotal);
 
-			raf = new RandomAccessFile(ctx.out, "rw");
-			if (raf.length() > total) raf.setLength(total);
-			else if (raf.length() < total && !rangeSupported) raf.setLength(0);
+			if (raf.length() > finalTotal) raf.setLength(finalTotal);
 
 			if (bits.cardinality() < numBlocks) {
-				final RandomAccessFile finalRaf = raf;
 				CompletableFuture<?>[] futures = IntStream.range(0, numBlocks)
 								.filter(i -> !bits.get(i))
 								.mapToObj(i -> CompletableFuture.runAsync(() -> 
-												downloadBlock(ctx, i, numBlocks, total, rangeSupported, finalRaf, bits, stateKey), executor))
+												downloadBlock(ctx, i, finalTotal, finalRangeSupported, channel, bits, stateKey), executor))
 								.toArray(CompletableFuture[]::new);
 				
-				CompletableFuture.allOf(futures).join();
+				try {
+					CompletableFuture.allOf(futures).join();
+				} catch (Exception ignored) {
+				}
 			}
 
-			if (ctx.out.length() != total) {
-				throw new IOException("File size mismatch: expected " + total + " but got " + ctx.out.length());
+			if (ctx.error.get() != null) {
+				throw ctx.error.get();
+			}
+
+			if (bits.cardinality() < numBlocks) {
+				throw new IOException("Download incomplete: " + bits.cardinality() + "/" + numBlocks + " blocks");
 			}
 
 			if (!ctx.isInactive()) {
-				cleanupState(stateKey);
+				cleanupState(stateKey, numBlocks);
 				tasks.remove(ctx.key);
 				ctx.future.complete(ctx.out);
 				if (ctx.cb != null) ctx.cb.onComplete(ctx.out);
 			}
 		} catch (Exception e) {
 			handleTaskError(ctx, e);
-		} finally {
-			closeQuietly(raf);
 		}
 	}
 
-	private void downloadBlock(TaskContext ctx, int idx, int totalBlocks, long totalLen, boolean rangeSupported, RandomAccessFile raf, BitSet bits, String stateKey) {
+	private void downloadBlock(TaskContext ctx, int idx, long totalLen, boolean rangeSupported, FileChannel channel, BitSet bits, String stateKey) {
 		if (ctx.isInactive()) return;
 		
-		long start = idx * BLOCK_SIZE;
-		long end = Math.min(start + BLOCK_SIZE - 1, totalLen - 1);
+		final long blockStart = idx * BLOCK_SIZE;
+		final long blockEnd = Math.min(blockStart + BLOCK_SIZE - 1, totalLen - 1);
 		
-		int retry = 0;
-		while (retry < 3 && !ctx.isInactive()) {
+		long savedProg = mmkv.decodeLong(stateKey + "_p_" + idx, -1);
+		long currentOffset = (rangeSupported && savedProg != -1) ? savedProg : blockStart;
+		
+		for (int retry = 0; retry < 5 && !ctx.isInactive(); retry++) {
 			Request.Builder rb = new Request.Builder().url(ctx.url);
 			if (rangeSupported) {
-				rb.header("Range", "bytes=" + start + "-" + end);
+				rb.header("Range", "bytes=" + currentOffset + "-" + blockEnd);
 			}
 
 			try (Response resp = client.newCall(rb.build()).execute()) {
 				if (!resp.isSuccessful()) {
-					if (resp.code() == 403 || resp.code() == 410) {
-						throw new IOException("URL expired (HTTP " + resp.code() + ")");
-					}
+					if (resp.code() == 403 || resp.code() == 410) throw new IOException("URL expired");
 					throw new IOException("HTTP " + resp.code());
 				}
 
-				if (rangeSupported && resp.code() != 206) {
-					if (idx != 0) throw new IOException("Server ignored Range header");
-				}
-
-				try (InputStream is = resp.body().byteStream()) {
+				try (InputStream is = Objects.requireNonNull(resp.body()).byteStream()) {
 					byte[] buf = new byte[16384];
 					int read;
-					long offset = start;
 					while ((read = is.read(buf)) != -1) {
-						if (ctx.isInactive()) return;
-						synchronized (ctx.fileLock) {
-							raf.seek(offset);
-							raf.write(buf, 0, read);
+						if (ctx.isInactive()) {
+							if (rangeSupported) mmkv.encode(stateKey + "_p_" + idx, currentOffset);
+							return;
 						}
+						
+						ByteBuffer buffer = ByteBuffer.wrap(buf, 0, read);
+						while (buffer.hasRemaining()) {
+							int written = channel.write(buffer, currentOffset);
+							currentOffset += written;
+						}
+						
 						ctx.downloadedBytes.addAndGet(read);
+						ctx.sessionDownloaded.addAndGet(read);
 						reportProgress(ctx, totalLen);
-						offset += read;
-						if (rangeSupported && offset > end) break;
+						
+						if (rangeSupported && currentOffset > blockEnd) break;
 					}
 					
 					synchronized (ctx.stateLock) {
 						bits.set(idx);
 						mmkv.encode(stateKey + "_bits", bits.toByteArray());
+						mmkv.removeValueForKey(stateKey + "_p_" + idx);
 					}
 					return;
 				}
 			} catch (Exception e) {
-				retry++;
-				if (retry >= 3) {
-					ctx.error.set(e);
+				if (e.getMessage() != null && (e.getMessage().contains("expired") || e.getMessage().contains("URL expired"))) {
+					ctx.error.compareAndSet(null, e);
 					return;
 				}
-				try { Thread.sleep(1000L * retry); } catch (InterruptedException ignored) {}
+				if (retry == 4) {
+					ctx.error.compareAndSet(null, e);
+					return;
+				}
+				try {
+					TimeUnit.MILLISECONDS.sleep(1000L * (retry + 1));
+				} catch (InterruptedException ignored) {
+					Thread.currentThread().interrupt();
+					return;
+				}
 			}
 		}
 	}
 
-	private long calculateDownloaded(BitSet bits, int numBlocks, long total) {
+	private long calculateDownloaded(String stateKey, BitSet bits, int numBlocks, long total) {
 		long count = 0;
 		for (int i = 0; i < numBlocks; i++) {
 			if (bits.get(i)) {
-				if (i == numBlocks - 1) {
-					count += (total % BLOCK_SIZE == 0) ? BLOCK_SIZE : (total % BLOCK_SIZE);
-				} else {
-					count += BLOCK_SIZE;
+				if (i == numBlocks - 1) count += (total - (long) (numBlocks - 1) * BLOCK_SIZE);
+				else count += BLOCK_SIZE;
+			} else {
+				long p = mmkv.decodeLong(stateKey + "_p_" + i, -1);
+				if (p != -1) {
+					count += (p - (long) i * BLOCK_SIZE);
 				}
 			}
 		}
@@ -224,28 +247,45 @@ public class StreamDownloaderImpl implements StreamDownloader {
 
 	private void reportProgress(TaskContext ctx, long total) {
 		if (ctx.cb == null || total <= 0) return;
-		int progress = (int) (ctx.downloadedBytes.get() * 100 / total);
-		progress = Math.min(99, Math.max(0, progress));
+		long now = System.currentTimeMillis();
+		long lastReport = ctx.lastReportTime.get();
+
+		long downloaded = ctx.downloadedBytes.get();
+		int progress = (int) (downloaded * 100 / total);
+		progress = Math.min(100, Math.max(0, progress));
 		
-		int last = ctx.lastProgress.get();
-		if (progress > last) {
-			if (ctx.lastProgress.compareAndSet(last, progress)) {
-				ctx.cb.onProgress(progress);
+		if (now - lastReport > 500 || progress > ctx.lastProgress.get()) {
+			if (ctx.lastReportTime.compareAndSet(lastReport, now)) {
+				ctx.lastProgress.set(progress);
+				
+				long elapsed = now - ctx.startTime.get();
+				long speed = elapsed > 500 ? (ctx.sessionDownloaded.get() * 1000 / elapsed) : 0;
+				ctx.cb.onProgress(progress, speed);
 			}
 		}
 	}
 
 	private void handleTaskError(TaskContext ctx, Exception e) {
-		if (ctx.isInactive()) return;
-		Log.e(TAG, "Task failed: " + ctx.key, e);
+		if (ctx.isInactive() && !isExpiredError(e)) return;
+		
+		Log.e(TAG, "Task failed: " + ctx.key + " - " + e.getMessage());
 		tasks.remove(ctx.key);
 		ctx.future.completeExceptionally(e);
 		if (ctx.cb != null) ctx.cb.onError(e);
 	}
 
-	private void cleanupState(String stateKey) {
+	private boolean isExpiredError(Exception e) {
+		String m = e.getMessage();
+		return m != null && (m.contains("expired") || m.contains("URL expired"));
+	}
+
+	private void cleanupState(String stateKey, int numBlocks) {
 		mmkv.removeValueForKey(stateKey + "_total");
 		mmkv.removeValueForKey(stateKey + "_bits");
+		mmkv.removeValueForKey(stateKey + "_range");
+		for (int i = 0; i < numBlocks; i++) {
+			mmkv.removeValueForKey(stateKey + "_p_" + i);
+		}
 	}
 
 	@Override
@@ -258,6 +298,8 @@ public class StreamDownloaderImpl implements StreamDownloader {
 	public void resume(@NonNull String key) {
 		TaskContext ctx = tasks.get(key);
 		if (ctx != null && ctx.paused.compareAndSet(true, false)) {
+			ctx.sessionDownloaded.set(0);
+			ctx.startTime.set(System.currentTimeMillis());
 			executor.execute(() -> runTask(ctx));
 		}
 	}
@@ -268,20 +310,15 @@ public class StreamDownloaderImpl implements StreamDownloader {
 		if (ctx != null) {
 			ctx.cancelled.set(true);
 			ctx.future.cancel(true);
-			cleanupState("dl_state_" + key);
 			if (ctx.cb != null) ctx.cb.onCancel();
 		}
 	}
 
 	@Override
 	public void setMaxThreadCount(int count) {
-		int threads = Math.max(2, Math.min(count, 16));
+		int threads = Math.max(2, Math.min(count, 32));
 		executor.setCorePoolSize(threads);
 		executor.setMaximumPoolSize(threads * 2);
-	}
-
-	private void closeQuietly(AutoCloseable c) {
-		if (c != null) try { c.close(); } catch (Exception ignored) {}
 	}
 
 	private static class TaskContext {
@@ -293,8 +330,10 @@ public class StreamDownloaderImpl implements StreamDownloader {
 		final AtomicBoolean paused = new AtomicBoolean(false);
 		final AtomicBoolean cancelled = new AtomicBoolean(false);
 		final AtomicLong downloadedBytes = new AtomicLong(0);
+		final AtomicLong sessionDownloaded = new AtomicLong(0);
+		final AtomicLong startTime = new AtomicLong(0);
+		final AtomicLong lastReportTime = new AtomicLong(0);
 		final AtomicInteger lastProgress = new AtomicInteger(-1);
-		final Object fileLock = new Object();
 		final Object stateLock = new Object();
 		final java.util.concurrent.atomic.AtomicReference<Exception> error = new java.util.concurrent.atomic.AtomicReference<>();
 

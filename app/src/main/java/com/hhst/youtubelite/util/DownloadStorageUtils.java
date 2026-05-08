@@ -7,6 +7,7 @@ import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore;
 import android.webkit.MimeTypeMap;
 
@@ -123,11 +124,21 @@ public final class DownloadStorageUtils {
 	public static boolean exists(@NonNull final Context context, @Nullable final String outputReference) {
 		if (outputReference == null || outputReference.isBlank()) return false;
 		if (isContentUri(outputReference)) {
-			try (final var cursor = context.getContentResolver().query(Uri.parse(outputReference), new String[]{MediaStore.MediaColumns._ID}, null, null, null)) {
+			final Uri uri = Uri.parse(outputReference);
+			try (ParcelFileDescriptor pfd = context.getContentResolver().openFileDescriptor(uri, "r")) {
+				return pfd != null;
+			} catch (Exception ignored) {}
+			
+			try {
+				final DocumentFile df = DocumentFile.fromSingleUri(context, uri);
+				return df != null && df.exists();
+			} catch (Exception ignored) {}
+
+			try (final var cursor = context.getContentResolver().query(uri, new String[]{MediaStore.MediaColumns._ID}, null, null, null)) {
 				return cursor != null && cursor.moveToFirst();
-			} catch (Exception ignored) {
-				return false;
-			}
+			} catch (Exception ignored) {}
+			
+			return false;
 		}
 		return new File(outputReference).exists();
 	}
@@ -135,12 +146,17 @@ public final class DownloadStorageUtils {
 	public static void delete(@NonNull final Context context, @Nullable final String outputReference) {
 		if (outputReference == null || outputReference.isBlank()) return;
 		if (isContentUri(outputReference)) {
+			final Uri uri = Uri.parse(outputReference);
 			try {
-				context.getContentResolver().delete(Uri.parse(outputReference), null, null);
-				return;
-			} catch (Exception ignored) {
-				return;
-			}
+				// Try direct deletion via content resolver
+				context.getContentResolver().delete(uri, null, null);
+			} catch (Exception ignored) {}
+			try {
+				// Try deletion via DocumentFile (useful for SAF URIs)
+				final DocumentFile df = DocumentFile.fromSingleUri(context, uri);
+				if (df != null && df.exists()) df.delete();
+			} catch (Exception ignored) {}
+			return;
 		}
 		FileUtils.deleteQuietly(new File(outputReference));
 	}
@@ -193,7 +209,7 @@ public final class DownloadStorageUtils {
 	}
 
 	@Nullable
-	private static String guessMimeType(@NonNull final String fileName) {
+	public static String guessMimeType(@NonNull final String fileName) {
 		final String extension = extractExtension(fileName);
 		if (extension == null) return null;
 		try {
@@ -209,6 +225,7 @@ public final class DownloadStorageUtils {
 			case "webp" -> "image/webp";
 			case "srt" -> "application/x-subrip";
 			case "vtt" -> "text/vtt";
+			case "ttml" -> "application/ttml+xml";
 			default -> null;
 		};
 	}

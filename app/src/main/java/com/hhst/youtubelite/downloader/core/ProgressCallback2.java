@@ -4,7 +4,7 @@ import java.io.File;
 
 public interface ProgressCallback2 {
 
-	void onProgress(int progress, long downloadedBytes, long totalBytes);
+	void onProgress(int progress, long downloadedBytes, long totalBytes, long speedBytesPerSecond);
 
 	void onComplete(File file);
 

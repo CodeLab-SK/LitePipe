@@ -1,19 +1,23 @@
 package com.hhst.youtubelite.downloader.ui;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -22,6 +26,7 @@ import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.CheckBox;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -77,7 +82,7 @@ public class DownloadDialog {
     private VideoDetails videoDetails;
     private StreamDetails streamDetails;
     private boolean thumbSel, subtitleSel;
-    private String mode = "video";
+    private String mode;
     private VideoStream videoSelStream;
     private AudioStream audioSelStream;
     private AudioStream videoAudioStream;
@@ -101,6 +106,10 @@ public class DownloadDialog {
     public DownloadDialog(String url, Context context, YoutubeExtractor youtubeExtractor) {
         this.context = context;
         this.dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_download, new FrameLayout(context), false);
+
+        mode = kv.decodeString(KEY_LAST_MODE, "video");
+        thumbSel = kv.decodeBool(KEY_LAST_THUMB_SEL, false);
+        subtitleSel = kv.decodeBool(KEY_LAST_SUB_SEL, false);
 
         Intent serviceIntent = new Intent(context, DownloadService.class);
         context.startService(serviceIntent);
@@ -175,6 +184,10 @@ public class DownloadDialog {
         Button downloadButton = dialogView.findViewById(R.id.button_download);
         SeekBar threadsSeekBar = dialogView.findViewById(R.id.threads_seekbar);
         TextView threadsCountText = dialogView.findViewById(R.id.threads_count);
+
+        updateButtonStates(videoButton, audioButton);
+        updateAuxButtonState(thumbnailButton, thumbSel);
+        updateAuxButtonState(subtitleButton, subtitleSel);
 
         AlertDialog dialog = new MaterialAlertDialogBuilder(context)
                 .setTitle(context.getString(R.string.download))
@@ -280,32 +293,54 @@ public class DownloadDialog {
                 context.unbindService(connection);
                 isBound = false;
             }
+            Activity activity = getActivity(context);
+            if (activity instanceof DownloadReceiverActivity) {
+                activity.finish();
+            }
         });
         dialog.show();
     }
 
     private void updateButtonStates(Button vBtn, Button aBtn) {
-        int white = context.getColor(android.R.color.white);
-        int black = context.getColor(android.R.color.black);
-        int gray = context.getColor(android.R.color.darker_gray);
+        int primary = getThemeAttrColor(androidx.appcompat.R.attr.colorPrimary);
+        int onPrimary = getThemeAttrColor(com.google.android.material.R.attr.colorOnPrimary);
+        int surfaceVariant = getThemeAttrColor(com.google.android.material.R.attr.colorSurfaceVariant);
+        int onSurfaceVariant = getThemeAttrColor(com.google.android.material.R.attr.colorOnSurfaceVariant);
 
         if ("video".equals(mode)) {
-            if (vBtn != null) { vBtn.setBackgroundColor(white); vBtn.setTextColor(black); }
-            if (aBtn != null) { aBtn.setBackgroundColor(gray); aBtn.setTextColor(black); }
+            if (vBtn != null) { setBtnStyle(vBtn, primary, onPrimary); }
+            if (aBtn != null) { setBtnStyle(aBtn, surfaceVariant, onSurfaceVariant); }
         } else if ("audio".equals(mode)) {
-            if (aBtn != null) { aBtn.setBackgroundColor(white); aBtn.setTextColor(black); }
-            if (vBtn != null) { vBtn.setBackgroundColor(gray); vBtn.setTextColor(black); }
+            if (aBtn != null) { setBtnStyle(aBtn, primary, onPrimary); }
+            if (vBtn != null) { setBtnStyle(vBtn, surfaceVariant, onSurfaceVariant); }
         } else {
-            if (vBtn != null) { vBtn.setBackgroundColor(gray); vBtn.setTextColor(black); }
-            if (aBtn != null) { aBtn.setBackgroundColor(gray); aBtn.setTextColor(black); }
+            if (vBtn != null) { setBtnStyle(vBtn, surfaceVariant, onSurfaceVariant); }
+            if (aBtn != null) { setBtnStyle(aBtn, surfaceVariant, onSurfaceVariant); }
         }
+    }
+
+    private void setBtnStyle(Button btn, int bg, int text) {
+        btn.setBackgroundTintList(ColorStateList.valueOf(bg));
+        btn.setTextColor(text);
     }
 
     private void updateAuxButtonState(Button btn, boolean selected) {
         if (btn == null) return;
-        int themeColor = selected ? android.R.color.white : android.R.color.darker_gray;
-        btn.setBackgroundColor(context.getColor(themeColor));
-        btn.setTextColor(context.getColor(android.R.color.black));
+        int primary = getThemeAttrColor(androidx.appcompat.R.attr.colorPrimary);
+        int onPrimary = getThemeAttrColor(com.google.android.material.R.attr.colorOnPrimary);
+        int surfaceVariant = getThemeAttrColor(com.google.android.material.R.attr.colorSurfaceVariant);
+        int onSurfaceVariant = getThemeAttrColor(com.google.android.material.R.attr.colorOnSurfaceVariant);
+
+        if (selected) setBtnStyle(btn, primary, onPrimary);
+        else setBtnStyle(btn, surfaceVariant, onSurfaceVariant);
+    }
+
+    private int getThemeAttrColor(int attr) {
+        TypedValue typedValue = new TypedValue();
+        if (context.getTheme().resolveAttribute(attr, typedValue, true)) {
+            return typedValue.data;
+        }
+        return Color.BLACK;
     }
 
     private void restorePreferences(Button vBtn, Button aBtn) {
@@ -583,7 +618,7 @@ public class DownloadDialog {
                     matchesLanguage(first, savedLanguage));
             if (savedLanguageComparison != 0) return savedLanguageComparison;
 
-            return Integer.compare((int) second.getAverageBitrate(), (int) first.getAverageBitrate());
+            return Long.compare(second.getAverageBitrate(), first.getAverageBitrate());
         });
     }
 
@@ -656,8 +691,10 @@ public class DownloadDialog {
         }
 
         if ("video".equals(mode) && videoSelStream != null) {
-            AudioStream audio = (videoAudioStream != null) ? videoAudioStream : streamDetails.getAudioStreams().get(0);
-            t.add(new Task(videoDetails.getId() + ":v", videoSelStream, audio, null, null, f, d, threadCount, videoDetails.getTitle(), videoDetails.getThumbnail(), videoSelStream.getResolution(), null, null));
+            AudioStream audio = (videoAudioStream != null) ? videoAudioStream : (streamDetails != null && !streamDetails.getAudioStreams().isEmpty() ? streamDetails.getAudioStreams().get(0) : null);
+            if (audio != null) {
+                t.add(new Task(videoDetails.getId() + ":v", videoSelStream, audio, null, null, f, d, threadCount, videoDetails.getTitle(), videoDetails.getThumbnail(), videoSelStream.getResolution(), null, null));
+            }
         } else if ("audio".equals(mode) && audioSelStream != null) {
             t.add(new Task(videoDetails.getId() + ":a", null, audioSelStream, null, null, f, d, threadCount, videoDetails.getTitle(), videoDetails.getThumbnail(), null, null, null));
         }
@@ -670,5 +707,14 @@ public class DownloadDialog {
             t.add(new Task(videoDetails.getId() + ":t", null, null, null, videoDetails.getThumbnail(), f, d, threadCount, videoDetails.getTitle(), videoDetails.getThumbnail(), null, null, null));
 
         return t;
+    }
+
+    private static Activity getActivity(Context context) {
+        if (context instanceof Activity) {
+            return (Activity) context;
+        } else if (context instanceof ContextWrapper) {
+            return getActivity(((ContextWrapper) context).getBaseContext());
+        }
+        return null;
     }
 }

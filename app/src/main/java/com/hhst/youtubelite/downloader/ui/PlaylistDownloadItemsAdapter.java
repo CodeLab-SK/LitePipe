@@ -7,6 +7,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.checkbox.MaterialCheckBox;
@@ -18,10 +19,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * Component that handles app logic.
- */
 public final class PlaylistDownloadItemsAdapter extends RecyclerView.Adapter<PlaylistDownloadItemsAdapter.VH> {
+	public static final Object PAYLOAD_SELECTION = new Object();
+
 	@NonNull
 	private final List<PlaylistDownloadItem> items = new ArrayList<>();
 	@NonNull
@@ -34,15 +34,31 @@ public final class PlaylistDownloadItemsAdapter extends RecyclerView.Adapter<Pla
 	}
 
 	public void replaceAll(@NonNull List<PlaylistDownloadItem> newItems) {
-		int oldSize = items.size();
+		DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new DiffUtil.Callback() {
+			@Override
+			public int getOldListSize() {
+				return items.size();
+			}
+
+			@Override
+			public int getNewListSize() {
+				return newItems.size();
+			}
+
+			@Override
+			public boolean areItemsTheSame(int oldItemPosition, int newItemPosition) {
+				return items.get(oldItemPosition).getPlaylistIndex() == newItems.get(newItemPosition).getPlaylistIndex();
+			}
+
+			@Override
+			public boolean areContentsTheSame(int oldItemPosition, int newItemPosition) {
+				return items.get(oldItemPosition).equals(newItems.get(newItemPosition));
+			}
+		});
+
 		items.clear();
 		items.addAll(newItems);
-		if (oldSize > 0) {
-			notifyItemRangeRemoved(0, oldSize);
-		}
-		if (!newItems.isEmpty()) {
-			notifyItemRangeInserted(0, newItems.size());
-		}
+		diffResult.dispatchUpdatesTo(this);
 	}
 
 	public void setInteractionEnabled(boolean interactionEnabled) {
@@ -70,6 +86,19 @@ public final class PlaylistDownloadItemsAdapter extends RecyclerView.Adapter<Pla
 	}
 
 	@Override
+	public void onBindViewHolder(@NonNull VH holder, int position, @NonNull List<Object> payloads) {
+		if (payloads.isEmpty()) {
+			onBindViewHolder(holder, position);
+		} else {
+			for (Object payload : payloads) {
+				if (payload == PAYLOAD_SELECTION) {
+					holder.updateSelection(items.get(position), interactionEnabled);
+				}
+			}
+		}
+	}
+
+	@Override
 	public int getItemCount() {
 		return items.size();
 	}
@@ -78,10 +107,10 @@ public final class PlaylistDownloadItemsAdapter extends RecyclerView.Adapter<Pla
 	 * Contract for app logic.
 	 */
 	public interface Callbacks {
-		void onItemToggled(int index, boolean selected);
+		void onItemToggled(int position, int playlistIndex, boolean selected);
 	}
 
-	static final class VH extends RecyclerView.ViewHolder {
+	public static final class VH extends RecyclerView.ViewHolder {
 		private final MaterialCheckBox checkBox;
 		private final ShapeableImageView thumbnail;
 		private final TextView title;
@@ -101,15 +130,26 @@ public final class PlaylistDownloadItemsAdapter extends RecyclerView.Adapter<Pla
 		          @NonNull Callbacks callbacks,
 		          final boolean interactionEnabled) {
 			title.setText(item.getTitle());
-			CharSequence metaText = buildMetaLine(item);
+			String metaText = buildMetaLine(item);
 			CharSequence statusText = getStatus(item);
 			meta.setText(metaText);
-			meta.setVisibility(metaText.length() > 0 ? View.VISIBLE : View.GONE);
+			meta.setVisibility(!metaText.isEmpty() ? View.VISIBLE : View.GONE);
 			status.setText(statusText);
 			status.setTextColor(getStatusColor(item));
 			status.setVisibility(shouldShowStatus(item) ? View.VISIBLE : View.GONE);
 			ImageUtils.loadThumb(thumbnail, item.getThumbnailUrl());
 
+			updateSelection(item, interactionEnabled);
+
+			checkBox.setOnCheckedChangeListener((buttonView, isChecked) ->
+							callbacks.onItemToggled(getBindingAdapterPosition(), item.getPlaylistIndex(), isChecked));
+			itemView.setOnClickListener(v -> {
+				if (!itemView.isEnabled()) return;
+				checkBox.toggle();
+			});
+		}
+
+		void updateSelection(@NonNull PlaylistDownloadItem item, boolean interactionEnabled) {
 			boolean enabled = interactionEnabled && item.isSelectable();
 			checkBox.setOnCheckedChangeListener(null);
 			checkBox.setChecked(item.isSelected());
@@ -119,16 +159,10 @@ public final class PlaylistDownloadItemsAdapter extends RecyclerView.Adapter<Pla
 							enabled || item.getBatchResultStatus() == PlaylistDownloadItem.BatchResultStatus.PREPARING
 											? 1f
 											: 0.7f);
-			checkBox.setOnCheckedChangeListener((buttonView, isChecked) ->
-							callbacks.onItemToggled(item.getPlaylistIndex(), isChecked));
-			itemView.setOnClickListener(v -> {
-				if (!enabled) return;
-				checkBox.toggle();
-			});
 		}
 
 		@NonNull
-		private CharSequence buildMetaLine(@NonNull PlaylistDownloadItem item) {
+		private String buildMetaLine(@NonNull PlaylistDownloadItem item) {
 			List<String> parts = new ArrayList<>(2);
 			if (item.getAuthor() != null && !item.getAuthor().isBlank()) {
 				parts.add(item.getAuthor());

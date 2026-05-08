@@ -9,7 +9,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -53,8 +52,10 @@ import com.hhst.youtubelite.extractor.YoutubeExtractor;
 import com.hhst.youtubelite.util.DownloadStorageUtils;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.Locale;
@@ -152,29 +153,60 @@ public class DownloadActivity extends AppCompatActivity {
 	private List<DownloadRecord> getCurrentlyDisplayedRecords() {
 		List<DownloadRecord> all = historyRepository.getAllSorted();
 		List<DownloadRecord> verifiedList = new ArrayList<>();
+		List<String> toRemove = new ArrayList<>();
+
+		Set<String> videoIdsInList = new HashSet<>();
+		for (DownloadRecord r : all) {
+			if (r.getType() == DownloadType.VIDEO) {
+				videoIdsInList.add(getShortVideoId(r.getVideoId()));
+			}
+		}
 
 		for (DownloadRecord record : all) {
 			if (record.getStatus() == DownloadStatus.COMPLETED && record.getType() != DownloadType.PLAYLIST) {
 				if (!DownloadStorageUtils.exists(this, record.getOutputPath())) {
-					historyRepository.remove(record.getTaskId());
+					toRemove.add(record.getTaskId());
 					continue;
 				}
 			}
+			
+			if (record.getType() == DownloadType.SUBTITLE && videoIdsInList.contains(getShortVideoId(record.getVideoId()))) {
+				continue;
+			}
+			
 			verifiedList.add(record);
+		}
+
+		if (!toRemove.isEmpty()) {
+			historyRepository.removeBatch(toRemove);
 		}
 
 		List<DownloadRecord> filtered = new ArrayList<>();
 		if (filterParentId == null) {
+			Map<String, Integer> childrenCounts = new HashMap<>();
+			for (DownloadRecord r : verifiedList) {
+				if (r.getParentId() != null) {
+					childrenCounts.merge(r.getParentId(), 1, Integer::sum);
+				}
+			}
+
+			List<String> emptyPlaylists = new ArrayList<>();
 			for (DownloadRecord r : verifiedList) {
 				if (r.getParentId() == null) {
 					if (r.getType() == DownloadType.PLAYLIST) {
-						if (countChildren(r.getTaskId()) == 0) {
-							historyRepository.remove(r.getTaskId());
+						Integer countVal = childrenCounts.get(r.getTaskId());
+						int count = (countVal != null) ? countVal : 0;
+						if (count == 0) {
+							emptyPlaylists.add(r.getTaskId());
 							continue;
 						}
+						r.setItemCount(count);
 					}
 					filtered.add(r);
 				}
+			}
+			if (!emptyPlaylists.isEmpty()) {
+				historyRepository.removeBatch(emptyPlaylists);
 			}
 		} else {
 			for (DownloadRecord r : verifiedList) {
@@ -184,16 +216,6 @@ public class DownloadActivity extends AppCompatActivity {
 			}
 		}
 		return filtered;
-	}
-
-	private int countChildren(String parentId) {
-		int count = 0;
-		for (DownloadRecord r : historyRepository.getAllSorted()) {
-			if (Objects.equals(r.getParentId(), parentId)) {
-				count++;
-			}
-		}
-		return count;
 	}
 
 	private void clearSelection() {
@@ -293,21 +315,24 @@ public class DownloadActivity extends AppCompatActivity {
 	private void confirmDelete(List<DownloadRecord> targets, boolean isAll) {
 		View view = LayoutInflater.from(this).inflate(R.layout.dialog_delete_record, null);
 		MaterialCheckBox cb = view.findViewById(R.id.checkbox_delete_file);
+		cb.setChecked(true);
 		if (isAll) cb.setText(R.string.delete_local_files);
 
 		new MaterialAlertDialogBuilder(this)
 						.setTitle(isAll ? "Delete All" : "Delete Selected")
 						.setView(view)
 						.setPositiveButton("Delete", (d, w) -> {
-							if (isBound) {
-								for (DownloadRecord r : targets) {
+							List<String> idsToRemove = new ArrayList<>();
+							for (DownloadRecord r : targets) {
+								if (isBound && downloadService != null) {
 									downloadService.cancel(r.getTaskId());
-									if (cb.isChecked()) {
-										DownloadStorageUtils.delete(DownloadActivity.this, r.getOutputPath());
-									}
-									historyRepository.remove(r.getTaskId());
 								}
+								if (cb.isChecked()) {
+									DownloadStorageUtils.delete(DownloadActivity.this, r.getOutputPath());
+								}
+								idsToRemove.add(r.getTaskId());
 							}
+							historyRepository.removeBatch(idsToRemove);
 							clearSelection();
 							loadRecords();
 						}).setNegativeButton("Cancel", null).show();
@@ -383,14 +408,16 @@ public class DownloadActivity extends AppCompatActivity {
 			new MaterialAlertDialogBuilder(DownloadActivity.this).setTitle("Delete Folder").setMessage("Delete folder content?")
 							.setPositiveButton("Delete", (d, w) -> {
 								List<DownloadRecord> all = historyRepository.getAllSorted();
+								List<String> idsToRemove = new ArrayList<>();
 								for (DownloadRecord r : all) {
 									if (Objects.equals(r.getParentId(), folderRecord.getTaskId())) {
-										if (isBound) downloadService.cancel(r.getTaskId());
+										if (isBound && downloadService != null) downloadService.cancel(r.getTaskId());
 										DownloadStorageUtils.delete(DownloadActivity.this, r.getOutputPath());
-										historyRepository.remove(r.getTaskId());
+										idsToRemove.add(r.getTaskId());
 									}
 								}
-								historyRepository.remove(folderRecord.getTaskId());
+								idsToRemove.add(folderRecord.getTaskId());
+								historyRepository.removeBatch(idsToRemove);
 								loadRecords();
 							}).setNegativeButton("Cancel", null).show();
 		}
@@ -412,11 +439,13 @@ public class DownloadActivity extends AppCompatActivity {
 	private void showClearHistoryDialog() {
 		new MaterialAlertDialogBuilder(this).setTitle("Clear Finished").setMessage("Remove finished items from list?")
 						.setPositiveButton("Clear", (d, w) -> {
+							List<String> toRemove = new ArrayList<>();
 							for (DownloadRecord r : historyRepository.getAllSorted()) {
 								DownloadStatus s = r.getStatus();
 								if (s == DownloadStatus.COMPLETED || s == DownloadStatus.FAILED || s == DownloadStatus.CANCELED)
-									historyRepository.remove(r.getTaskId());
+									toRemove.add(r.getTaskId());
 							}
+							historyRepository.removeBatch(toRemove);
 							loadRecords();
 						}).setNegativeButton("Cancel", null).show();
 	}
@@ -647,6 +676,7 @@ public class DownloadActivity extends AppCompatActivity {
 			ShapeableImageView thumb;
 			TextView title, statusChip, typeChip, size;
 			LinearProgressIndicator progress;
+			View progressWrapper;
 			ImageButton more;
 			MaterialCheckBox checkBox;
 			String currentTaskId;
@@ -660,6 +690,7 @@ public class DownloadActivity extends AppCompatActivity {
 				typeChip = v.findViewById(R.id.type_chip);
 				size = v.findViewById(R.id.size_downloaded);
 				progress = v.findViewById(R.id.progress);
+				progressWrapper = v.findViewById(R.id.progress_wrapper);
 				more = v.findViewById(R.id.more);
 				checkBox = v.findViewById(R.id.checkbox);
 			}
@@ -762,7 +793,7 @@ public class DownloadActivity extends AppCompatActivity {
 
 			private String getTypeString(Context context, DownloadType type, String quality) {
 				return switch (type) {
-					case VIDEO -> context.getString(R.string.type_video) + (quality != null ? "(" + quality + ")" : "");
+					case VIDEO -> context.getString(R.string.type_video) + (quality != null ? " (" + quality + ")" : "");
 					case AUDIO -> context.getString(R.string.type_audio);
 					case SUBTITLE -> context.getString(R.string.type_subtitle);
 					case THUMBNAIL -> context.getString(R.string.type_thumbnail);
@@ -775,25 +806,72 @@ public class DownloadActivity extends AppCompatActivity {
 				Context context = itemView.getContext();
 				DownloadStatus s = r.getStatus();
 				
-				statusChip.setText(String.format("%s • %s", getStatusString(context, s), getTypeString(context, r.getType(), r.getQuality())));
-				typeChip.setVisibility(View.GONE);
-				
-				if (s == DownloadStatus.COMPLETED) statusChip.setTextColor(Color.parseColor("#4CAF50"));
-				else if (s == DownloadStatus.FAILED) statusChip.setTextColor(Color.parseColor("#F44336"));
-				else statusChip.setTextColor(Color.LTGRAY);
-				
-				if (r.getTotalSize() > 0) {
-					size.setText(context.getString(R.string.download_progress_with_total, formatMB(r.getDownloadedSize()), formatMB(r.getTotalSize()), r.getProgress()));
-				} else {
-					size.setText(context.getString(R.string.download_progress_simple, formatMB(r.getDownloadedSize())));
+				statusChip.setText(getStatusString(context, s));
+				typeChip.setText(getTypeString(context, r.getType(), r.getQuality()));
+				typeChip.setVisibility(View.VISIBLE);
+
+				int statusBgRes, statusTextColorRes;
+				switch (s) {
+					case COMPLETED -> {
+						statusBgRes = R.drawable.bg_download_chip_completed;
+						statusTextColorRes = R.color.chip_completed_text;
+					}
+					case FAILED, CANCELED -> {
+						statusBgRes = R.drawable.bg_download_chip_error;
+						statusTextColorRes = R.color.chip_error_text;
+					}
+					case PAUSED -> {
+						statusBgRes = R.drawable.bg_download_chip_paused;
+						statusTextColorRes = R.color.chip_paused_text;
+					}
+					default -> {
+						statusBgRes = R.drawable.bg_download_chip_active;
+						statusTextColorRes = R.color.chip_active_text;
+					}
 				}
-				progress.setVisibility((s == DownloadStatus.RUNNING || s == DownloadStatus.QUEUED || s == DownloadStatus.MERGING) ? View.VISIBLE : View.GONE);
-				if (s == DownloadStatus.RUNNING) progress.setProgressCompat(r.getProgress(), true);
-				else if (s == DownloadStatus.QUEUED || s == DownloadStatus.MERGING) progress.setIndeterminate(true);
+
+				statusChip.setBackgroundResource(statusBgRes);
+				statusChip.setTextColor(ContextCompat.getColor(context, statusTextColorRes));
+
+				typeChip.setBackgroundResource(R.drawable.bg_download_chip_type);
+				typeChip.setTextColor(ContextCompat.getColor(context, R.color.chip_type_text));
+
+				String sizeText;
+				if (r.getType() == DownloadType.SUBTITLE) {
+					sizeText = "";
+				} else if (r.getTotalSize() > 0) {
+					sizeText = context.getString(R.string.download_progress_with_total, formatMB(r.getDownloadedSize()), formatMB(r.getTotalSize()), r.getProgress());
+					if (s == DownloadStatus.RUNNING && r.getSpeed() > 0) {
+						sizeText += " • " + calculateETA(r, r.getSpeed());
+					}
+				} else {
+					sizeText = context.getString(R.string.download_progress_simple, formatMB(r.getDownloadedSize()));
+				}
+				size.setText(sizeText);
+				
+				boolean showProgress = (s == DownloadStatus.RUNNING || s == DownloadStatus.QUEUED || s == DownloadStatus.MERGING);
+				progressWrapper.setVisibility(showProgress ? View.VISIBLE : View.GONE);
+				
+				if (s == DownloadStatus.RUNNING) {
+					progress.setIndeterminate(false);
+					progress.setProgressCompat(r.getProgress(), true);
+				} else if (s == DownloadStatus.QUEUED || s == DownloadStatus.MERGING) {
+					progress.setIndeterminate(true);
+				}
 			}
 			
 			private String formatMB(long bytes) {
 				return String.format(Locale.getDefault(), "%.1f", bytes / 1048576.0);
+			}
+
+			private String calculateETA(DownloadRecord record, long speedBytesPerSec) {
+				if (speedBytesPerSec <= 0 || record.getTotalSize() <= 0) return "--:--";
+				long remainingBytes = record.getTotalSize() - record.getDownloadedSize();
+				if (remainingBytes <= 0) return "0s";
+				long seconds = remainingBytes / speedBytesPerSec;
+				if (seconds < 60) return seconds + "s";
+				if (seconds < 3600) return (seconds / 60) + "m";
+				return (seconds / 3600) + "h " + ((seconds % 3600) / 60) + "m";
 			}
 		}
 

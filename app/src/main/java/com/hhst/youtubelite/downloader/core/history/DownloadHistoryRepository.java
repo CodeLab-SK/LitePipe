@@ -9,9 +9,12 @@ import com.tencent.mmkv.MMKV;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.HashSet;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -70,6 +73,14 @@ public final class DownloadHistoryRepository {
 		writeAllInternal(list);
 	}
 
+	public synchronized void removeBatch(@NonNull final Collection<String> taskIds) {
+		if (taskIds.isEmpty()) return;
+		final List<DownloadRecord> list = readAllInternal();
+		final Set<String> idSet = new HashSet<>(taskIds);
+		list.removeIf(r -> idSet.contains(r.getTaskId()));
+		writeAllInternal(list);
+	}
+
 	public synchronized void clear() {
 		mmkv.removeValueForKey(KEY_DOWNLOAD_HISTORY);
 	}
@@ -90,4 +101,3 @@ public final class DownloadHistoryRepository {
 		mmkv.encode(KEY_DOWNLOAD_HISTORY, gson.toJson(list, LIST_TYPE));
 	}
 }
-

@@ -5,9 +5,6 @@ import androidx.annotation.Nullable;
 
 import lombok.Data;
 
-/**
- * Component that handles app logic.
- */
 @Data
 public final class PlaylistDownloadItem {
 	private final int playlistIndex;
@@ -78,9 +75,6 @@ public final class PlaylistDownloadItem {
 		return isReady() && batchResultStatus != BatchResultStatus.CANCELED;
 	}
 
-	/**
-	 * Enumeration of app logic.
-	 */
 	public enum AvailabilityStatus {
 		LOADING,
 		READY,
@@ -88,9 +82,6 @@ public final class PlaylistDownloadItem {
 		LOAD_FAILED
 	}
 
-	/**
-	 * Enumeration of app logic.
-	 */
 	public enum BatchResultStatus {
 		NOT_STARTED,
 		PREPARING,

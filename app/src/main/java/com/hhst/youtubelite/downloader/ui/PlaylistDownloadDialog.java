@@ -15,7 +15,6 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.CheckBox;
-import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.SeekBar;
@@ -119,8 +118,6 @@ public final class PlaylistDownloadDialog {
 	@Nullable
 	private BatchRequest batchReq;
 	@Nullable
-	private DownloadRecord parentRecord;
-	@Nullable
 	private ExtractionSession batchExtractionSession;
 	@Nullable
 	private String playlistTitle;
@@ -140,6 +137,8 @@ public final class PlaylistDownloadDialog {
 	private int threadCount;
 	private int batchPreparedCount;
 	private int batchTotalCount;
+	private int selectedReadyCount;
+	private int readyCount;
 	private int toggleSelectedColor;
 	private int toggleUnselectedColor;
 	@NonNull
@@ -170,6 +169,7 @@ public final class PlaylistDownloadDialog {
 		}
 	};
 
+	@SuppressLint("InflateParams")
 	public PlaylistDownloadDialog(@Nullable String seededTitle,
 	                              @Nullable List<PlaylistDownloadItem> seededItems,
 	                              @Nullable YoutubeWebview sourceWebView,
@@ -184,20 +184,30 @@ public final class PlaylistDownloadDialog {
 		this.context = context;
 		this.youtubeExtractor = youtubeExtractor;
 		this.tabManager = tabManager;
-		this.adapter = new PlaylistDownloadItemsAdapter((playlistIndex, selected) -> {
+		this.adapter = new PlaylistDownloadItemsAdapter((position, playlistIndex, selected) -> {
 			if (isUiLockedForBatch()) return;
-			PlaylistDownloadItem item = findItem(playlistIndex);
+			PlaylistDownloadItem item = (position != RecyclerView.NO_POSITION && position < items.size())
+							? items.get(position)
+							: findItem(playlistIndex);
 			if (item == null || !item.isSelectable()) return;
+			if (item.isSelected() == selected) return;
+			
+			if (selected) selectedReadyCount++;
+			else selectedReadyCount--;
+			
 			manualSelectionChanged = true;
 			item.setSelected(selected);
-			refreshItems();
+			if (position != RecyclerView.NO_POSITION) {
+				notifyItemSelectionChanged(position);
+			} else {
+				refreshItems();
+			}
 			updateSelectionSummary();
 			updatePrimaryActionState();
 		});
 		this.dialogView = LayoutInflater.from(context).inflate(
 						R.layout.dialog_playlist_download,
-						new FrameLayout(context),
-						false);
+						null);
 	}
 
 	public void show() {
@@ -245,19 +255,20 @@ public final class PlaylistDownloadDialog {
 			recyclerView.setLayoutManager(new LinearLayoutManager(context));
 			recyclerView.setAdapter(adapter);
 			recyclerView.setItemAnimator(null);
-			recyclerView.setHasFixedSize(false);
+			recyclerView.setHasFixedSize(true);
 			recyclerView.setNestedScrollingEnabled(false);
 		}
 		if (selectAllCheckBox != null) {
 			selectAllCheckBox.setOnClickListener(v -> {
 				if (isUiLockedForBatch()) return;
 				manualSelectionChanged = true;
-				boolean shouldSelectAll = countSelectedReadyItems() < countReadyItems();
+				boolean shouldSelectAll = selectedReadyCount < readyCount;
 				for (PlaylistDownloadItem item : items) {
 					if (!item.isReady()) continue;
 					item.setSelected(shouldSelectAll);
 				}
-				refreshItems();
+				selectedReadyCount = shouldSelectAll ? readyCount : 0;
+				adapter.notifyItemRangeChanged(0, items.size(), PlaylistDownloadItemsAdapter.PAYLOAD_SELECTION);
 				updateSelectionSummary();
 				updatePrimaryActionState();
 			});
@@ -452,6 +463,16 @@ public final class PlaylistDownloadDialog {
 			updatePlaylistTitle();
 			items.clear();
 			items.addAll(seededItems);
+			
+			readyCount = 0;
+			selectedReadyCount = 0;
+			for (PlaylistDownloadItem item : seededItems) {
+				if (item.isReady()) {
+					readyCount++;
+					if (item.isSelected()) selectedReadyCount++;
+				}
+			}
+			
 			loadingTerminal = true;
 			terminalLoadMessage = null;
 			refreshItems();
@@ -696,6 +717,16 @@ public final class PlaylistDownloadDialog {
 		}
 		items.clear();
 		items.addAll(result);
+		
+		readyCount = 0;
+		selectedReadyCount = 0;
+		for (PlaylistDownloadItem item : result) {
+			if (item.isReady()) {
+				readyCount++;
+				if (item.isSelected()) selectedReadyCount++;
+			}
+		}
+		
 		refreshItems();
 		updateSelectionSummary();
 		updateStatusText();
@@ -709,6 +740,8 @@ public final class PlaylistDownloadDialog {
 		loadingTerminal = true;
 		if (!hadRows && terminalLoadMessage != null) {
 			items.clear();
+			readyCount = 0;
+			selectedReadyCount = 0;
 			refreshItems();
 		}
 		updateSelectionSummary();
@@ -721,15 +754,12 @@ public final class PlaylistDownloadDialog {
 		batchReq = null;
 		batchRunning = true;
 		batchCanceled = false;
-		parentRecord = batchRequest.parent;
 		batchPreparedCount = 0;
 		batchTotalCount = batchRequest.selectedIndexes.size();
 		batchExtractionSession = new ExtractionSession();
 		lockUiForBatch(true);
 		updateStatusText();
 		updatePrimaryActionState();
-		DownloadService service = downloadService;
-		if (service != null) service.upsertPlaylistRecord(batchRequest.parent);
 		executor.submit(() -> runBatchPreparation(batchRequest));
 	}
 
@@ -756,11 +786,12 @@ public final class PlaylistDownloadDialog {
 								item.getVideoUrl(),
 								batchExtractionSession).get();
 				if (batchCanceled || resourcesDisposed) break;
+				String plannedName = batchRequest.plannedNames.get(playlistIndex);
 				List<Task> tasks = taskFactory.buildPlaylistTasksForItem(
 								playbackDetails,
 								batchRequest.config,
 								playlistIndex,
-								batchRequest.plannedNames.getOrDefault(playlistIndex, item.getTitle()),
+								plannedName != null ? plannedName : item.getTitle(),
 								DownloadStorageUtils.getWorkingDirectory(context),
 								batchRequest.parent.getTaskId(),
 								subFolder);
@@ -847,14 +878,6 @@ public final class PlaylistDownloadDialog {
 			updateStatusText();
 			updateSelectionSummary();
 			updatePrimaryActionState();
-			DownloadService service = downloadService;
-			DownloadRecord parent = parentRecord;
-			if (service != null && parent != null) {
-				parent.setSealed(true);
-				parent.setUpdatedAt(System.currentTimeMillis());
-				service.upsertPlaylistRecord(parent);
-				service.refreshPlaylistRecord(parent.getTaskId());
-			}
 			StringBuilder builder = new StringBuilder(canceled
 							? context.getString(R.string.playlist_download_batch_added_before_cancel, addedRows)
 							: context.getString(R.string.playlist_download_batch_added, addedRows));
@@ -875,16 +898,25 @@ public final class PlaylistDownloadDialog {
 	                                @NonNull PlaylistDownloadItem.BatchResultStatus batchResultStatus,
 	                                @Nullable String failureReason) {
 		handler.post(() -> {
-			PlaylistDownloadItem item = findItem(playlistIndex);
-			if (item == null || resourcesDisposed) return;
-			item.setBatchResultStatus(batchResultStatus);
-			if (failureReason != null && !failureReason.isBlank()) item.setFailureReason(failureReason);
-			refreshItems();
+			if (resourcesDisposed) return;
+			for (int i = 0; i < items.size(); i++) {
+				PlaylistDownloadItem item = items.get(i);
+				if (item.getPlaylistIndex() == playlistIndex) {
+					item.setBatchResultStatus(batchResultStatus);
+					if (failureReason != null && !failureReason.isBlank()) item.setFailureReason(failureReason);
+					adapter.notifyItemChanged(i);
+					break;
+				}
+			}
 		});
 	}
 
 	private void refreshItems() {
 		adapter.replaceAll(items);
+	}
+
+	private void notifyItemSelectionChanged(int position) {
+		adapter.notifyItemChanged(position, PlaylistDownloadItemsAdapter.PAYLOAD_SELECTION);
 	}
 
 	private void updatePlaylistTitle() {
@@ -916,8 +948,8 @@ public final class PlaylistDownloadDialog {
 		}
 		summaryView.setText(context.getString(
 						R.string.playlist_download_summary,
-						countSelectedReadyItems(),
-						countReadyItems(),
+						selectedReadyCount,
+						readyCount,
 						items.size()));
 	}
 
@@ -944,7 +976,6 @@ public final class PlaylistDownloadDialog {
 	}
 
 	private void updatePrimaryActionState() {
-		int selectedReadyCount = countSelectedReadyItems();
 		DownloadSelectionConfig config = new DownloadSelectionConfig(
 						primaryMediaMode,
 						subtitleEnabled,
@@ -964,26 +995,9 @@ public final class PlaylistDownloadDialog {
 			cancelButton.setText(R.string.cancel);
 		}
 		if (selectAllCheckBox != null) {
-			int readyCount = countReadyItems();
 			selectAllCheckBox.setEnabled(!isUiLockedForBatch() && readyCount > 0);
 			selectAllCheckBox.setChecked(readyCount > 0 && selectedReadyCount == readyCount);
 		}
-	}
-
-	private int countSelectedReadyItems() {
-		int count = 0;
-		for (PlaylistDownloadItem item : items) {
-			if (item.isReady() && item.isSelected()) count++;
-		}
-		return count;
-	}
-
-	private int countReadyItems() {
-		int count = 0;
-		for (PlaylistDownloadItem item : items) {
-			if (item.isReady()) count++;
-		}
-		return count;
 	}
 
 	private void updateToggleButtons() {
@@ -1010,7 +1024,7 @@ public final class PlaylistDownloadDialog {
 	private void lockUiForBatch(boolean locked) {
 		adapter.setInteractionEnabled(!locked);
 		if (threadsSeekBar != null) threadsSeekBar.setEnabled(!locked);
-		if (selectAllCheckBox != null) selectAllCheckBox.setEnabled(!locked && countReadyItems() > 0);
+		if (selectAllCheckBox != null) selectAllCheckBox.setEnabled(!locked && readyCount > 0);
 		if (videoButton != null) videoButton.setEnabled(!locked);
 		if (audioButton != null) audioButton.setEnabled(!locked);
 		if (subtitleButton != null) subtitleButton.setEnabled(!locked);
@@ -1039,7 +1053,6 @@ public final class PlaylistDownloadDialog {
 			batchExtractionSession.cancel();
 			batchExtractionSession = null;
 		}
-		parentRecord = null;
 		backgroundBatch = false;
 		executor.shutdownNow();
 		downloadService = null;
@@ -1053,10 +1066,6 @@ public final class PlaylistDownloadDialog {
 		}
 		dialog = null;
 	}
-
-	/**
-	 * Value object for app logic.
-	 */
 	private record BatchRequest(@NonNull List<Integer> selectedIndexes,
 	                            @NonNull Map<Integer, String> plannedNames,
 	                            @NonNull DownloadSelectionConfig config,

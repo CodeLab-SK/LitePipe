@@ -4,6 +4,7 @@ import android.content.Context;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.hhst.youtubelite.downloader.core.DownloadPrefs;
 import com.hhst.youtubelite.downloader.core.LiteDownloader;
 import com.hhst.youtubelite.downloader.core.MediaMuxer;
 import com.hhst.youtubelite.downloader.core.ProgressCallback;
@@ -18,11 +19,14 @@ import org.schabi.newpipe.extractor.stream.Stream;
 import java.io.File;
 import java.net.URL;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -35,25 +39,32 @@ public class LiteDownloaderImpl implements LiteDownloader {
 	private final StreamDownloader streamDL;
 	private final YoutubeExtractor youtubeExtractor;
 	private final MediaMerger mediaMerger;
+	private final DownloadPrefs prefs;
 	private final ExecutorService executor = Executors.newCachedThreadPool();
 	private final Map<String, Task> tasks = new ConcurrentHashMap<>();
 	private final Map<String, ProgressCallback2> cbs = new ConcurrentHashMap<>();
+	
+	private final Queue<Task> pendingTasks = new ConcurrentLinkedQueue<>();
+	private final AtomicInteger activeCount = new AtomicInteger(0);
 
 	@Inject
 	public LiteDownloaderImpl(@ApplicationContext Context ctx,
 	                          StreamDownloader streamDL,
-	                          YoutubeExtractor youtubeExtractor) {
-		this(ctx, streamDL, youtubeExtractor, MediaMuxer::merge);
+	                          YoutubeExtractor youtubeExtractor,
+	                          DownloadPrefs prefs) {
+		this(ctx, streamDL, youtubeExtractor, MediaMuxer::merge, prefs);
 	}
 
 	LiteDownloaderImpl(@ApplicationContext Context ctx,
 	                   StreamDownloader streamDL,
 	                   YoutubeExtractor youtubeExtractor,
-	                   MediaMerger mediaMerger) {
+	                   MediaMerger mediaMerger,
+	                   DownloadPrefs prefs) {
 		this.ctx = ctx;
 		this.streamDL = streamDL;
 		this.youtubeExtractor = youtubeExtractor;
 		this.mediaMerger = mediaMerger;
+		this.prefs = prefs;
 	}
 
 	@Override
@@ -63,8 +74,23 @@ public class LiteDownloaderImpl implements LiteDownloader {
 	}
 
 	@Override
-	public void download(@NonNull Task t) {
+	public synchronized void download(@NonNull Task t) {
 		tasks.put(t.videoId(), t);
+		pendingTasks.offer(t);
+		checkQueue();
+	}
+
+	private void checkQueue() {
+		while (activeCount.get() < prefs.getMaxConcurrentDownloads() && !pendingTasks.isEmpty()) {
+			Task t = pendingTasks.poll();
+			if (t != null) {
+				activeCount.incrementAndGet();
+				startDownloadInternal(t);
+			}
+		}
+	}
+
+	private void startDownloadInternal(Task t) {
 		if (t.subtitle() != null) {
 			exec(t, () -> FileUtils.copyURLToFile(new URL(t.subtitle().getContent()), outputFile(t)));
 		} else if (t.thumbnail() != null) {
@@ -81,6 +107,8 @@ public class LiteDownloaderImpl implements LiteDownloader {
 				complete(t.videoId(), outputFile(t));
 			} catch (Exception e) {
 				throw new CompletionException(e);
+			} finally {
+				taskFinished();
 			}
 		}, executor).exceptionally(e -> handleErr(t, e));
 	}
@@ -89,16 +117,16 @@ public class LiteDownloaderImpl implements LiteDownloader {
 		streamDL.setMaxThreadCount(t.threadCount());
 		File vF = tmp(t, "_v"), aF = tmp(t, "_a"), out = outputFile(t);
 		long vSz = len(t.video()), aSz = len(t.audio());
-		Aggregator agg = new Aggregator(vSz, aSz, (p, d, tot) -> progress(t.videoId(), p, d, tot));
+		Aggregator agg = new Aggregator(vSz, aSz, (p, d, tot, spd) -> progress(t.videoId(), p, d, tot, spd));
 
-		CompletableFuture<File> vFut = t.video() == null ? null : streamDL.download(t.videoId() + "_v", t.video().getContent(), vF, createProgressAdapter(t.videoId(), p -> {
-			if (aSz > 0) agg.updV(p);
-			else progress(t.videoId(), p, (long) (vSz * (p / 100.0)), vSz);
+		CompletableFuture<File> vFut = t.video() == null ? null : streamDL.download(t.videoId() + "_v", t.video().getContent(), vF, createProgressAdapter(t.videoId(), (p, spd) -> {
+			if (aSz > 0) agg.updV(p, spd);
+			else progress(t.videoId(), p, (long) (vSz * (p / 100.0)), vSz, spd);
 		}));
 
-		CompletableFuture<File> aFut = t.audio() == null ? null : streamDL.download(t.videoId() + "_a", t.audio().getContent(), aF, createProgressAdapter(t.videoId(), p -> {
-			if (vSz > 0) agg.updA(p);
-			else progress(t.videoId(), p, (long) (aSz * (p / 100.0)), aSz);
+		CompletableFuture<File> aFut = t.audio() == null ? null : streamDL.download(t.videoId() + "_a", t.audio().getContent(), aF, createProgressAdapter(t.videoId(), (p, spd) -> {
+			if (vSz > 0) agg.updA(p, spd);
+			else progress(t.videoId(), p, (long) (aSz * (p / 100.0)), aSz, spd);
 		}));
 
 		CompletableFuture<?> combined = (vFut != null && aFut != null ? CompletableFuture.allOf(vFut, aFut) : (vFut != null ? vFut : aFut));
@@ -125,9 +153,19 @@ public class LiteDownloaderImpl implements LiteDownloader {
 					complete(t.videoId(), out);
 				} catch (Exception e) {
 					throw new CompletionException(e);
+				} finally {
+					taskFinished();
 				}
-			}).exceptionally(e -> handleErr(t, e));
+			}).exceptionally(e -> {
+				taskFinished();
+				return handleErr(t, e);
+			});
 		}
+	}
+
+	private void taskFinished() {
+		activeCount.decrementAndGet();
+		checkQueue();
 	}
 
 	@Override
@@ -145,7 +183,7 @@ public class LiteDownloaderImpl implements LiteDownloader {
 		if (t != null) {
 			if (t.video() != null) streamDL.resume(videoId + "_v");
 			if (t.audio() != null) streamDL.resume(videoId + "_a");
-			progress(videoId, -1, -1, -1);
+			progress(videoId, -1, -1, -1, 0);
 		}
 	}
 
@@ -163,9 +201,9 @@ public class LiteDownloaderImpl implements LiteDownloader {
 		}
 	}
 
-	private ProgressCallback createProgressAdapter(String videoId, java.util.function.IntConsumer action) {
+	private ProgressCallback createProgressAdapter(String videoId, java.util.function.BiConsumer<Integer, Long> action) {
 		return new ProgressCallback() {
-			@Override public void onProgress(int p) { action.accept(p); }
+			@Override public void onProgress(int p, long spd) { action.accept(p, spd); }
 			@Override public void onComplete(File f) {}
 			@Override public void onError(Exception e) {}
 			@Override public void onCancel() {}
@@ -224,8 +262,8 @@ public class LiteDownloaderImpl implements LiteDownloader {
 		}
 	}
 
-	private void progress(String videoId, int p, long downloaded, long total) {
-		notify(videoId, cb -> cb.onProgress(p, downloaded, total));
+	private void progress(String videoId, int p, long downloaded, long total, long speed) {
+		notify(videoId, cb -> cb.onProgress(p, downloaded, total, speed));
 	}
 
 	private void notify(String videoId, CallbackAction action) {
@@ -269,12 +307,13 @@ public class LiteDownloaderImpl implements LiteDownloader {
 		void merge(@NonNull File videoFile, @NonNull File audioFile, @NonNull File outputFile) throws Exception;
 	}
 	interface CallbackAction { void run(ProgressCallback2 cb); }
-	interface ProgressUpdateListener { void onUpdate(int progress, long downloaded, long total); }
+	interface ProgressUpdateListener { void onUpdate(int progress, long downloaded, long total, long speed); }
 
 	private static class Aggregator {
 		final long vSz, aSz, tot;
 		final ProgressUpdateListener listener;
 		int vP, aP;
+		long vSpd, aSpd;
 
 		Aggregator(long v, long a, ProgressUpdateListener l) {
 			vSz = Math.max(v, 1);
@@ -283,13 +322,14 @@ public class LiteDownloaderImpl implements LiteDownloader {
 			listener = l;
 		}
 
-		synchronized void updV(int p) { vP = p; calc(); }
-		synchronized void updA(int p) { aP = p; calc(); }
+		synchronized void updV(int p, long spd) { vP = p; vSpd = spd; calc(); }
+		synchronized void updA(int p, long spd) { aP = p; aSpd = spd; calc(); }
 
 		void calc() {
 			int totalProgress = (int) ((vP * vSz + aP * aSz) / tot);
 			long downloaded = (long) (vSz * (vP / 100.0) + aSz * (aP / 100.0));
-			listener.onUpdate(totalProgress, downloaded, tot);
+			long totalSpeed = vSpd + aSpd;
+			listener.onUpdate(totalProgress, downloaded, tot, totalSpeed);
 		}
 	}
 }
