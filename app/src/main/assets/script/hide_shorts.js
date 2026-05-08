@@ -1,15 +1,16 @@
 (function () {
-    if (!JSON.parse(lite.getPreferences()).enable_hide_shorts) return;
+    const prefs = JSON.parse(lite.getPreferences());
+    if (!prefs.hide_shorts) return;
     if (window.hideShortsInjected) return;
 
     function hideElement(element) {
         if (!element) return;
         const closestSelectors = [
-            'ytm-reel-shelf-renderer', // Shorts in recommendation bar
-            'ytm-pivot-bar-item-renderer', // Shorts in bottom navigation
-            'ytm-video-with-context-renderer', // Single short video
-            'ytm-rich-section-renderer', // Shorts grid
-            'grid-shelf-view-model' // Grid shelf view model
+            'ytm-reel-shelf-renderer',
+            'ytm-video-with-context-renderer',
+            'ytm-rich-section-renderer',
+            'grid-shelf-view-model',
+            'ytm-shelf-renderer'
         ];
         
         for (const selector of closestSelectors) {
@@ -21,7 +22,6 @@
         }
     }
 
-    // Listen for animation start events
     document.addEventListener('animationstart', (e) => {
         if (e.animationName === 'nodeInserted') {
             const element = e.target;

@@ -7,6 +7,8 @@ import android.webkit.WebView;
 
 import com.tencent.mmkv.MMKV;
 
+import java.util.concurrent.Executors;
+
 import dagger.hilt.android.HiltAndroidApp;
 
 @HiltAndroidApp
@@ -23,10 +25,12 @@ public class App extends Application {
 			}
 		}
 
-		try {
-			Constant.USER_AGENT = WebSettings.getDefaultUserAgent(this);
-		} catch (Exception e) {
-		}
+		Executors.newSingleThreadExecutor().execute(() -> {
+			try {
+				Constant.USER_AGENT = WebSettings.getDefaultUserAgent(this);
+			} catch (Exception ignored) {
+			}
+		});
 	}
 
 }
