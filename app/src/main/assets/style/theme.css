@@ -1,3 +1,29 @@
 html {
     -webkit-tap-highlight-color:transparent;
- }
+}
+
+html[page-class="watch"] ytm-header-bar-renderer,
+html[page-class="watch"] #player-container-id,
+html[page-class="watch"] #player {
+    display: none !important;
+}
+
+html[page-class="watch"] body {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+}
+
+html[page-class="watch"] ytm-watch {
+    margin-top: -48px !important;
+    padding-top: -56.25vw !important;
+}
+
+html[page-class="watch"] #content-wrapper,
+html[page-class="watch"] .page-container {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+* {
+    -webkit-touch-callout: none !important;
+}

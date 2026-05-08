@@ -1,30 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
+
     <style name="Base.Theme.YoutubeLite" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <item name="android:colorControlActivated">@color/yt_red</item>
+        <item name="android:colorControlActivated">?attr/colorPrimary</item>
         <item name="colorPrimary">@color/primary</item>
         <item name="colorOnPrimary">@color/on_primary</item>
-        <item name="colorSecondary">@color/secondary</item>
-        <item name="colorOnSecondary">@color/on_secondary</item>
-        <item name="android:windowBackground">@color/background</item>
-        <item name="android:colorBackground">@color/background</item>
-        <item name="colorOnBackground">@color/on_background</item>
+        <item name="colorSecondary">?attr/colorSurfaceVariant</item>
+        <item name="colorOnSecondary">?attr/colorOnSurfaceVariant</item>
+        <item name="colorSecondaryContainer">?attr/colorSurfaceVariant</item>
+        <item name="colorOnSecondaryContainer">?attr/colorOnSurfaceVariant</item>
+
+        <item name="android:windowBackground">?attr/colorSurface</item>
+        <item name="android:colorBackground">?attr/colorSurface</item>
+
         <item name="colorSurface">@color/surface</item>
         <item name="colorOnSurface">@color/on_surface</item>
         <item name="colorSurfaceVariant">@color/surface_variant</item>
         <item name="colorOnSurfaceVariant">@color/on_surface_variant</item>
         <item name="colorOutline">@color/outline</item>
-        <item name="colorSurfaceContainer">@color/surface</item>
-        <item name="colorSurfaceContainerLow">@color/surface</item>
-        <item name="colorSurfaceContainerHigh">@color/surface</item>
-        <item name="colorSurfaceContainerHighest">@color/surface</item>
-        <item name="colorSurfaceContainerLowest">@color/surface</item>
+        <item name="colorOutlineVariant">?attr/colorOutline</item>
+
+        <item name="colorSurfaceContainer">?attr/colorSurface</item>
+        <item name="colorSurfaceContainerLow">?attr/colorSurface</item>
+        <item name="colorSurfaceContainerHigh">?attr/colorSurfaceVariant</item>
+        <item name="colorSurfaceContainerHighest">?attr/colorSurfaceVariant</item>
+        <item name="colorSurfaceContainerLowest">?attr/colorSurface</item>
 
         <item name="materialAlertDialogTheme">@style/Theme.YoutubeLite.AlertDialog</item>
         <item name="bottomSheetDialogTheme">@style/Theme.YoutubeLite.BottomSheetDialog</item>
 
         <item name="android:windowLayoutInDisplayCutoutMode" tools:targetApi="28">shortEdges</item>
+
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">true</item>
     </style>
 
     <style name="Theme.YoutubeLite" parent="Base.Theme.YoutubeLite" />
@@ -33,12 +44,12 @@
         <item name="windowSplashScreenBackground">@color/splash_bg</item>
         <item name="windowSplashScreenAnimatedIcon">@android:color/transparent</item>
         <item name="postSplashScreenTheme">@style/Theme.YoutubeLite</item>
-        <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="android:windowLayoutInDisplayCutoutMode" tools:targetApi="28">shortEdges</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 
     <style name="Theme.YoutubeLite.AlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
@@ -59,6 +70,7 @@
     <style name="Widget.YoutubeLite.BottomSheet" parent="Widget.Material3.BottomSheet.Modal">
         <item name="backgroundTint">@color/surface</item>
         <item name="shapeAppearance">@style/ShapeAppearance.YoutubeLite.BottomSheet</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 
     <style name="ShapeAppearance.YoutubeLite.BottomSheet" parent="ShapeAppearance.Material3.LargeComponent">
@@ -74,14 +86,14 @@
         <item name="cornerSize">28dp</item>
     </style>
 
-    <!-- Professional Card Style -->
     <style name="AppCard" parent="Widget.Material3.CardView.Elevated">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginHorizontal">16dp</item>
         <item name="android:layout_marginVertical">6dp</item>
-        <item name="cardCornerRadius">16dp</item>
-        <item name="cardElevation">2dp</item>
+        <item name="cardBackgroundColor">?attr/colorSurfaceContainerHigh</item>
+        <item name="cardCornerRadius">12dp</item>
+        <item name="cardElevation">0dp</item>
         <item name="strokeWidth">1dp</item>
         <item name="strokeColor">?attr/colorOutlineVariant</item>
         <item name="android:clickable">true</item>
@@ -94,7 +106,7 @@
         <item name="android:layout_height">wrap_content</item>
         <item name="android:padding">16dp</item>
         <item name="android:gravity">center_vertical</item>
-        <item name="android:textAppearance">?attr/textAppearanceBodyLarge</item>
+        <item name="android:textAppearance">?attr/textAppearanceTitleMedium</item>
         <item name="android:textColor">?attr/colorOnSurface</item>
         <item name="android:drawablePadding">16dp</item>
         <item name="drawableTint">?attr/colorOnSurfaceVariant</item>
@@ -105,13 +117,13 @@
     <style name="AboutCard" parent="AppCard" />
     <style name="AboutItem" parent="AppCardItem" />
 
-    <style name="Theme.Transparent" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.Transparent" parent="Theme.YoutubeLite">
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowContentOverlay">@null</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowIsFloating">true</item>
-        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:backgroundDimEnabled">true</item>
     </style>
 
 </resources>

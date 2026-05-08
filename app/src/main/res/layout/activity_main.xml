@@ -6,16 +6,18 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fitsSystemWindows="false"
+    android:background="?attr/colorSurface"
     tools:context=".ui.MainActivity">
 
     <FrameLayout
         android:id="@+id/fragment_container"
         android:layout_width="match_parent"
         android:layout_height="0dp"
+        android:background="@android:color/transparent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@+id/nav_bar_divider" />
+        app:layout_constraintBottom_toTopOf="@+id/incognito_banner" />
 
     <com.hhst.youtubelite.player.LitePlayerView
         android:id="@+id/playerView"
@@ -36,12 +38,12 @@
         android:id="@+id/expanded_queue_container"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:background="?android:attr/windowBackground"
+        android:background="?attr/colorSurface"
         android:elevation="12dp"
         android:orientation="vertical"
         android:visibility="gone"
         app:layout_constraintTop_toBottomOf="@+id/playerView"
-        app:layout_constraintBottom_toTopOf="@+id/nav_bar_divider">
+        app:layout_constraintBottom_toTopOf="@+id/incognito_banner">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -68,6 +70,15 @@
                 android:src="@drawable/ic_playback_end_next"
                 app:tint="?attr/colorOnSurface"
                 android:contentDescription="@string/loop"/>
+
+            <ImageButton
+                android:id="@+id/btn_queue_download"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_download"
+                app:tint="?attr/colorOnSurface"
+                android:contentDescription="@string/download"/>
 
             <ImageButton
                 android:id="@+id/btn_queue_clear"
@@ -113,26 +124,29 @@
         </FrameLayout>
     </LinearLayout>
 
-    <LinearLayout
+    <com.google.android.material.card.MaterialCardView
         android:id="@+id/queue_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="?android:attr/windowBackground"
         android:visibility="gone"
         android:elevation="11dp"
+        app:cardElevation="4dp"
+        app:cardCornerRadius="16dp"
+        app:cardBackgroundColor="?attr/colorSurface"
+        app:strokeWidth="1dp"
+        app:strokeColor="?attr/colorOutline"
         app:layout_constraintTop_toBottomOf="@+id/playerView"
-        app:layout_constraintBottom_toTopOf="@+id/nav_bar_divider"
+        app:layout_constraintBottom_toTopOf="@+id/incognito_banner"
         app:layout_constraintVertical_bias="1.0">
 
         <LinearLayout
             android:id="@+id/queue_header"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="56dp"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:paddingHorizontal="12dp"
-            android:background="?attr/colorSurfaceVariant"
+            android:paddingHorizontal="16dp"
+            android:background="?attr/selectableItemBackground"
             android:clickable="true"
             android:focusable="true">
 
@@ -144,14 +158,14 @@
                 android:text="@string/Queue"
                 android:textColor="?attr/colorOnSurface"
                 android:textStyle="bold"
-                android:textSize="11sp"
+                android:textSize="14sp"
                 android:ellipsize="end"
                 android:maxLines="1"/>
 
             <ImageButton
                 android:id="@+id/btn_expand_queue"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_expand_less"
                 app:tint="?attr/colorOnSurface"
@@ -159,7 +173,20 @@
 
         </LinearLayout>
 
-    </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <TextView
+        android:id="@+id/incognito_banner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#212121"
+        android:gravity="center"
+        android:paddingVertical="4dp"
+        android:text="You're incognito"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@+id/nav_bar_divider" />
 
     <View
         android:id="@+id/nav_bar_divider"
@@ -173,7 +200,7 @@
         android:id="@+id/custom_nav_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="?attr/colorOnPrimary"
+        android:background="?attr/colorSurface"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"

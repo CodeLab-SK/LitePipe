@@ -56,9 +56,6 @@ public class SettingsActivity extends AppCompatActivity {
         findViewById(R.id.category_download).setOnClickListener(v -> 
             openSubSettings(4, R.string.download));
 
-        findViewById(R.id.category_miscellaneous).setOnClickListener(v -> 
-            openSubSettings(5, R.string.miscellaneous));
-
         findViewById(R.id.reset_layout).setOnClickListener(v -> showResetConfirmation());
     }
 

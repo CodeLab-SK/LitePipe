@@ -65,7 +65,7 @@ public class SubSettingsActivity extends AppCompatActivity {
                     getContentResolver().takePersistableUriPermission(uri,
                             Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
                     MMKV.defaultMMKV().encode(Constant.DOWNLOAD_LOCATION, uri.toString());
-                    if (adapter != null) adapter.notifyDataSetChanged();
+                    if (adapter != null) adapter.notifyItemChangedByKey(Constant.DOWNLOAD_LOCATION);
                 }
             }
     );
@@ -109,12 +109,10 @@ public class SubSettingsActivity extends AppCompatActivity {
         RecyclerView recyclerView = findViewById(R.id.recycler_view);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         
-
-        boolean useDraggable = navBarMode;
-        adapter = new SettingsAdapter(extensions, useDraggable, navBarMode);
+        adapter = new SettingsAdapter(extensions, navBarMode, navBarMode);
         recyclerView.setAdapter(adapter);
 
-        if (useDraggable) {
+        if (navBarMode) {
             ItemTouchHelper touchHelper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0) {
                 @Override
                 public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
@@ -185,6 +183,18 @@ public class SubSettingsActivity extends AppCompatActivity {
             this.touchHelper = touchHelper;
         }
 
+        @SuppressLint("NotifyDataSetChanged")
+        void notifyItemChangedByKey(String key) {
+            for (int i = 0; i < items.size(); i++) {
+                Extension item = items.get(i);
+                if (item.key() != null && item.key().equals(key)) {
+                    notifyItemChanged(i);
+                    return;
+                }
+            }
+            notifyDataSetChanged();
+        }
+
         @Override
         public int getItemViewType(int position) {
             return draggableMode ? TYPE_DRAGGABLE : TYPE_TOGGLE;
@@ -219,6 +229,7 @@ public class SubSettingsActivity extends AppCompatActivity {
             } else if (holder instanceof ToggleViewHolder toggleHolder) {
                 toggleHolder.title.setText(ext.description());
                 boolean isDownloadLocation = Constant.DOWNLOAD_LOCATION.equals(ext.key());
+                boolean isDownloadMaxConcurrent = Constant.DOWNLOAD_MAX_CONCURRENT.equals(ext.key());
                 boolean isDefaultQuality = Constant.DEFAULT_QUALITY.equals(ext.key());
                 boolean isDefaultSpeed = Constant.DEFAULT_PLAYBACK_SPEED.equals(ext.key());
                 boolean isSeekAmount = Constant.DOUBLE_TAP_SEEK_AMOUNT.equals(ext.key());
@@ -229,6 +240,13 @@ public class SubSettingsActivity extends AppCompatActivity {
                     toggleHolder.checkbox.setVisibility(View.GONE);
                     toggleHolder.actionButton.setVisibility(View.VISIBLE);
                     toggleHolder.actionButton.setOnClickListener(v -> directoryPickerLauncher.launch(null));
+                } else if (isDownloadMaxConcurrent) {
+                    int max = MMKV.defaultMMKV().decodeInt(Constant.DOWNLOAD_MAX_CONCURRENT, 2);
+                    toggleHolder.description.setText(String.valueOf(max));
+                    toggleHolder.description.setVisibility(View.VISIBLE);
+                    toggleHolder.checkbox.setVisibility(View.GONE);
+                    toggleHolder.actionButton.setVisibility(View.VISIBLE);
+                    toggleHolder.actionButton.setOnClickListener(v -> showMaxConcurrentSelector());
                 } else if (isDefaultQuality) {
                     String quality = MMKV.defaultMMKV().decodeString("preferences:" + Constant.DEFAULT_QUALITY, "Auto");
                     toggleHolder.description.setText(quality);
@@ -274,6 +292,8 @@ public class SubSettingsActivity extends AppCompatActivity {
                 toggleHolder.itemView.setOnClickListener(v -> {
                     if (isDownloadLocation) {
                         directoryPickerLauncher.launch(null);
+                    } else if (isDownloadMaxConcurrent) {
+                        showMaxConcurrentSelector();
                     } else if (isDefaultQuality) {
                         showQualitySelector();
                     } else if (isDefaultSpeed) {
@@ -299,31 +319,51 @@ public class SubSettingsActivity extends AppCompatActivity {
             }
         }
 
-        @SuppressLint("NotifyDataSetChanged")
         private void showQualitySelector() {
             String[] options = {"Auto", "144p", "240p", "360p", "480p", "720p", "1080p", "1440p", "2160p"};
+            String current = MMKV.defaultMMKV().decodeString("preferences:" + Constant.DEFAULT_QUALITY, "Auto");
+            int selected = Arrays.asList(options).indexOf(current);
+
             new MaterialAlertDialogBuilder(SubSettingsActivity.this)
                     .setTitle(R.string.default_quality)
-                    .setItems(options, (d, w) -> {
+                    .setSingleChoiceItems(options, selected, (d, w) -> {
                         MMKV.defaultMMKV().encode("preferences:" + Constant.DEFAULT_QUALITY, options[w]);
-                        notifyDataSetChanged();
+                        d.dismiss();
+                        notifyItemChangedByKey(Constant.DEFAULT_QUALITY);
                     })
                     .show();
         }
 
-        @SuppressLint("NotifyDataSetChanged")
+        private void showMaxConcurrentSelector() {
+            String[] options = {"1", "2", "3", "4", "5"};
+            int current = MMKV.defaultMMKV().decodeInt(Constant.DOWNLOAD_MAX_CONCURRENT, 2);
+            int selected = Arrays.asList(options).indexOf(String.valueOf(current));
+
+            new MaterialAlertDialogBuilder(SubSettingsActivity.this)
+                    .setTitle(R.string.max_concurrent_downloads)
+                    .setSingleChoiceItems(options, selected, (d, w) -> {
+                        MMKV.defaultMMKV().encode(Constant.DOWNLOAD_MAX_CONCURRENT, Integer.parseInt(options[w]));
+                        d.dismiss();
+                        notifyItemChangedByKey(Constant.DOWNLOAD_MAX_CONCURRENT);
+                    })
+                    .show();
+        }
+
         private void showSeekAmountSelector() {
             String[] options = {"5s", "10s", "15s", "20s", "30s", "60s"};
+            String current = MMKV.defaultMMKV().decodeString("preferences:" + Constant.DOUBLE_TAP_SEEK_AMOUNT, "10s");
+            int selected = Arrays.asList(options).indexOf(current);
+
             new MaterialAlertDialogBuilder(SubSettingsActivity.this)
                     .setTitle(R.string.double_tap_seek_amount)
-                    .setItems(options, (d, w) -> {
+                    .setSingleChoiceItems(options, selected, (d, w) -> {
                         MMKV.defaultMMKV().encode("preferences:" + Constant.DOUBLE_TAP_SEEK_AMOUNT, options[w]);
-                        notifyDataSetChanged();
+                        d.dismiss();
+                        notifyItemChangedByKey(Constant.DOUBLE_TAP_SEEK_AMOUNT);
                     })
                     .show();
         }
 
-        @SuppressLint("NotifyDataSetChanged")
         private void showSpeedSelector() {
             String currentSpeed = MMKV.defaultMMKV().decodeString("preferences:" + Constant.DEFAULT_PLAYBACK_SPEED, "1.0x");
             if (currentSpeed == null) currentSpeed = "1.0x";
@@ -349,7 +389,7 @@ public class SubSettingsActivity extends AppCompatActivity {
                                 if (speed > 4.0f) speed = 4.0f;
                                 if (speed < 0.25f) speed = 0.25f;
                                 MMKV.defaultMMKV().encode("preferences:" + Constant.DEFAULT_PLAYBACK_SPEED, String.format(Locale.US, "%.2fx", speed));
-                                notifyDataSetChanged();
+                                notifyItemChangedByKey(Constant.DEFAULT_PLAYBACK_SPEED);
                             } catch (NumberFormatException ignored) {}
                         }
                     })
@@ -388,7 +428,7 @@ public class SubSettingsActivity extends AppCompatActivity {
             return items.size();
         }
 
-        class ToggleViewHolder extends RecyclerView.ViewHolder {
+        static class ToggleViewHolder extends RecyclerView.ViewHolder {
             TextView title;
             TextView description;
             MaterialSwitch checkbox;
@@ -402,7 +442,7 @@ public class SubSettingsActivity extends AppCompatActivity {
             }
         }
 
-        class DraggableViewHolder extends RecyclerView.ViewHolder {
+        static class DraggableViewHolder extends RecyclerView.ViewHolder {
             TextView title;
             MaterialSwitch checkbox;
             ImageView dragHandle;

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="yt_red">#FF0000</color>
-    <color name="primary">#0F0F0F</color>
+    <color name="primary">#000000</color>
     <color name="on_primary">#FFFFFF</color>
     <color name="secondary">#606060</color>
     <color name="on_secondary">#FFFFFF</color>
@@ -15,4 +15,17 @@
     <color name="splash_bg">#0F0F0F</color>
     <color name="splash_text">#FFFFFF</color>
     <color name="splash_secondary_text">#AAAAAA</color>
+
+    <!-- Download Chips Colors -->
+    <color name="chip_active_bg">#D3E4FF</color>
+    <color name="chip_active_text">#001C38</color>
+    <color name="chip_completed_bg">#C6F6D5</color>
+    <color name="chip_completed_text">#22543D</color>
+    <color name="chip_error_bg">#FED7D7</color>
+    <color name="chip_error_text">#822727</color>
+    <color name="chip_paused_bg">#E2E8F0</color>
+    <color name="chip_paused_text">#2D3748</color>
+    <color name="chip_type_bg">#F1F1F1</color>
+    <color name="chip_type_text">#606060</color>
+
 </resources>

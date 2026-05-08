@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
 import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.TypedValue;
@@ -20,6 +19,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -57,19 +57,19 @@ public class NavigationBar extends HorizontalScrollView {
     private void init() {
         setFillViewport(true);
         setHorizontalScrollBarEnabled(false);
-        
+        setOverScrollMode(OVER_SCROLL_NEVER);
         setHorizontalFadingEdgeEnabled(true);
-        setFadingEdgeLength(dpToPx(32));
+        setFadingEdgeLength(dpToPx(40));
         
         container = new LinearLayout(getContext());
         container.setOrientation(LinearLayout.HORIZONTAL);
         container.setGravity(Gravity.CENTER_VERTICAL);
-        addView(container, new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dpToPx(56)));
+        addView(container, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(56)));
         kv = MMKV.defaultMMKV();
         
         ViewCompat.setOnApplyWindowInsetsListener(this, (v, insets) -> {
             Insets navInsets = insets.getInsets(WindowInsetsCompat.Type.navigationBars());
-            v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), navInsets.bottom + dpToPx(2));
+            v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), navInsets.bottom);
             return insets;
         });
     }
@@ -109,7 +109,7 @@ public class NavigationBar extends HorizontalScrollView {
         List<NavItemInfo> visibleItems = new ArrayList<>();
 
         for (String key : order) {
-            switch (key) {
+            switch (key.trim()) {
                 case "home":
                     if (extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.NAV_BAR_SHOW_HOME))
                         visibleItems.add(new NavItemInfo(R.drawable.ic_home, R.string.nav_home, pageClass.equals(Constant.PAGE_HOME), () -> {
@@ -155,7 +155,8 @@ public class NavigationBar extends HorizontalScrollView {
             if (size <= 4) {
                 addNavItem(info.iconRes, info.labelRes, info.isSelected, 0, 1.0f, info.action);
             } else {
-                addNavItem(info.iconRes, info.labelRes, info.isSelected, (int) (screenWidth / 4.5), 0f, info.action);
+                int itemWidth = (int) (screenWidth / 4.5);
+                addNavItem(info.iconRes, info.labelRes, info.isSelected, itemWidth, 0f, info.action);
             }
         }
     }
@@ -165,7 +166,10 @@ public class NavigationBar extends HorizontalScrollView {
         item.setOrientation(LinearLayout.VERTICAL);
         item.setGravity(Gravity.CENTER);
         
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(width, ViewGroup.LayoutParams.MATCH_PARENT);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                Math.max(width, 0),
+            ViewGroup.LayoutParams.MATCH_PARENT
+        );
         params.weight = weight;
         item.setLayoutParams(params);
 
@@ -176,42 +180,32 @@ public class NavigationBar extends HorizontalScrollView {
         item.setClickable(true);
         item.setFocusable(true);
 
-        TypedValue typedValue = new TypedValue();
-        getContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true);
-        int colorOnSurface = typedValue.data;
-        
-        getContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurfaceVariant, typedValue, true);
-        int colorOnSurfaceVariant = typedValue.data;
+        int colorRed = ContextCompat.getColor(getContext(), R.color.yt_red);
+        int colorInactive = ContextCompat.getColor(getContext(), R.color.secondary);
 
-        int iconColor = isSelected ? colorOnSurface : colorOnSurfaceVariant;
-        int textColor = isSelected ? colorOnSurface : colorOnSurfaceVariant;
-
-        FrameLayout iconContainer = new FrameLayout(getContext());
-        int containerWidth = dpToPx(64);
-        int containerHeight = dpToPx(28);
-        LinearLayout.LayoutParams containerParams = new LinearLayout.LayoutParams(containerWidth, containerHeight);
-        containerParams.topMargin = dpToPx(4);
-        iconContainer.setLayoutParams(containerParams);
+        int iconColor;
+        int textColor;
 
         if (isSelected) {
-            View indicator = new View(getContext());
-            int indicatorHeight = dpToPx(3);
-            FrameLayout.LayoutParams indicatorParams = new FrameLayout.LayoutParams(dpToPx(24), indicatorHeight);
-            indicatorParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
-            indicatorParams.bottomMargin = dpToPx(-4);
-            indicator.setLayoutParams(indicatorParams);
-            
-            GradientDrawable shape = new GradientDrawable();
-            shape.setShape(GradientDrawable.RECTANGLE);
-            shape.setCornerRadius(dpToPx(1));
-            shape.setColor(getContext().getColor(R.color.yt_red));
-            indicator.setBackground(shape);
-            iconContainer.addView(indicator);
+            textColor = colorRed;
+            TypedValue typedValue = new TypedValue();
+            getContext().getTheme().resolveAttribute(com.google.android.material.R.attr.colorOnSurface, typedValue, true);
+            iconColor = typedValue.data;
+        } else {
+            iconColor = colorInactive;
+            textColor = colorInactive;
         }
+
+        FrameLayout iconContainer = new FrameLayout(getContext());
+        int containerWidth = width > 0 ? (int)(width * 0.9) : dpToPx(60);
+        int containerHeight = dpToPx(32);
+        LinearLayout.LayoutParams containerParams = new LinearLayout.LayoutParams(containerWidth, containerHeight);
+        containerParams.topMargin = dpToPx(2);
+        iconContainer.setLayoutParams(containerParams);
 
         ImageView icon = new ImageView(getContext());
         icon.setImageResource(iconRes);
-        int iconSize = dpToPx(24);
+        int iconSize = dpToPx(26);
         FrameLayout.LayoutParams iconParams = new FrameLayout.LayoutParams(iconSize, iconSize);
         iconParams.gravity = Gravity.CENTER;
         icon.setLayoutParams(iconParams);
@@ -223,15 +217,14 @@ public class NavigationBar extends HorizontalScrollView {
         if (!extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.HIDE_NAV_BAR_LABELS)) {
             TextView label = new TextView(getContext());
             label.setText(labelRes);
-            label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+            label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10);
             label.setGravity(Gravity.CENTER);
             label.setTextColor(textColor);
-            label.setPadding(dpToPx(4), 0, dpToPx(4), dpToPx(4)); // Reduced bottom padding slightly to avoid cutoff if insets are applied
+            label.setPadding(dpToPx(2), 0, dpToPx(2), dpToPx(2));
             label.setSingleLine(true);
             label.setEllipsize(TextUtils.TruncateAt.END);
             if (isSelected) {
                 label.setTypeface(null, Typeface.BOLD);
-                label.setTextColor(getContext().getColor(R.color.yt_red));
             } else {
                 label.setTypeface(null, Typeface.NORMAL);
             }

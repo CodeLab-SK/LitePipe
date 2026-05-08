@@ -9,7 +9,8 @@
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="?attr/colorSurface"
+        android:background="@android:color/transparent"
+        app:elevation="0dp"
         app:liftOnScroll="true">
 
         <com.google.android.material.appbar.MaterialToolbar
@@ -18,7 +19,8 @@
             android:layout_height="?attr/actionBarSize"
             app:navigationIcon="@drawable/ic_arrow_back"
             app:title="@string/about"
-            app:titleCentered="true" />
+            app:titleCentered="true"
+            app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge" />
 
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -51,7 +53,7 @@
                     android:contentDescription="@null"
                     android:padding="4dp"
                     app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Medium"
-                    app:strokeColor="?attr/colorOutlineVariant"
+                    app:strokeColor="?attr/colorOutline"
                     app:strokeWidth="1dp" />
 
                 <TextView
@@ -87,58 +89,78 @@
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/source_code_layout"
-                style="@style/AboutCard">
+                style="@style/AppCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginVertical="6dp">
 
                 <androidx.appcompat.widget.AppCompatTextView
-                    style="@style/AboutItem"
-                    android:text="@string/source_code"
-                    app:drawableStartCompat="@drawable/ic_code" />
+                    style="@style/AppCardItem"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/source_code" />
 
             </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/check_update_layout"
-                style="@style/AboutCard">
+                style="@style/AppCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginVertical="6dp">
 
                 <androidx.appcompat.widget.AppCompatTextView
                     android:id="@+id/check_update_text"
-                    style="@style/AboutItem"
-                    android:text="@string/check_for_updates"
-                    app:drawableStartCompat="@drawable/ic_update" />
+                    style="@style/AppCardItem"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/check_for_updates" />
 
             </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/clear_cache_layout"
-                style="@style/AboutCard">
+                style="@style/AppCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginVertical="6dp">
 
                 <androidx.appcompat.widget.AppCompatTextView
-                    style="@style/AboutItem"
-                    android:text="@string/clear_cache"
-                    app:drawableStartCompat="@drawable/ic_delete" />
+                    style="@style/AppCardItem"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/clear_cache" />
 
             </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/export_log_layout"
-                style="@style/AboutCard">
+                style="@style/AppCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginVertical="6dp">
 
                 <androidx.appcompat.widget.AppCompatTextView
-                    style="@style/AboutItem"
-                    android:text="@string/export_error_log"
-                    app:drawableStartCompat="@drawable/ic_export" />
+                    style="@style/AppCardItem"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/export_error_log" />
 
             </com.google.android.material.card.MaterialCardView>
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:alpha="0.7"
                 android:gravity="center"
                 android:paddingTop="24dp"
                 android:text="Made with ♥ by Sahil Kumar"
                 android:textAppearance="?attr/textAppearanceLabelMedium"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                android:alpha="0.7"
+                android:textColor="#546E7A"
                 tools:ignore="HardcodedText" />
 
         </LinearLayout>

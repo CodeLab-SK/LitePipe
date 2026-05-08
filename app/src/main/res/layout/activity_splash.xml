@@ -1,15 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/splash_bg">
 
-    <!-- Subtle Depth Glow -->
     <View
-        android:layout_width="220dp"
-        android:layout_height="220dp"
+        android:id="@+id/logo_glow"
+        android:layout_width="240dp"
+        android:layout_height="240dp"
         android:background="@drawable/splash_glow"
+        android:alpha="0"
         app:layout_constraintBottom_toBottomOf="@+id/logo"
         app:layout_constraintEnd_toEndOf="@+id/logo"
         app:layout_constraintStart_toStartOf="@+id/logo"
@@ -17,24 +19,28 @@
 
     <ImageView
         android:id="@+id/logo"
-        android:layout_width="100dp"
-        android:layout_height="100dp"
+        android:layout_width="108dp"
+        android:layout_height="108dp"
+        android:alpha="0"
         android:contentDescription="@null"
+        android:elevation="4dp"
+        android:scaleType="fitCenter"
         android:src="@mipmap/ic_launcher"
         app:layout_constraintBottom_toTopOf="@+id/app_name"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.45"
+        app:layout_constraintVertical_bias="0.44"
         app:layout_constraintVertical_chainStyle="packed" />
 
     <TextView
         android:id="@+id/app_name"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="14dp"
+        android:alpha="0"
         android:fontFamily="sans-serif-black"
-        android:letterSpacing="0.04"
+        android:letterSpacing="0.03"
         android:text="@string/app_name"
         android:textColor="@color/splash_text"
         android:textSize="30sp"
@@ -47,8 +53,9 @@
         android:id="@+id/tagline_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
+        android:layout_marginTop="8dp"
         android:orientation="horizontal"
+        android:gravity="center_vertical"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -60,21 +67,21 @@
             android:layout_height="wrap_content"
             android:alpha="0"
             android:fontFamily="sans-serif-medium"
-            android:letterSpacing="0.30"
-            android:text="Simple"
+            android:letterSpacing="0.28"
+            android:text="@string/splash_tagline_simple"
             android:textAllCaps="true"
             android:textColor="@color/splash_secondary_text"
-            android:textSize="13sp" />
+            android:textSize="12sp" />
 
         <TextView
             android:id="@+id/tagline_dot1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:alpha="0"
-            android:paddingHorizontal="6dp"
-            android:text="•"
+            android:paddingHorizontal="7dp"
+            android:text="@string/splash_dot"
             android:textColor="@color/splash_secondary_text"
-            android:textSize="13sp" />
+            android:textSize="12sp" />
 
         <TextView
             android:id="@+id/tagline_fast"
@@ -82,21 +89,21 @@
             android:layout_height="wrap_content"
             android:alpha="0"
             android:fontFamily="sans-serif-medium"
-            android:letterSpacing="0.30"
-            android:text="Fast"
+            android:letterSpacing="0.28"
+            android:text="@string/splash_tagline_fast"
             android:textAllCaps="true"
             android:textColor="@color/splash_secondary_text"
-            android:textSize="13sp" />
+            android:textSize="12sp" />
 
         <TextView
             android:id="@+id/tagline_dot2"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:alpha="0"
-            android:paddingHorizontal="6dp"
-            android:text="•"
+            android:paddingHorizontal="7dp"
+            android:text="@string/splash_dot"
             android:textColor="@color/splash_secondary_text"
-            android:textSize="13sp" />
+            android:textSize="12sp" />
 
         <TextView
             android:id="@+id/tagline_minimal"
@@ -104,23 +111,26 @@
             android:layout_height="wrap_content"
             android:alpha="0"
             android:fontFamily="sans-serif-medium"
-            android:letterSpacing="0.30"
-            android:text="Minimal"
+            android:letterSpacing="0.28"
+            android:text="@string/splash_tagline_minimal"
             android:textAllCaps="true"
             android:textColor="@color/splash_secondary_text"
-            android:textSize="13sp" />
+            android:textSize="12sp" />
+
     </LinearLayout>
 
     <TextView
+        android:id="@+id/bottom_tagline"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="40dp"
+        android:layout_marginBottom="36dp"
+        android:alpha="0"
         android:fontFamily="sans-serif-light"
-        android:text="Premium Experience"
+        android:letterSpacing="0.18"
+        android:text="@string/splash_premium_experience"
+        android:textAllCaps="true"
         android:textColor="@color/splash_secondary_text"
         android:textSize="11sp"
-        android:textAllCaps="true"
-        android:letterSpacing="0.1"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />

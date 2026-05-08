@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/bg_bottom_sheet"
+    android:background="?attr/colorSurface"
     android:orientation="vertical"
     android:padding="16dp">
 
@@ -12,7 +12,8 @@
         android:layout_height="4dp"
         android:layout_gravity="center_horizontal"
         android:layout_marginBottom="8dp"
-        android:background="@android:color/darker_gray" />
+        android:background="?attr/colorOnSurfaceVariant"
+        android:alpha="0.3" />
 
     <TextView
         android:layout_width="match_parent"
@@ -20,6 +21,7 @@
         android:gravity="center"
         android:paddingBottom="16dp"
         android:text="@string/more_options"
+        android:textColor="?attr/colorOnSurface"
         android:textSize="18sp"
         android:textStyle="bold" />
 
@@ -45,6 +47,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/resize_mode"
+            android:textColor="?attr/colorOnSurface"
             android:textSize="16sp" />
 
         <ImageView
@@ -53,7 +56,7 @@
             android:contentDescription="@null"
             android:importantForAccessibility="no"
             android:src="@drawable/ic_chevron_right"
-            app:tint="?attr/colorPrimary" />
+            app:tint="?attr/colorOnSurfaceVariant" />
     </LinearLayout>
 
     <LinearLayout
@@ -78,6 +81,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/audio_track"
+            android:textColor="?attr/colorOnSurface"
             android:textSize="16sp" />
 
         <ImageView
@@ -86,7 +90,7 @@
             android:contentDescription="@null"
             android:importantForAccessibility="no"
             android:src="@drawable/ic_chevron_right"
-            app:tint="?attr/colorPrimary" />
+            app:tint="?attr/colorOnSurfaceVariant" />
     </LinearLayout>
 
     <LinearLayout
@@ -110,7 +114,8 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Subtitle Style"
+            android:text="@string/subtitle_style"
+            android:textColor="?attr/colorOnSurface"
             android:textSize="16sp" />
 
         <ImageView
@@ -119,7 +124,7 @@
             android:contentDescription="@null"
             android:importantForAccessibility="no"
             android:src="@drawable/ic_chevron_right"
-            app:tint="?attr/colorPrimary" />
+            app:tint="?attr/colorOnSurfaceVariant" />
     </LinearLayout>
 
     <LinearLayout
@@ -144,6 +149,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/info"
+            android:textColor="?attr/colorOnSurface"
             android:textSize="16sp" />
 
         <ImageView
@@ -152,7 +158,7 @@
             android:contentDescription="@null"
             android:importantForAccessibility="no"
             android:src="@drawable/ic_chevron_right"
-            app:tint="?attr/colorPrimary" />
+            app:tint="?attr/colorOnSurfaceVariant" />
     </LinearLayout>
 
 </LinearLayout>
