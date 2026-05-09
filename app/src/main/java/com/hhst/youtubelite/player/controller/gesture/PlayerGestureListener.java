@@ -2,6 +2,7 @@ package com.hhst.youtubelite.player.controller.gesture;
 
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.Color;
 import android.media.AudioManager;
 import android.os.Handler;
 import android.provider.Settings;
@@ -50,6 +51,7 @@ public class PlayerGestureListener extends GestureDetector.SimpleOnGestureListen
 	private final Runnable resetSeekRunnable = () -> cumulativeSeekAmount = 0;
 	private long lastTapTime = 0;
 	private float vol = -1;
+	private boolean volumeWarningShowing = false;
 
 	enum DoubleTapAction {
 		SEEK_BACKWARD,
@@ -173,9 +175,11 @@ public class PlayerGestureListener extends GestureDetector.SimpleOnGestureListen
 		handler.removeCallbacks(resetSeekRunnable);
 		String seekAmountStr = kv.decodeString("preferences:" + com.hhst.youtubelite.extension.Constant.DOUBLE_TAP_SEEK_AMOUNT, "10s");
 		int seekSeconds = 10;
-		try {
-			seekSeconds = Integer.parseInt(seekAmountStr.replace("s", ""));
-		} catch (Exception ignored) {}
+		if (seekAmountStr != null) {
+			try {
+				seekSeconds = Integer.parseInt(seekAmountStr.replace("s", ""));
+			} catch (Exception ignored) {}
+		}
 		
 		long seekStep = seekSeconds * 1000L;
 		if (isLeft) {
@@ -192,7 +196,7 @@ public class PlayerGestureListener extends GestureDetector.SimpleOnGestureListen
 
 	@Override
 	public boolean onScroll(MotionEvent e1, @NonNull MotionEvent e2, float dx, float dy) {
-		if (!isEnabled() || e1 == null || e2.getPointerCount() > 1 || isLongPressing) return false;
+		if (!isEnabled() || e1 == null || e2.getPointerCount() > 1 || isLongPressing || volumeWarningShowing) return false;
 		
 		float x = e1.getX(), width = playerView.getWidth();
 		float y = e1.getY(), height = playerView.getHeight();
@@ -316,12 +320,52 @@ public class PlayerGestureListener extends GestureDetector.SimpleOnGestureListen
 		final AudioManager am = (AudioManager) activity.getSystemService(Context.AUDIO_SERVICE);
 		if (am == null) return;
 		final int max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
-		if (vol == -1) vol = (float) am.getStreamVolume(AudioManager.STREAM_MUSIC);
+		boolean boosterEnabled = controller.getExtensionManager().isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_VOLUME_BOOSTER);
+		
+		if (vol == -1) {
+			float systemVol = (float) am.getStreamVolume(AudioManager.STREAM_MUSIC);
+			float engineVol = engine.getVolume();
+			if (engineVol > 1.0f && boosterEnabled) {
+				vol = (float) max + (engineVol - 1.0f) * (float) max;
+			} else {
+				vol = systemVol;
+			}
+		}
+
 		float delta = (dy / playerView.getHeight()) * (float) max * 1.2f;
-		vol = Math.min(Math.max(vol + delta, 0), (float) max);
-		am.setStreamVolume(AudioManager.STREAM_MUSIC, Math.round(vol), 0);
+		float targetVol = vol + delta;
+		float limit = boosterEnabled ? (float) max * 2.0f : (float) max;
+		final float newVol = Math.min(Math.max(targetVol, 0), limit);
+
+		int percentage = Math.round((newVol / (float) max) * 100);
+
+		if (percentage > 100 && !kv.decodeBool("volume_booster_warning_dont_show", false) && vol <= (float) max) {
+			volumeWarningShowing = true;
+			controller.showVolumeWarning(confirmed -> {
+				volumeWarningShowing = false;
+				if (confirmed) {
+					applyVolume(newVol, max, am);
+				}
+			});
+			return;
+		}
+
+		applyVolume(newVol, max, am);
+	}
+
+	private void applyVolume(float newVol, int max, AudioManager am) {
+		vol = newVol;
 		int percentage = Math.round((vol / (float) max) * 100);
-		controller.showHint(percentage + "%", -1);
+		
+		if (vol > (float) max) {
+			am.setStreamVolume(AudioManager.STREAM_MUSIC, max, 0);
+			engine.setVolume(1.0f + (vol - (float) max) / (float) max);
+			controller.showHint(percentage + "%", -1, Color.RED);
+		} else {
+			am.setStreamVolume(AudioManager.STREAM_MUSIC, Math.round(vol), 0);
+			engine.setVolume(1.0f);
+			controller.showHint(percentage + "%", -1);
+		}
 	}
 
 	@Override

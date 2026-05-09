@@ -16,6 +16,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -1119,12 +1120,35 @@ public class Controller {
 	}
 
 	public void showHint(@NonNull String text, long durationMs) {
+		showHint(text, durationMs, Color.WHITE);
+	}
+
+	public void showHint(@NonNull String text, long durationMs, int color) {
 		if (hintText == null || activity.isInPictureInPictureMode() || stateMachine.isInPictureInPicture() || stateMachine.isInMiniPlayer())
 			return;
 		hintText.setText(text);
+		hintText.setTextColor(color);
 		ViewUtils.animateViewAlpha(hintText, 1.0f, View.GONE);
 		handler.removeCallbacks(this::hideHint);
 		if (durationMs > 0) handler.postDelayed(this::hideHint, durationMs);
+	}
+
+	public void showVolumeWarning(java.util.function.Consumer<Boolean> onResult) {
+		View dialogView = activity.getLayoutInflater().inflate(R.layout.dialog_volume_warning, null);
+		CheckBox dontShowAgain = dialogView.findViewById(R.id.dont_show_again);
+		
+		new MaterialAlertDialogBuilder(activity)
+				.setTitle(R.string.volume_booster_warning_title)
+				.setView(dialogView)
+				.setCancelable(false)
+				.setPositiveButton(R.string.ok, (dialog, which) -> {
+					if (dontShowAgain.isChecked()) {
+						kv.encode("volume_booster_warning_dont_show", true);
+					}
+					onResult.accept(true);
+				})
+				.setNegativeButton(R.string.cancel, (dialog, which) -> onResult.accept(false))
+				.show();
 	}
 
 	public boolean isFullscreen() {

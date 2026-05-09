@@ -508,6 +508,14 @@ public class Engine {
 		this.player.setPlaybackParameters(new PlaybackParameters(rate));
 	}
 
+	public void setVolume(float volume) {
+		this.player.setVolume(volume);
+	}
+
+	public float getVolume() {
+		return this.player.getVolume();
+	}
+
 	public void addListener(@NonNull Player.Listener listener) {
 		this.player.addListener(listener);
 	}
