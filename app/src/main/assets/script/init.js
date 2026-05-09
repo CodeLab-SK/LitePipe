@@ -46,7 +46,7 @@ try {
                 'ja': { 'download': 'ダウンロード', 'downloads': 'ダウンロード', 'extension': 'LitePipe 設定', 'chat': 'チャット', 'about': '詳細', 'pip': 'PiP', 'incognito': 'シークレットをオン', 'incognito_off': 'シークレットをオフ' },
                 'ko': { 'download': '다운로드', 'downloads': '다운로드', 'extension': 'LitePipe 플러그인', 'chat': '채팅', 'about': '정보', 'pip': 'PiP', 'incognito': '시크릿 모드 켜기', 'incognito_off': '시크릿 모드 끄기' },
                 'fr': { 'download': 'Télécharger', 'downloads': 'Téléchargements', 'extension': 'Paramètres LitePipe', 'chat': 'Chat', 'about': 'À propos', 'pip': 'PiP', 'incognito': 'Activer navigation privée', 'incognito_off': 'Désactiver navigation privée' },
-                'ru': { 'download': 'Скачать', 'downloads': 'Загрузки', 'extension': 'Настройки LitePipe', 'chat': 'Чат', 'about': 'О программе', 'pip': 'PiP', 'incognito': 'Вкл. инкогнито', 'incognito_off': 'Выкл. инкогнито' },
+                'ru': { 'download': 'Скачать', 'downloads': 'Загрузки', 'extension': 'Настройки LitePipe', 'chat': 'Чат', 'about': 'О программе', 'pip': 'PiP', 'incognito': 'Вкл. инコグニト', 'incognito_off': 'Выкл. инコグニト' },
                 'tr': { 'download': 'İndir', 'downloads': 'İndirilenler', 'extension': 'LitePipe Ayarları', 'chat': 'Sohbet', 'about': 'Hakkında', 'pip': 'PiP', 'incognito': 'Gizli modu aç', 'incognito_off': 'Gizli modu kapat' },
             };
             const lang = (document.documentElement.lang || 'en').toLowerCase();
@@ -669,6 +669,7 @@ try {
 
             let anchor = container.querySelector('ytm-segmented-like-dislike-button-renderer')
                          || container.querySelector('ytm-toggle-button-renderer')
+                         || container.querySelector('segmented-like-dislike-button-view-model')
                          || container.firstElementChild;
 
             if (!anchor) return;
@@ -691,10 +692,11 @@ try {
                 }
             });
 
-            actionBar.querySelectorAll('.ytSpecButtonViewModelHost, ytm-toggle-button-renderer, ytm-button-renderer, .slim_video_action_bar_renderer_button, ytm-segmented-like-dislike-button-renderer').forEach((btn) => {
+            actionBar.querySelectorAll('.ytSpecButtonViewModelHost, ytm-toggle-button-renderer, ytm-button-renderer, .slim_video_action_bar_renderer_button, ytm-segmented-like-dislike-button-renderer, segmented-like-dislike-button-view-model').forEach((btn) => {
                 const label = (btn.getAttribute('aria-label') || btn.textContent || '').toLowerCase().trim();
                 const id = btn.id || '';
-                const isLikeDislike = btn.tagName.toLowerCase() === 'ytm-segmented-like-dislike-button-renderer' || label.includes('like');
+                const tag = btn.tagName.toLowerCase();
+                const isLikeDislike = tag === 'ytm-segmented-like-dislike-button-renderer' || tag === 'segmented-like-dislike-button-view-model' || label.includes('like') || btn.classList.contains('ytSegmentedLikeDislikeButtonViewModelHost');
                 let hide = false;
                 if (prefs.action_bar_show_like_dislike === false && isLikeDislike) hide = true;
                 if (prefs.action_bar_show_download === false && (label.includes('download') || id === 'downloadButton')) hide = true;
@@ -749,11 +751,13 @@ try {
                 const mp = document.querySelector('#movie_player');
                 if (mp) { mp.mute?.(); mp.pauseVideo?.(); }
             } else if (pc === 'shorts') {
-                const header = document.querySelector('ytm-header-bar-renderer');
+                const header = document.querySelector('ytm-header-bar-renderer, .ytm-header-bar-renderer');
                 if (header) {
-                    header.querySelector('ytm-home-logo')?.style.setProperty('display', 'none', 'important');
-                    header.querySelectorAll('.header-bar-search-button, .header-search-button').forEach(el => el.style.setProperty('display', 'none', 'important'));
+                    header.style.setProperty('display', 'none', 'important');
                 }
+                document.querySelectorAll('#home-icon, .logo-in-player, [aria-label*="Search"], .topbar-menu-button-avatar-button, .header-bar-search-button, .header-search-button, .search-button').forEach(el => {
+                    el.style.setProperty('display', 'none', 'important');
+                });
             } else {
                 const header = document.querySelector('ytm-header-bar-renderer');
                 if (header) {
@@ -770,6 +774,30 @@ try {
                 if (prefs.show_search_suggestions === false) suggestions.style.setProperty('display', 'none', 'important');
                 else suggestions.style.removeProperty('display');
             }
+
+            if (prefs.hide_comments === true) {
+                document.documentElement.classList.add('lp-hide-comments');
+            } else {
+                document.documentElement.classList.remove('lp-hide-comments');
+            }
+
+            if (prefs.action_bar_show_like_dislike === false) {
+                document.documentElement.classList.add('lp-hide-likes');
+            } else {
+                document.documentElement.classList.remove('lp-hide-likes');
+            }
+
+            if (prefs.shorts_show_like === false) document.documentElement.classList.add('lp-hide-shorts-like');
+            else document.documentElement.classList.remove('lp-hide-shorts-like');
+
+            if (prefs.shorts_show_dislike === false) document.documentElement.classList.add('lp-hide-shorts-dislike');
+            else document.documentElement.classList.remove('lp-hide-shorts-dislike');
+
+            if (prefs.shorts_show_comments === false) document.documentElement.classList.add('lp-hide-shorts-comments');
+            else document.documentElement.classList.remove('lp-hide-shorts-comments');
+
+            if (prefs.shorts_show_share === false) document.documentElement.classList.add('lp-hide-shorts-share');
+            else document.documentElement.classList.remove('lp-hide-shorts-share');
 
             const settingsBackArrow = document.querySelector('[data-mode="settings"] > .mobile-topbar-back-arrow');
             if (settingsBackArrow instanceof Element && settingsBackArrow.dataset.liteGoBackBound !== 'true') {

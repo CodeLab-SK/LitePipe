@@ -38,6 +38,12 @@ public final class Constant {
     public static final String SHOW_NAV_BAR_IN_SHORTS = "show_nav_bar_in_shorts";
     public static final String HIDE_SHORTS = "hide_shorts";
 
+    public static final String SHORTS_BUTTONS = "shorts_buttons";
+    public static final String SHORTS_SHOW_LIKE = "shorts_show_like";
+    public static final String SHORTS_SHOW_DISLIKE = "shorts_show_dislike";
+    public static final String SHORTS_SHOW_COMMENTS = "shorts_show_comments";
+    public static final String SHORTS_SHOW_SHARE = "shorts_show_share";
+
     public static final String CUSTOMIZE_PLAYER_BUTTONS = "customize_player_buttons";
     public static final String PLAYER_SHOW_SPEED = "player_show_speed";
     public static final String PLAYER_SHOW_QUALITY = "player_show_quality";
@@ -57,6 +63,7 @@ public final class Constant {
     public static final String PLAYER_GESTURE_2X = "player_gesture_2x";
     public static final String PLAYER_GESTURE_FULLSCREEN_SWIPE = "player_gesture_fullscreen_swipe";
     public static final String PLAYER_GESTURE_MINIPLAYER_SWIPE = "player_gesture_miniplayer_swipe";
+    public static final String PLAYER_VOLUME_BOOSTER = "player_volume_booster";
 
     public static final String DEFAULT_QUALITY = "default_quality";
     public static final String DEFAULT_PLAYBACK_SPEED = "default_playback_speed";
@@ -64,6 +71,8 @@ public final class Constant {
     public static final String DOWNLOAD_LOCATION = "download_location";
     public static final String DOWNLOAD_MAX_CONCURRENT = "download_max_concurrent";
     public static final String DOWNLOAD_CLIPBOARD_DETECTION = "download_clipboard_detection_enabled";
+
+    public static final String HIDE_COMMENTS = "hide_comments";
 
     public static final Map<String, Object> DEFAULT_PREFERENCES = Map.ofEntries(
             Map.entry(NAV_BAR_SHOW_HOME, true),
@@ -90,6 +99,10 @@ public final class Constant {
             Map.entry(SHORTS_GESTURE_2X, true),
             Map.entry(SHOW_NAV_BAR_IN_SHORTS, true),
             Map.entry(HIDE_SHORTS, false),
+            Map.entry(SHORTS_SHOW_LIKE, true),
+            Map.entry(SHORTS_SHOW_DISLIKE, true),
+            Map.entry(SHORTS_SHOW_COMMENTS, true),
+            Map.entry(SHORTS_SHOW_SHARE, true),
             Map.entry(PLAYER_SHOW_SPEED, true),
             Map.entry(PLAYER_SHOW_QUALITY, true),
             Map.entry(PLAYER_SHOW_SUBTITLES, true),
@@ -107,7 +120,9 @@ public final class Constant {
             Map.entry(PLAYER_GESTURE_2X, true),
             Map.entry(PLAYER_GESTURE_FULLSCREEN_SWIPE, true),
             Map.entry(PLAYER_GESTURE_MINIPLAYER_SWIPE, true),
+            Map.entry(PLAYER_VOLUME_BOOSTER, false),
             Map.entry(DOWNLOAD_MAX_CONCURRENT, 2),
-            Map.entry(DOWNLOAD_CLIPBOARD_DETECTION, true)
+            Map.entry(DOWNLOAD_CLIPBOARD_DETECTION, true),
+            Map.entry(HIDE_COMMENTS, false)
     );
 }

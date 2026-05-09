@@ -26,10 +26,17 @@ public record Extension(String key, int description, int helpText, List<Extensio
                 new Extension(Constant.HIDE_NAV_BAR_LABELS, R.string.hide_nav_bar_labels, null),
                 new Extension(Constant.ENABLE_DISPLAY_DISLIKES, R.string.return_dislike, null),
                 new Extension(Constant.ENABLE_LONG_PRESS_MENU, R.string.long_press_context_menu, null),
-                new Extension(Constant.SHOW_SEARCH_SUGGESTIONS, R.string.show_search_suggestions, null)
+                new Extension(Constant.SHOW_SEARCH_SUGGESTIONS, R.string.show_search_suggestions, null),
+                new Extension(Constant.HIDE_COMMENTS, R.string.hide_comments, null)
             )),
 
             new Extension(null, R.string.shorts, List.of(
+                    new Extension(Constant.SHORTS_BUTTONS, R.string.shorts_buttons, R.string.shorts_buttons_desc, List.of(
+                            new Extension(Constant.SHORTS_SHOW_LIKE, R.string.shorts_like, null),
+                            new Extension(Constant.SHORTS_SHOW_DISLIKE, R.string.shorts_dislike, null),
+                            new Extension(Constant.SHORTS_SHOW_COMMENTS, R.string.shorts_comments, null),
+                            new Extension(Constant.SHORTS_SHOW_SHARE, R.string.shorts_share, null)
+                    )),
                     new Extension(Constant.SHORTS_GESTURE_2X, R.string.shorts_gesture_2x, null),
                     new Extension(Constant.SHOW_NAV_BAR_IN_SHORTS, R.string.show_nav_bar_in_shorts, null),
                     new Extension(Constant.HIDE_SHORTS, R.string.hide_shorts, null)
@@ -69,6 +76,7 @@ public record Extension(String key, int description, int helpText, List<Extensio
                     new Extension(Constant.PLAYER_GESTURE_FULLSCREEN_SWIPE, R.string.gesture_fullscreen_swipe, null),
                     new Extension(Constant.PLAYER_GESTURE_MINIPLAYER_SWIPE, R.string.gesture_miniplayer_swipe, null)
                 )),
+                new Extension(Constant.PLAYER_VOLUME_BOOSTER, R.string.volume_booster, null),
                 new Extension(REMEMBER_LAST_POSITION, R.string.remember_last_position, null),
                 new Extension(Constant.DEFAULT_QUALITY, R.string.default_quality, null),
                 new Extension(Constant.DEFAULT_PLAYBACK_SPEED, R.string.default_playback_speed, null),
