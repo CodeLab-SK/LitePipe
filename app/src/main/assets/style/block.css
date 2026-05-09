@@ -22,3 +22,53 @@ ytm-promoted-sparkles-web-renderer,
 {
     display: none !important;
 }
+
+html[page-class="watch"].lp-hide-comments ytm-item-section-renderer[section-identifier="comments-entry-point"],
+html[page-class="watch"].lp-hide-comments ytm-comments-entry-point-header-renderer,
+html[page-class="watch"].lp-hide-comments .comment-section-header-renderer,
+html[page-class="watch"].lp-hide-comments #comments-entry-point,
+html[page-class="watch"].lp-hide-comments yt-video-metadata-carousel-view-model,
+html[page-class="watch"].lp-hide-comments .ytVideoMetadataCarouselViewModelHost {
+    display: none !important;
+}
+
+html[page-class="shorts"] ytm-header-bar-renderer,
+html[page-class="shorts"] .ytm-header-bar-renderer,
+html[page-class="shorts"] #home-icon,
+html[page-class="shorts"] .logo-in-player,
+html[page-class="shorts"] [aria-label*="Search"],
+html[page-class="shorts"] .topbar-menu-button-avatar-button,
+html[page-class="shorts"] .header-bar-search-button,
+html[page-class="shorts"] .header-search-button,
+html[page-class="shorts"] .search-button,
+html[page-class="shorts"] .header-bar-search-button-container {
+    display: none !important;
+}
+
+html[page-class="shorts"].lp-hide-shorts-like like-button-view-model {
+    display: none !important;
+}
+html[page-class="shorts"].lp-hide-shorts-dislike dislike-button-view-model {
+    display: none !important;
+}
+html[page-class="shorts"].lp-hide-shorts-comments reel-action-bar-view-model button-view-model:has(button[aria-label*="comment"]),
+html[page-class="shorts"].lp-hide-shorts-comments reel-action-bar-view-model button-view-model:has(button[aria-label*="Comment"]),
+html[page-class="shorts"].lp-hide-shorts-comments reel-action-bar-view-model button-view-model:has(button[aria-label*="view"]) {
+    display: none !important;
+}
+html[page-class="shorts"].lp-hide-shorts-share reel-action-bar-view-model button-view-model:has(button[aria-label*="share"]),
+html[page-class="shorts"].lp-hide-shorts-share reel-action-bar-view-model button-view-model:has(button[aria-label*="Share"]) {
+    display: none !important;
+}
+
+a[href*="intent://"],
+.lp-hide-app-button,
+.ytListItemViewModelContainer:has(a[href*="intent://"]),
+.ytListItemViewModelLayoutWrapper:has(a[href*="intent://"]) {
+ytm-menu-item:has(a[href*="intent://"]),
+ytm-menu-item:has(button:contains("Open App")),
+ytm-menu-item:has(button:contains("Open app")),
+button.menu-item-button:contains("Open App"),
+button.menu-item-button:contains("Open app") {
+    display: none !important;
+}
