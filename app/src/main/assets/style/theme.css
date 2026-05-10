@@ -27,3 +27,50 @@ html[page-class="watch"] .page-container {
 * {
     -webkit-touch-callout: none !important;
 }
+
+yt-dynamic-text-view-model.ytPageHeaderViewModelTitle .dynamicTextViewModelH1 {
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    text-overflow: ellipsis !important;
+    line-height: 1.2 !important;
+    max-height: 32px !important;
+}
+
+.dynamicTextViewModelH1 .ytAttributedStringHost {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    line-height: 1.2 !important;
+}
+
+ytm-mobile-topbar-renderer .cairo-settings-topbar-title,
+ytm-mobile-topbar-renderer .mobile-topbar-title,
+.mobile-topbar-title {
+    overflow: visible !important;
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+    line-height: 1.4 !important;
+    height: auto !important;
+    min-height: auto !important;
+}
+
+ytm-mobile-topbar-renderer header {
+    overflow: visible !important;
+    min-height: auto !important;
+    height: auto !important;
+}
+
+.ytm-header-metadata {
+    overflow: visible !important;
+    white-space: normal !important;
+    word-wrap: break-word !important;
+}
+
+ytm-header-bar-renderer .ytm-header-title {
+    overflow: visible !important;
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    line-height: 1.4 !important;
+}
+
