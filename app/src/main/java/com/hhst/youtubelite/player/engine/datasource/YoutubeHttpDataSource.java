@@ -27,7 +27,6 @@ import androidx.media3.datasource.BaseDataSource;
 import androidx.media3.datasource.DataSourceException;
 import androidx.media3.datasource.DataSpec;
 import androidx.media3.datasource.DataSpec.HttpMethod;
-import androidx.media3.datasource.DefaultHttpDataSource;
 import androidx.media3.datasource.HttpDataSource;
 import androidx.media3.datasource.HttpUtil;
 
@@ -38,8 +37,9 @@ import com.hhst.youtubelite.util.StreamIOUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InterruptedIOException;
 import java.io.OutputStream;
+import java.io.InterruptedIOException;
+
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.NoRouteToHostException;
@@ -193,6 +193,11 @@ public final class YoutubeHttpDataSource extends BaseDataSource implements HttpD
 
 			final InputStream errorStream = httpURLConnection.getErrorStream();
 			final byte[] errorResponseBody = errorStream != null ? StreamIOUtils.readInputStreamToBytes(errorStream) : Util.EMPTY_BYTE_ARRAY;
+
+			Log.e(TAG, "Response code: " + responseCode + " for URL: " + httpURLConnection.getURL());
+			if (errorResponseBody.length > 0) {
+				Log.e(TAG, "Error body: " + new String(errorResponseBody));
+			}
 
 			closeConnectionQuietly();
 			final IOException cause = responseCode == 416 ? new DataSourceException(PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE) : null;
@@ -363,6 +368,9 @@ public final class YoutubeHttpDataSource extends BaseDataSource implements HttpD
 
 		httpURLConnection.setRequestProperty(HttpHeaders.ACCEPT_ENCODING, allowGzip ? "gzip" : "identity");
 		httpURLConnection.setInstanceFollowRedirects(followRedirects);
+
+		Log.d(TAG, "Request URL: " + requestUrl);
+		Log.d(TAG, "Request Headers: " + httpURLConnection.getRequestProperties());
 
 		if (isVideoPlaybackUrl) {
 			httpURLConnection.setRequestMethod("POST");

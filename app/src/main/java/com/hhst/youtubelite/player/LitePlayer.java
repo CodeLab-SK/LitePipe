@@ -44,6 +44,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 
@@ -361,43 +362,46 @@ public class LitePlayer {
 		final ExtractionSession session = new ExtractionSession();
 		extractionSession = session;
 
-		extractor.getInfo(url, session).thenAccept(er -> activity.runOnUiThread(() -> {
-			if (this.extractionSession == session) this.extractionSession = null;
-			if (!Objects.equals(this.vid, videoId)) return;
-			this.loadedVideoId = videoId;
-			playerView.setTitle(er.video().getTitle());
+		extractor.getInfo(url, session).thenAccept(er -> {
+            CompletableFuture.runAsync(() -> sponsor.load(videoId));
 
-			final List<QueueItem> items = queueRepository.getItems();
-			for (QueueItem item : items) {
-				if (Objects.equals(item.getVideoId(), videoId)) {
-					item.setTitle(er.video().getTitle());
-					item.setAuthor(er.video().getAuthor());
-					item.setThumbnailUrl(er.video().getThumbnailUrl());
-					queueRepository.add(item);
-					break;
-				}
-			}
+            activity.runOnUiThread(() -> {
+                if (this.extractionSession == session) this.extractionSession = null;
+                if (!Objects.equals(this.vid, videoId)) return;
+                this.loadedVideoId = videoId;
+                playerView.setTitle(er.video().getTitle());
 
-			playerView.updateSkipMarkers(er.video().getDuration(), TimeUnit.SECONDS);
+                final List<QueueItem> items = queueRepository.getItems();
+                for (QueueItem item : items) {
+                    if (Objects.equals(item.getVideoId(), videoId)) {
+                        item.setTitle(er.video().getTitle());
+                        item.setAuthor(er.video().getAuthor());
+                        item.setThumbnailUrl(er.video().getThumbnailUrl());
+                        queueRepository.add(item);
+                        break;
+                    }
+                }
 
-			String preferredQuality = prefs.getQuality();
-			PlaybackPlan plan = PlaybackPlanner.plan(er.deliveries(), preferredQuality, null);
-			PlaybackDetails details = new PlaybackDetails(er.video(), er.catalog(), er.deliveries(), plan, er.segments(), er.subtitles());
+                playerView.updateSkipMarkers(er.video().getDuration(), TimeUnit.SECONDS);
 
-			engine.play(details);
-			if (initialPositionMs >= 0L) {
-				engine.seekTo(initialPositionMs);
-			}
-			controller.updateSegmentsButtonState();
-			controller.updateSubtitleButtonState();
+                String preferredQuality = prefs.getQuality();
+                PlaybackPlan plan = PlaybackPlanner.plan(er.deliveries(), preferredQuality, null);
+                PlaybackDetails details = new PlaybackDetails(er.video(), er.catalog(), er.deliveries(), plan, er.segments(), er.subtitles());
 
-			if (playbackService != null) {
-				PlaybackService.start(activity);
-				playbackService.showNotification(er.video().getTitle(), er.video().getAuthor(), er.video().getThumbnailUrl(), er.video().getDuration() * 1000);
-			}
-			refreshQueueNavigationAvailability();
-			sponsor.load(videoId);
-		})).exceptionally(e -> {
+                engine.play(details);
+                if (initialPositionMs >= 0L) {
+                    engine.seekTo(initialPositionMs);
+                }
+                controller.updateSegmentsButtonState();
+                controller.updateSubtitleButtonState();
+
+                if (playbackService != null) {
+                    PlaybackService.start(activity);
+                    playbackService.showNotification(er.video().getTitle(), er.video().getAuthor(), er.video().getThumbnailUrl(), er.video().getDuration() * 1000);
+                }
+                refreshQueueNavigationAvailability();
+            });
+		}).exceptionally(e -> {
 			if (this.extractionSession == session) this.extractionSession = null;
 			Throwable cause = e instanceof CompletionException ? e.getCause() : e;
 			activity.runOnUiThread(() -> {
