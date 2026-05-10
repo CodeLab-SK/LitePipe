@@ -74,3 +74,7 @@ ytm-header-bar-renderer .ytm-header-title {
     line-height: 1.4 !important;
 }
 
+html[page-class="watch"] ytm-feed-filter-chip-bar-renderer,
+html[page-class="watch"] ytm-chip-cloud-renderer {
+    margin-top: -48px !important;
+}
