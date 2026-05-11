@@ -23,7 +23,6 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.provider.OpenableColumns;
-import android.provider.Settings;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -1036,33 +1035,23 @@ public final class MainActivity extends AppCompatActivity {
 	}
 
 	private void checkOpenByDefault() {
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-			MMKV kv = MMKV.defaultMMKV();
-			if (kv.getBoolean("asked_open_by_default", false)) return;
+        MMKV kv = MMKV.defaultMMKV();
+        if (kv.getBoolean("asked_open_by_default", false)) return;
 
-			DomainVerificationManager manager = getSystemService(DomainVerificationManager.class);
-			try {
-				DomainVerificationUserState userState = manager.getDomainVerificationUserState(getPackageName());
-				if (userState != null && !userState.isLinkHandlingAllowed()) {
-					new MaterialAlertDialogBuilder(this)
-							.setTitle(R.string.open_by_default_title)
-							.setMessage(R.string.open_by_default_message)
-							.setPositiveButton(R.string.open_by_default_settings, (d, w) -> {
-								kv.putBoolean("asked_open_by_default", true);
-								try {
-									startActivity(new Intent(Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS,
-											Uri.parse("package:" + getPackageName())));
-								} catch (Exception e) {
-									Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-											Uri.parse("package:" + getPackageName()));
-									startActivity(intent);
-								}
-							})
-							.setNegativeButton(R.string.open_by_default_later, (d, w) -> kv.putBoolean("asked_open_by_default", true))
-							.show();
-				}
-			} catch (Exception ignored) {}
-		}
+        boolean alreadyVerified = false;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            DomainVerificationManager manager = getSystemService(DomainVerificationManager.class);
+            try {
+                DomainVerificationUserState userState = manager.getDomainVerificationUserState(getPackageName());
+                if (userState != null && userState.isLinkHandlingAllowed()) {
+                    alreadyVerified = true;
+                }
+            } catch (Exception ignored) {}
+        }
+        
+        if (!alreadyVerified) {
+            new LinkTutorialDialog(this).show();
+        }
 	}
 
 	private void fetchTitleAndShowPopup(final String url) {
