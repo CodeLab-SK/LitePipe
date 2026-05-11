@@ -71,6 +71,7 @@ import javax.inject.Inject;
 
 import dagger.hilt.android.qualifiers.ApplicationContext;
 import dagger.hilt.android.scopes.ActivityScoped;
+import lombok.Getter;
 
 @UnstableApi
 @ActivityScoped
@@ -134,7 +135,8 @@ public class Engine {
 	};
 	@Nullable
 	private VideoDetails videoDetails;
-	@NonNull
+	@Getter
+    @NonNull
 	private List<StreamSegment> segments = List.of();
 	@NonNull
 	private List<SubtitlesStream> subtitles = List.of();
@@ -917,18 +919,7 @@ public class Engine {
 		return subtitles;
 	}
 
-	public List<StreamSegment> getSegments() {
-		if (!this.segments.isEmpty())
-			return this.segments;
-
-
-		List<StreamSegment> segments = new ArrayList<>();
-		VideoDetails video = videoDetails;
-		if (video != null) segments.add(new StreamSegment(video.getTitle() != null ? video.getTitle() : "", 0));
-		return segments;
-	}
-
-	@Nullable
+    @Nullable
 	public String getThumbnailUrl() {
 		return videoDetails != null ? videoDetails.getThumbnailUrl() : null;
 	}

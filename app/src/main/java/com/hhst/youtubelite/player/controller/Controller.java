@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.content.res.ColorStateList;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -16,6 +17,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
@@ -394,6 +396,8 @@ public class Controller {
 		if (slider != null) slider.setValue(currentSpeed);
 		if (speedText != null) speedText.setText(String.format(Locale.getDefault(), "%.2fx", currentSpeed));
 		
+		if (presetContainer != null) updatePresetButtons(presetContainer, currentSpeed);
+
 		java.util.function.Consumer<Float> updateSpeed = (val) -> {
 			float newVal = Math.max(0.25f, Math.min(4.0f, val));
 			if (slider != null) slider.setValue(newVal);
@@ -401,6 +405,7 @@ public class Controller {
 			engine.setPlaybackRate(newVal);
 			updateSpeedButtonUI(newVal);
 			prefs.setSpeed(newVal);
+			if (presetContainer != null) updatePresetButtons(presetContainer, newVal);
 		};
 		if (slider != null) {
 			slider.addOnChangeListener((s, value, fromUser) -> {
@@ -426,6 +431,38 @@ public class Controller {
 			}
 		}
 		dialog.show();
+	}
+
+	private void updatePresetButtons(LinearLayout container, float currentSpeed) {
+		int primary = getThemeAttrColor(androidx.appcompat.R.attr.colorPrimary);
+		int onPrimary = getThemeAttrColor(com.google.android.material.R.attr.colorOnPrimary);
+		int surfaceVariant = getThemeAttrColor(com.google.android.material.R.attr.colorSurfaceVariant);
+		int onSurfaceVariant = getThemeAttrColor(com.google.android.material.R.attr.colorOnSurfaceVariant);
+
+		for (int i = 0; i < container.getChildCount(); i++) {
+			View child = container.getChildAt(i);
+			if (child instanceof Button btn) {
+				Object tag = btn.getTag();
+				if (tag != null) {
+					float speed = Float.parseFloat(tag.toString());
+					if (Math.abs(speed - currentSpeed) < 0.01f) {
+						btn.setBackgroundTintList(ColorStateList.valueOf(primary));
+						btn.setTextColor(onPrimary);
+					} else {
+						btn.setBackgroundTintList(ColorStateList.valueOf(surfaceVariant));
+						btn.setTextColor(onSurfaceVariant);
+					}
+				}
+			}
+		}
+	}
+
+	private int getThemeAttrColor(int attr) {
+		TypedValue typedValue = new TypedValue();
+		if (activity.getTheme().resolveAttribute(attr, typedValue, true)) {
+			return typedValue.data;
+		}
+		return Color.BLACK;
 	}
 
 	private void applyLoopMode(@NonNull final ImageButton loopBtn, @NonNull final PlayerLoopMode mode) {
@@ -585,14 +622,18 @@ public class Controller {
 		if (segmentsBtn == null) return;
 		boolean isVisibleInSettings = extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_SHOW_SEGMENTS);
 		boolean hasSegments = !engine.getSegments().isEmpty();
-		segmentsBtn.setEnabled(hasSegments);
+
+		segmentsBtn.setEnabled(true);
 		segmentsBtn.setAlpha(hasSegments ? 1.0f : DISABLED_BUTTON_ALPHA);
 		segmentsBtn.setVisibility(isVisibleInSettings ? View.VISIBLE : View.GONE);
 	}
 
 	private void showSegmentsPopup(@NonNull final View anchor) {
 		List<StreamSegment> segments = engine.getSegments();
-		if (segments.isEmpty()) return;
+		if (segments.isEmpty()) {
+			showHint(activity.getString(R.string.no_chapters), 1000);
+			return;
+		}
 		String[] titles = new String[segments.size()];
 		int currentIdx = -1;
 		long posSec = engine.position() / 1000;
