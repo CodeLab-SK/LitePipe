@@ -49,6 +49,7 @@ import com.hhst.youtubelite.downloader.core.history.DownloadStatus;
 import com.hhst.youtubelite.downloader.core.history.DownloadType;
 import com.hhst.youtubelite.downloader.service.DownloadService;
 import com.hhst.youtubelite.extractor.YoutubeExtractor;
+import com.hhst.youtubelite.ui.OfflinePlayerActivity;
 import com.hhst.youtubelite.util.DownloadStorageUtils;
 
 import java.util.ArrayList;
@@ -462,8 +463,18 @@ public class DownloadActivity extends AppCompatActivity {
 			loadRecords();
 			return;
 		}
-		final String type = DownloadStorageUtils.getMimeType(this, record.getOutputPath(), record.getFileName());
+		
+        if (record.getType() == DownloadType.VIDEO) {
+            final Intent intent = new Intent(this, OfflinePlayerActivity.class);
+            intent.setAction("PLAY_LOCAL_VIDEO");
+            intent.putExtra("uri", uri);
+            intent.putExtra("title", record.getFileName());
+            intent.putExtra("video_id", record.getVideoId());
+            startActivity(intent);
+            return;
+        }
 
+		final String type = DownloadStorageUtils.getMimeType(this, record.getOutputPath(), record.getFileName());
 		final Intent intent = new Intent(Intent.ACTION_VIEW);
 		intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 		intent.setDataAndType(uri, type != null ? type : "*/*");

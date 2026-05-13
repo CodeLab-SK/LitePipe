@@ -59,7 +59,6 @@ public class TabManager {
 	private YoutubeFragment tab;
 	@Nullable
 	private YoutubeFragment suspendedWatchFragment;
-	private boolean offlineMode = false;
 
 	private static final List<String> cachedScripts = new ArrayList<>();
 	private static final List<String> cachedStyles = new ArrayList<>();
@@ -82,7 +81,7 @@ public class TabManager {
 	}
 
 	public void onUrlChanged(@NonNull final YoutubeFragment fragment, @NonNull final String url) {
-		if (fragment != tab || offlineMode) return;
+		if (fragment != tab) return;
 		final LitePlayer litePlayer = litePlayer();
 		final String pageClass = UrlUtils.getPageClass(url);
 		final boolean isWatch = Constant.PAGE_WATCH.equals(pageClass);
@@ -96,6 +95,7 @@ public class TabManager {
 			litePlayer.play(url);
 			return;
 		}
+
 		if (suspendedWatchFragment != null || litePlayer.isInAppMiniPlayer()) return;
 		litePlayer.hide();
 	}
@@ -137,6 +137,7 @@ public class TabManager {
 						litePlayer().canSuspendWatch());
 		if (suspendCurrentWatch) suspendCurrentWatch(ft);
 		else if (tab != null) ft.hide(tab);
+		
 		if (!NAV_TAGS.contains(targetTag)) {
 			final var first = tabs.peekFirst();
 			if (first == null || !Constant.PAGE_HOME.equals(first.getMTag())) {
@@ -145,6 +146,7 @@ public class TabManager {
 				ft.add(R.id.fragment_container, home, Constant.PAGE_HOME);
 				ft.hide(home);
 			}
+
 			final YoutubeFragment next = createFragment(url, targetTag);
 			this.tab = next;
 			tabs.offer(next);
@@ -188,7 +190,6 @@ public class TabManager {
 		if (assetsLoaded) return;
 		final AssetManager assetManager = activity.getAssets();
 		try {
-			// Load Styles
 			String[] styles = assetManager.list("style");
 			if (styles != null) {
 				for (String style : styles) {
@@ -198,7 +199,6 @@ public class TabManager {
 					}
 				}
 			}
-			// Load Scripts
 			String[] scripts = assetManager.list("script");
 			if (scripts != null) {
 				List<String> list = new ArrayList<>(Arrays.asList(scripts));
@@ -367,10 +367,6 @@ public class TabManager {
 	}
 
 	public boolean goBack() {
-		if (offlineMode) {
-			litePlayer().hide();
-			return true;
-		}
 		final YoutubeFragment tab = this.tab;
 		if (tab == null) return false;
 		final YoutubeWebview webview = tab.getWebview();
@@ -463,29 +459,6 @@ public class TabManager {
 		}
 		litePlayer.exitInAppMiniPlayer();
 		litePlayer.setMiniPlayerCallbacks(null, null);
-	}
-
-	public void setOfflineMode(boolean offline) {
-		this.offlineMode = offline;
-		final FragmentTransaction ft = getFm().beginTransaction();
-		final YoutubeFragment tab = this.tab;
-		if (offline) {
-			if (tab != null) {
-				ft.hide(tab);
-			}
-			if (suspendedWatchFragment != null) {
-				ft.hide(suspendedWatchFragment);
-			}
-			loadUrl("file:///android_asset/page/offline.html");
-		} else {
-			if (tab != null) {
-				ft.show(tab);
-			}
-		}
-		ft.commitAllowingStateLoss();
-		if (activity instanceof MainActivity mainActivity) {
-			mainActivity.setUiVisibility(!offline);
-		}
 	}
 
 	private void commitAndRun(@NonNull final FragmentTransaction ft, @NonNull final Runnable afterCommit) {

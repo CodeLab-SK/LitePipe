@@ -1,7 +1,10 @@
 package com.hhst.youtubelite.util;
 
 import android.content.Context;
+import android.database.Cursor;
+import android.media.MediaMetadataRetriever;
 import android.net.Uri;
+import android.provider.OpenableColumns;
 import android.webkit.CookieManager;
 
 import androidx.annotation.NonNull;
@@ -206,7 +209,7 @@ public final class UrlUtils {
 				builder.appendQueryParameter("hl", hl);
 				changed = true;
 			}
-			if (uri.getQueryParameter("gl") == null && gl != null && !gl.isEmpty()) {
+			if (uri.getQueryParameter("gl") == null && !gl.isEmpty()) {
 				builder.appendQueryParameter("gl", gl);
 				changed = true;
 			}
@@ -240,4 +243,39 @@ public final class UrlUtils {
 		}
 		cookieManager.flush();
 	}
+
+    @NonNull
+    public static String fetchLocalTitle(@NonNull Context context, @NonNull Uri uri, boolean keepExtension) {
+        String name = null;
+        if ("content".equals(uri.getScheme())) {
+            try (Cursor cursor = context.getContentResolver().query(uri, null, null, null, null)) {
+                if (cursor != null && cursor.moveToFirst()) {
+                    int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                    if (nameIndex != -1) {
+                        name = cursor.getString(nameIndex);
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+        if (name == null || name.isEmpty()) {
+            name = uri.getLastPathSegment();
+        }
+
+        if (name == null || name.isEmpty()) {
+            try (MediaMetadataRetriever retriever = new MediaMetadataRetriever()) {
+                retriever.setDataSource(context, uri);
+                name = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
+            } catch (Exception ignored) {}
+        }
+
+        if (name != null) {
+            if (keepExtension) return name;
+            int dot = name.lastIndexOf('.');
+            if (dot > 0) {
+                return name.substring(0, dot);
+            }
+            return name;
+        }
+        return "Video";
+    }
 }

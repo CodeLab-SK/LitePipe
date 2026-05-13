@@ -108,6 +108,22 @@
             </intent-filter>
 
             <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".ui.OfflinePlayerActivity"
+            android:label="@string/offline_player"
+            android:configChanges="orientation|screenSize|keyboard|keyboardHidden|screenLayout|smallestScreenSize|uiMode"
+            android:launchMode="singleTask"
+            android:taskAffinity=".offline"
+            android:supportsPictureInPicture="true"
+            android:exported="true">
+
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
@@ -117,9 +133,8 @@
             </intent-filter>
 
             <intent-filter>
-                <action android:name="android.intent.action.SEND" />
+                <action android:name="PLAY_LOCAL_VIDEO" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
 

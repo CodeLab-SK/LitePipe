@@ -345,7 +345,6 @@ public class LitePlayer {
 		this.vid = videoId;
 		activity.runOnUiThread(() -> {
 			if (inAppMiniPlayer) exitInAppMiniPlayer();
-			tabManager.get().setOfflineMode(false);
 			engine.clear();
 			playerView.setTitle(null);
 			final SponsorOverlayView layer = playerView.findViewById(R.id.sponsor_overlay);
@@ -418,7 +417,6 @@ public class LitePlayer {
 		cancelCurrentExtraction();
 		activity.runOnUiThread(() -> {
 			if (inAppMiniPlayer) exitInAppMiniPlayer();
-			tabManager.get().setOfflineMode(true);
 			engine.clear();
 			playerView.setTitle(title);
 			playerView.show();
@@ -437,7 +435,6 @@ public class LitePlayer {
 		cancelCurrentExtraction();
 		activity.runOnUiThread(() -> {
 			playerView.hide();
-			tabManager.get().setOfflineMode(false);
 			engine.clear();
 			controller.clearRotation();
 			playerView.disableAutoPiP();
