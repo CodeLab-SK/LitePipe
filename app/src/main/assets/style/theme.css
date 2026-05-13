@@ -2,79 +2,36 @@ html {
     -webkit-tap-highlight-color:transparent;
 }
 
-html[page-class="watch"] ytm-header-bar-renderer,
-html[page-class="watch"] #player-container-id,
-html[page-class="watch"] #player {
-    display: none !important;
-}
-
-html[page-class="watch"] body {
-    padding-top: 0 !important;
-    margin-top: 0 !important;
-}
-
 html[page-class="watch"] ytm-watch {
     margin-top: -48px !important;
     padding-top: -56.25vw !important;
 }
 
-html[page-class="watch"] #content-wrapper,
-html[page-class="watch"] .page-container {
-    margin-top: 0 !important;
-    padding-top: 0 !important;
-}
-
-* {
-    -webkit-touch-callout: none !important;
-}
-
-yt-dynamic-text-view-model.ytPageHeaderViewModelTitle .dynamicTextViewModelH1 {
-    overflow: hidden !important;
-    white-space: nowrap !important;
-    text-overflow: ellipsis !important;
-    line-height: 1.2 !important;
-    max-height: 32px !important;
-}
-
-.dynamicTextViewModelH1 .ytAttributedStringHost {
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-    line-height: 1.2 !important;
-}
-
-ytm-mobile-topbar-renderer .cairo-settings-topbar-title,
-ytm-mobile-topbar-renderer .mobile-topbar-title,
-.mobile-topbar-title {
-    overflow: visible !important;
-    white-space: normal !important;
-    word-wrap: break-word !important;
-    word-break: break-word !important;
-    line-height: 1.4 !important;
-    height: auto !important;
-    min-height: auto !important;
-}
-
-ytm-mobile-topbar-renderer header {
-    overflow: visible !important;
-    min-height: auto !important;
-    height: auto !important;
-}
-
-.ytm-header-metadata {
-    overflow: visible !important;
-    white-space: normal !important;
-    word-wrap: break-word !important;
-}
-
-ytm-header-bar-renderer .ytm-header-title {
-    overflow: visible !important;
-    white-space: normal !important;
-    word-wrap: break-word !important;
-    line-height: 1.4 !important;
-}
-
 html[page-class="watch"] ytm-feed-filter-chip-bar-renderer,
 html[page-class="watch"] ytm-chip-cloud-renderer {
     margin-top: -48px !important;
+}
+
+.cairo-settings-topbar-title {
+    padding: 0 !important;
+    margin-top: -8 !important;
+    white-space: nowrap !important;
+    line-height: 1 !important;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+    text-overflow: ellipsis !important;
+}
+
+html:not([page-class="channel"]):not([page-class="@"]) .cairo-settings-topbar-title {
+    margin-top: -10px !important;
+}
+
+html[page-class="channel"] .cairo-settings-topbar-title,
+html[page-class="@"] .cairo-settings-topbar-title {
+    margin-top: 0 !important;
+}
+
+header.mobile-topbar-header.cairo-settings-topbar,
+.mobile-topbar-header-content {
+    overflow: visible !important;
 }

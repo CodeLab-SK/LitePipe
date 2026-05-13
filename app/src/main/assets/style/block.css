@@ -18,9 +18,27 @@ ytm-promoted-sparkles-web-renderer,
 [href*="/premium"],
 .playlist-engagement-panel-top-level-buttons,
 .yt-mini-app-container-view-model__background-blur,
-.yt-mini-app-container-view-model__background-scrim
+.yt-mini-app-container-view-model__background-scrim,
+.bottom-sheet-menu-item > :nth-last-child(3)
 {
     display: none !important;
+}
+
+html[page-class="watch"] ytm-header-bar-renderer {
+    display: none !important;
+}
+
+html[page-class="watch"] #player,
+html[page-class="watch"] #player-container-id {
+    position: absolute !important;
+    top: -9999px !important;
+    left: -9999px !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 
 html[page-class="watch"].lp-hide-comments ytm-item-section-renderer[section-identifier="comments-entry-point"],
@@ -60,15 +78,7 @@ html[page-class="shorts"].lp-hide-shorts-share reel-action-bar-view-model button
 html[page-class="shorts"].lp-hide-shorts-share reel-action-bar-view-model button-view-model:has(button[aria-label*="Share"]) {
     display: none !important;
 }
-
-a[href*="intent://"],
-.lp-hide-app-button,
-.ytListItemViewModelContainer:has(a[href*="intent://"]),
-.ytListItemViewModelLayoutWrapper:has(a[href*="intent://"]) {
-ytm-menu-item:has(a[href*="intent://"]),
-ytm-menu-item:has(button:contains("Open App")),
-ytm-menu-item:has(button:contains("Open app")),
-button.menu-item-button:contains("Open App"),
-button.menu-item-button:contains("Open app") {
+html[page-class="shorts"].lp-hide-shorts-search-suggestion yt-shorts-suggested-action-view-model,
+html[page-class="shorts"].lp-hide-shorts-search-suggestion .ytReelMetapanelViewModelMetapanelItem:has(yt-shorts-suggested-action-view-model) {
     display: none !important;
 }
