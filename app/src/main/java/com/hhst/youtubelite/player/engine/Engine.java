@@ -64,6 +64,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -76,8 +77,10 @@ import lombok.Getter;
 @UnstableApi
 @ActivityScoped
 public class Engine {
-	static final String NO_PLAYABLE_SOURCE_MESSAGE = "No supported playable stream URL in StreamCatalog";
+	static final String NO_PLAYABLE_SOURCE_MESSAGE = "No  playable stream found";
 	private static final int SAFE_ZONE_MS = 5000;
+	private static final long SYNC_INTERVAL_MS = 30000;
+
 	@NonNull
 	private final ExoPlayer player;
 	@NonNull
@@ -99,6 +102,8 @@ public class Engine {
 	private String videoId;
 	@Nullable private OnSponsorDetectedListener sponsorListener;
 
+	private long lastSyncTime = 0;
+
 	private final Runnable onTimeUpdate = new Runnable() {
 		@Override
 		public void run() {
@@ -111,6 +116,13 @@ public class Engine {
 					&& !IncognitoManager.getInstance().isIncognito()) {
 				if (pos > SAFE_ZONE_MS && pos < duration - SAFE_ZONE_MS) {
 					prefs.persistProgress(videoId, pos, duration, TimeUnit.MILLISECONDS);
+				}
+			}
+
+			if (videoId != null && !IncognitoManager.getInstance().isIncognito()) {
+				long now = System.currentTimeMillis();
+				if (now - lastSyncTime >= SYNC_INTERVAL_MS) {
+					triggerSync(pos);
 				}
 			}
 
@@ -210,7 +222,10 @@ public class Engine {
 			@Override
 			public void onIsPlayingChanged(boolean isPlaying) {
 				handler.removeCallbacks(onTimeUpdate);
-				if (isPlaying) handler.post(onTimeUpdate);
+				if (isPlaying) {
+					handler.post(onTimeUpdate);
+					triggerSync();
+				}
 			}
 
 			@Override
@@ -228,6 +243,9 @@ public class Engine {
 				long duration = player.getDuration();
 				if (duration > 0) {
 					playerView.updateRemainingTime(newPosition.positionMs, duration, player.getPlaybackParameters().speed);
+				}
+				if (reason == Player.DISCONTINUITY_REASON_SEEK) {
+					triggerSync(newPosition.positionMs);
 				}
 			}
 
@@ -389,6 +407,7 @@ public class Engine {
 
 		this.player.prepare();
 		this.player.setPlayWhenReady(true);
+		lastSyncTime = 0;
 	}
 
 	public void playLocal(@NonNull Uri uri, @Nullable String title, @Nullable List<DownloadRecord> subtitles) {
@@ -973,6 +992,16 @@ public class Engine {
 	private boolean isLiveMode(@Nullable PlaybackPlan plan) {
 		return plan != null && (plan.getMode() == PlaybackMode.LIVE_DASH
 						|| plan.getMode() == PlaybackMode.LIVE_HLS);
+	}
+
+	private void triggerSync() {
+		triggerSync(player.getCurrentPosition());
+	}
+
+	private void triggerSync(long positionMs) {
+		if (videoId == null || IncognitoManager.getInstance().isIncognito()) return;
+		lastSyncTime = System.currentTimeMillis();
+		tabManager.evalWatchJs(String.format(Locale.US, "window.__syncNativeProgress(%d)", positionMs / 1000), null);
 	}
 
 	public void clear() {

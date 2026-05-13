@@ -1,5 +1,5 @@
 try {
-    if (!window.injected) {
+        if (!window.injected) {
         const st = setTimeout.bind(window), si = setInterval.bind(window);
         const ct = clearTimeout.bind(window), ci = clearInterval.bind(window);
         const THRESHOLD = 800, map = new Map();
@@ -287,8 +287,7 @@ try {
                     tmp.innerHTML = iconD.trim();
                     const svgEl = tmp.querySelector('svg');
                     if (svgEl) {
-                        svgEl.style.marginRight = '16px';
-                        svgEl.style.fill = 'currentColor';
+                        svgEl.style.cssText = 'width:24px;height:24px;display:block;fill:currentColor;flex-shrink:0;';
                         newIcon = svgEl;
                     }
                 } else {
@@ -296,18 +295,31 @@ try {
                     svg.setAttribute('viewBox', '0 -960 960 960');
                     svg.setAttribute('width', '24');
                     svg.setAttribute('height', '24');
-                    svg.style.marginRight = '16px';
-                    svg.style.fill = 'currentColor';
+                    svg.setAttribute('focusable', 'false');
+                    svg.setAttribute('aria-hidden', 'true');
+                    svg.style.cssText = 'width:24px;height:24px;display:block;fill:currentColor;flex-shrink:0;';
                     const path = document.createElementNS(ns, 'path');
-                    try { path.setAttribute('d', iconD); } catch (e) { /* ignore bad path */ }
+                    try { path.setAttribute('d', iconD); } catch (e) {}
                     svg.appendChild(path);
                     newIcon = svg;
                 }
 
-                const oldIcon = btn.querySelector('yt-icon, .ytm-settings-item-icon, img, svg');
-                if (oldIcon && oldIcon.parentNode && newIcon) {
-                    try { oldIcon.parentNode.replaceChild(newIcon, oldIcon); } catch (e) { /* ignore replace errors */ }
+                const oldIcon = btn.querySelector('yt-icon, c3-icon, .ytm-settings-item-icon, img, svg');
+                if (oldIcon && newIcon) {
+                    if (oldIcon.parentNode) {
+                        try {
+                            oldIcon.parentNode.replaceChild(newIcon, oldIcon);
+                        } catch (e) {
+                            btn.insertBefore(newIcon, btn.firstChild);
+                        }
+                    } else {
+                        btn.insertBefore(newIcon, btn.firstChild);
+                    }
+                } else if (newIcon && !oldIcon) {
+                    btn.insertBefore(newIcon, btn.firstChild);
                 }
+
+                btn.style.cssText = 'display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:16px!important;padding:12px 16px!important;width:100%!important;box-sizing:border-box!important;';
 
                 btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); clickFn(); }, true);
                 return btn;
@@ -485,6 +497,10 @@ try {
             if (b) b.remove();
         };
 
+        let _incognitoHeaderScheduled = false;
+        const _incognitoHeaderMaxAttempts = 50;
+        let _incognitoHeaderAttempts = 0;
+
         const injectIncognitoToHeader = () => {
             const pc = getPageClass(location.href);
             if (pc !== 'you' && pc !== 'library') return;
@@ -498,6 +514,7 @@ try {
                     .ytFlexibleActionsViewModelActionRow { -webkit-tap-highlight-color: transparent !important; user-select: none !important; outline: none !important; }
                     .ytFlexibleActionsViewModelActionRow * { -webkit-tap-highlight-color: transparent !important; outline: none !important; -webkit-user-drag: none !important; }
                     .ytFlexibleActionsViewModelAction:empty { display: none !important; }
+                    #_lp_incognito_chip { display: flex !important; flex: 0 0 auto !important; order: -999 !important; }
                 `;
                 document.head.appendChild(style);
             }
@@ -509,11 +526,19 @@ try {
                 if (isOn) injectIncognitoFallbackBanner();
                 else removeIncognitoFallbackBanner();
 
-                window._lpIncognitoRetry = (window._lpIncognitoRetry || 0) + 1;
-                if (window._lpIncognitoRetry < 6) st(() => injectIncognitoToHeader(), 350);
+                if (_incognitoHeaderAttempts < _incognitoHeaderMaxAttempts && !_incognitoHeaderScheduled) {
+                    _incognitoHeaderScheduled = true;
+                    _incognitoHeaderAttempts++;
+                    st(() => {
+                        _incognitoHeaderScheduled = false;
+                        injectIncognitoToHeader();
+                    }, 100);
+                }
                 return;
             }
-            window._lpIncognitoRetry = 0;
+
+            _incognitoHeaderAttempts = 0;
+            _incognitoHeaderScheduled = false;
 
             removeIncognitoFallbackBanner();
 
@@ -525,10 +550,15 @@ try {
             }
             actionRow.style.cssText = 'display:flex!important;flex-wrap:nowrap!important;gap:8px!important;padding:0 16px 4px 16px!important;justify-content:flex-start!important;width:max-content!important;';
 
-            const existing = document.getElementById('_lp_incognito_chip');
+            let existing = document.getElementById('_lp_incognito_chip');
             if (existing) {
                 updateIncognitoChip(existing, isOn);
-                if (actionRow.firstChild !== existing) actionRow.prepend(existing);
+                if (actionRow.firstElementChild !== existing) {
+                    try {
+                        actionRow.removeChild(existing);
+                        actionRow.prepend(existing);
+                    } catch (e) {}
+                }
                 return;
             }
 
@@ -539,29 +569,35 @@ try {
                 () => {
                     if (window.android?.toggleIncognito) {
                         android.toggleIncognito();
-                        st(() => injectIncognitoToHeader(), 250);
+                        _incognitoHeaderAttempts = 0;
+                        st(() => injectIncognitoToHeader(), 100);
                     }
                 }
             );
             chip.id = '_lp_incognito_chip';
-            actionRow.prepend(chip);
+            chip.style.flex = '0 0 auto';
+            chip.style.order = '-999';
+            try {
+                actionRow.prepend(chip);
+            } catch (e) {
+                st(() => injectIncognitoToHeader(), 100);
+            }
         };
 
-let incognitoObserver = null;
+        let incognitoObserver = null;
         const startIncognitoObserver = () => {
             if (incognitoObserver) return;
             incognitoObserver = new MutationObserver(() => {
                 const pc = getPageClass(location.href);
                 if (pc !== 'you' && pc !== 'library') return;
-                const actionRow = document.querySelector('yt-flexible-actions-view-model .ytFlexibleActionsViewModelActionRow');
-                if (actionRow && !document.getElementById('_lp_incognito_chip')) {
+                if (!document.getElementById('_lp_incognito_chip')) {
+                    _incognitoHeaderAttempts = 0;
                     injectIncognitoToHeader();
                 }
             });
             incognitoObserver.observe(document.body, { childList: true, subtree: true });
         };
         startIncognitoObserver();
-
 
         const openLiveChat = (vid) => {
             let container = document.getElementById('live_chat_container');
@@ -642,7 +678,16 @@ let incognitoObserver = null;
         const handlePlayerVisibility = () => {
             const url = location.href;
             updatePageClass(url);
-            if (getPageClass(url) === 'watch') android.play(url);
+            const pc = getPageClass(url);
+            if (pc === 'watch') android.play(url);
+            if (pc === 'shorts') {
+                st(() => {
+                    const shortsPage = document.querySelector('ytm-shorts, shorts-video, #shorts-container, ytm-reel-watch-sequence');
+                    if (!shortsPage) {
+                        location.href = url;
+                    }
+                }, 1200);
+            }
         };
 
         window.addEventListener('popstate', handlePlayerVisibility);
@@ -657,8 +702,28 @@ let incognitoObserver = null;
         const resizeObserver = new ResizeObserver(() => {
             if (getPageClass(location.href) !== 'watch') return;
             const p = document.querySelector('#movie_player');
-            if (p) android.setPlayerHeight(p.clientHeight);
+            if (p && p.clientHeight > 10) android.setPlayerHeight(p.clientHeight);
         });
+
+        window.__liteSyncInFlight = false;
+        window.__syncNativeProgress = function(seconds) {
+            const p = document.querySelector('#movie_player');
+            if (!p || window.__liteSyncInFlight) return false;
+            window.__liteSyncInFlight = true;
+            try {
+                p.mute?.();
+                p.seekTo?.(seconds);
+                p.playVideo?.();
+                setTimeout(() => {
+                    p.pauseVideo?.();
+                    window.__liteSyncInFlight = false;
+                }, 2000);
+                return true;
+            } catch (e) {
+                window.__liteSyncInFlight = false;
+                return false;
+            }
+        };
 
         document.addEventListener('animationstart', (e) => {
             if (e.animationName !== 'nodeInserted') return;
@@ -667,19 +732,17 @@ let incognitoObserver = null;
 
             if (node.id === 'movie_player') {
                 if (pc === 'watch') {
-                    node.mute();
-                    node.seekTo(node.getDuration() / 2);
-                    if (window.android?.getResumePosition) {
-                        const resumePos = android.getResumePosition(getVideoId(location.href));
-                        if (resumePos > 0) node.seekTo(resumePos);
-                    }
-                    node.addEventListener('onStateChange', s => { if (s === 1) node.pauseVideo(); });
+                    node.mute?.();
+                    const resumePos = (window.android?.getResumePosition ? android.getResumePosition(getVideoId(location.href)) : 0) / 1000;
+                    node.seekTo?.(resumePos || (node.getDuration() / 2));
+                    node.addEventListener('onStateChange', s => {
+                        if (s === 1 && !window.__liteSyncInFlight) node.pauseVideo?.();
+                    });
                 }
                 resizeObserver.disconnect();
                 resizeObserver.observe(node);
             } else if (pc === 'watch') {
                 if (node.id === 'player' || node.id === 'player-container-id') {
-                    node.style.setProperty('display', 'none', 'important');
                 } else if (node.classList.contains('watch-below-the-player')) {
                     ['touchmove', 'touchend'].forEach(ev => {
                         node.addEventListener(ev, evt => evt.stopPropagation(), { passive: false, capture: true });
@@ -720,7 +783,7 @@ let incognitoObserver = null;
 
             const targetOrder = [];
             if (!isLive) targetOrder.push({ id: 'downloadButton', key: 'download', icon: 'M480-328.46 309.23-499.23l42.16-43.38L450-444v-336h60v336l98.61-98.61 42.16 43.38L480-328.46ZM252.31-180Q222-180 201-201q-21-21-21-51.31v-108.46h60v108.46q0 4.62 3.85 8.46 3.84 3.85 8.46 3.85h455.38q4.62 0 8.46-3.85 3.85-3.84 3.85-8.46v-108.46h60v108.46Q780-222 759-201q-21 21-51.31 21H252.31Z', fn: () => android.download(location.href) });
-            if (isLive) targetOrder.push({ id: 'chatButton', key: 'chat', icon: 'M240-384h336v-72H240v72Zm0-132h480v-72H240v72Zm0-132h480v-72H240v72ZM96-96v-696q0-29.7 21.15-50.85Q138.3-864 168-864h624q29.7 0 50.85 21.15Q864-821.7 864-792v480q0 29.7-21.15 50.85Q821.7-240 792-240H240L96-96Zm114-216h582v-480H168v-522l42-42Zm-42 0v-480 480Z', fn: () => openLiveChat(getVideoId(location.href)) });
+            if (isLive) targetOrder.push({ id: 'chatButton', key: 'chat', icon: 'M240-384h336v-72H240v72Zm0-132h480v-72H240v72Zm0-132h480v-72H240v72ZM96-96v-696q0-29.7 21.15-50.85Q138.3-864 168-864h624q29.7 0 50.85 21.15Q864-792v480q0 29.7-21.15 50.85Q821.7-240 792-240H240L96-96Zm114-216h582v-480H168v-522l42-42Zm-42 0v-480 480Z', fn: () => openLiveChat(getVideoId(location.href)) });
             if (prefs.enable_pip) targetOrder.push({ id: 'pipButton', key: 'pip', icon: 'M720-312v-336H432v336h288ZM240-168q-29.7 0-50.85-21.15Q168-210.3 168-240v-480q0-29.7 21.15-50.85Q210.3-792 240-792h480q29.7 0 50.85 21.15Q792-749.7 792-720v480q0 29.7-21.15 50.85Q749.7-168 720-168H240Zm0-72h480v-480H240v480Zm0 0v-480 480Z', fn: () => android.pip() });
 
             targetOrder.forEach(item => {
@@ -784,16 +847,14 @@ let incognitoObserver = null;
             }
 
             if (pc === 'watch') {
-                const playerEl = document.getElementById('player'), container = document.getElementById('player-container-id'), header = document.querySelector('ytm-header-bar-renderer');
-                if (playerEl) playerEl.style.setProperty('display', 'none', 'important');
-                if (container) container.style.setProperty('display', 'none', 'important');
+                const header = document.querySelector('ytm-header-bar-renderer');
                 if (header) header.style.setProperty('display', 'none', 'important');
                 document.body.style.setProperty('padding-top', '0', 'important');
-                document.querySelector('ytm-feed-filter-chip-bar-renderer')?.style.setProperty('position', 'fixed', 'important');
+
                 const ad = document.querySelector('.ad-showing video');
                 if (ad) ad.currentTime = ad.duration;
                 const mp = document.querySelector('#movie_player');
-                if (mp) { mp.mute?.(); mp.pauseVideo?.(); }
+                if (mp && !window.__liteSyncInFlight) { mp.mute?.(); mp.pauseVideo?.(); }
             } else if (pc === 'shorts') {
                 const header = document.querySelector('ytm-header-bar-renderer, .ytm-header-bar-renderer');
                 if (header) {
@@ -802,6 +863,12 @@ let incognitoObserver = null;
                 document.querySelectorAll('#home-icon, .logo-in-player, [aria-label*="Search"], .topbar-menu-button-avatar-button, .header-bar-search-button, .header-search-button, .search-button').forEach(el => {
                     el.style.setProperty('display', 'none', 'important');
                 });
+                const shortsContainer = document.querySelector('ytm-shorts, shorts-video, #shorts-container, ytm-reel-watch-sequence, ytm-reel-video-renderer');
+                if (shortsContainer) {
+                    shortsContainer.style.removeProperty('visibility');
+                    shortsContainer.style.removeProperty('opacity');
+                    shortsContainer.style.removeProperty('display');
+                }
             } else {
                 const header = document.querySelector('ytm-header-bar-renderer');
                 if (header) {
@@ -843,7 +910,7 @@ let incognitoObserver = null;
             if (prefs.shorts_show_share === false) document.documentElement.classList.add('lp-hide-shorts-share');
             else document.documentElement.classList.remove('lp-hide-shorts-share');
 
-            const settingsBackArrow = document.querySelector('[data-mode="settings"] > .mobile-topbar-back-arrow');
+            const settingsBackArrow = document.querySelector('[data-mode="settings"] > .mobile-topbar-back-arrow, ytm-mobile-topbar-renderer[data-mode="settings"] .mobile-topbar-back-arrow');
             if (settingsBackArrow instanceof Element && settingsBackArrow.dataset.liteGoBackBound !== 'true') {
                 bindListener(settingsBackArrow, 'click', event => {
                     event.preventDefault();
@@ -851,6 +918,26 @@ let incognitoObserver = null;
                     if (window.android?.goBack) android.goBack();
                 }, true);
                 settingsBackArrow.dataset.liteGoBackBound = 'true';
+            }
+
+            const historyBackArrow = document.querySelector('[data-mode="history"] > .mobile-topbar-back-arrow, ytm-mobile-topbar-renderer[data-mode="history"] .mobile-topbar-back-arrow, header.cairo-settings-topbar[data-mode] .mobile-topbar-back-arrow');
+            if (historyBackArrow instanceof Element && historyBackArrow.dataset.liteGoBackBound !== 'true') {
+                bindListener(historyBackArrow, 'click', event => {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                    if (window.android?.goBack) android.goBack();
+                }, true);
+                historyBackArrow.dataset.liteGoBackBound = 'true';
+            }
+
+            const playlistBackArrow = document.querySelector('[data-mode="playlist"] > .mobile-topbar-back-arrow, ytm-mobile-topbar-renderer[data-mode="playlist"] .mobile-topbar-back-arrow');
+            if (playlistBackArrow instanceof Element && playlistBackArrow.dataset.liteGoBackBound !== 'true') {
+                bindListener(playlistBackArrow, 'click', event => {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                    if (window.android?.goBack) android.goBack();
+                }, true);
+                playlistBackArrow.dataset.liteGoBackBound = 'true';
             }
 
             if (pc === 'select_site') {
@@ -863,9 +950,7 @@ let incognitoObserver = null;
                         const extPath = 'M497-120l-33-124q-15-7-30-16t-28-20l-116 50-70-121 98-88q-2-10-3-20t-1-20q0-10 1-20t3-20l-98-88 70-121 116 50q13-11 28-20t30-16l33-124h140l33 124q15 7 30 16t28 20l116-50 70 121-98 88q2 10 3 20t1 20q0 10-1 20t-3 20l98 88-70 121-116-50q-13 11-28 20t-30 16l-33 124H497Zm70-227q55 0 94-39t39-94q0-55-39-94t-94-39q-55 0-94 39t-39 94q0 55 39 94t94 39Z';
 
                         const aboutBtn = createCustomSettingBtn(base, 'aboutButton', 'about', aboutPath, () => android.about());
-
                         const dlBtn = createCustomSettingBtn(base, 'downloadButton', 'downloads', dlPath, () => android.download());
-
                         const extBtn = createCustomSettingBtn(base, 'extensionButton', 'extension', extPath, () => android.extension());
 
                         if (aboutBtn) settings.appendChild(aboutBtn);
