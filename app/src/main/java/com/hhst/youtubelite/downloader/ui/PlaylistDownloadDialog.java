@@ -383,7 +383,7 @@ public final class PlaylistDownloadDialog {
 								: "local-queue") + ":" + now);
 				record.setVideoId(firstItem == null ? "" : firstItem.getVideoId());
 				record.setType(DownloadType.PLAYLIST);
-				record.setStatus(DownloadStatus.QUEUED);
+				record.setStatus(DownloadStatus.RUNNING);
 				record.setProgress(0);
 				record.setFileName(parentTitle);
 				record.setOutputPath("");
@@ -751,6 +751,9 @@ public final class PlaylistDownloadDialog {
 
 	private void startBatchPreparation(@NonNull BatchRequest batchRequest) {
 		if (resourcesDisposed) return;
+		if (downloadService != null) {
+			downloadService.addPlaylistRecord(batchRequest.parent);
+		}
 		batchReq = null;
 		batchRunning = true;
 		batchCanceled = false;

@@ -11,7 +11,9 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -60,6 +62,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.inject.Inject;
 
@@ -83,6 +87,8 @@ public class DownloadActivity extends AppCompatActivity {
 	private MaterialToolbar toolbar;
 	private MaterialCheckBox selectAllCheckbox;
 	private View selectionHeader;
+	private final ExecutorService diffExecutor = Executors.newSingleThreadExecutor();
+	private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
 	private final Set<String> selectedIds = new HashSet<>();
 
@@ -138,17 +144,27 @@ public class DownloadActivity extends AppCompatActivity {
 		if (selectAllCheckbox != null) {
 			selectAllCheckbox.setOnClickListener(v -> {
 				if (selectAllCheckbox.isChecked()) {
-					List<DownloadRecord> currentItems = getCurrentlyDisplayedRecords();
-					for (DownloadRecord r : currentItems) selectedIds.add(r.getTaskId());
+					loadRecordsForSelection();
 				} else {
 					selectedIds.clear();
+					updateUIState();
+					adapter.refreshCurrentList();
 				}
-				updateUIState();
-				adapter.refreshCurrentList();
 			});
 		}
 
 		updateUIState();
+	}
+
+	private void loadRecordsForSelection() {
+		diffExecutor.execute(() -> {
+			List<DownloadRecord> currentItems = getCurrentlyDisplayedRecords();
+			mainHandler.post(() -> {
+				for (DownloadRecord r : currentItems) selectedIds.add(r.getTaskId());
+				updateUIState();
+				adapter.refreshCurrentList();
+			});
+		});
 	}
 
 	private List<DownloadRecord> getCurrentlyDisplayedRecords() {
@@ -197,7 +213,7 @@ public class DownloadActivity extends AppCompatActivity {
 					if (r.getType() == DownloadType.PLAYLIST) {
 						Integer countVal = childrenCounts.get(r.getTaskId());
 						int count = (countVal != null) ? countVal : 0;
-						if (count == 0) {
+						if (count == 0 && r.getStatus() != DownloadStatus.RUNNING && r.getStatus() != DownloadStatus.QUEUED && r.getStatus() != DownloadStatus.MERGING) {
 							emptyPlaylists.add(r.getTaskId());
 							continue;
 						}
@@ -237,8 +253,10 @@ public class DownloadActivity extends AppCompatActivity {
 			toolbar.setNavigationIcon(R.drawable.ic_close);
 			if (selectionHeader != null) {
 				selectionHeader.setVisibility(View.VISIBLE);
-				List<DownloadRecord> currentItems = getCurrentlyDisplayedRecords();
-				selectAllCheckbox.setChecked(!currentItems.isEmpty() && selectedIds.size() >= currentItems.size());
+				diffExecutor.execute(() -> {
+					List<DownloadRecord> currentItems = getCurrentlyDisplayedRecords();
+					mainHandler.post(() -> selectAllCheckbox.setChecked(!currentItems.isEmpty() && selectedIds.size() >= currentItems.size()));
+				});
 			}
 		}
 		invalidateOptionsMenu();
@@ -278,7 +296,10 @@ public class DownloadActivity extends AppCompatActivity {
 		} else if (id == R.id.action_resume_all) {
 			performBatch(DownloadStatus.PAUSED, tid -> downloadService.resume(tid));
 		} else if (id == R.id.action_delete_all) {
-			confirmDelete(getCurrentlyDisplayedRecords(), true);
+			diffExecutor.execute(() -> {
+				List<DownloadRecord> records = getCurrentlyDisplayedRecords();
+				mainHandler.post(() -> confirmDelete(records, true));
+			});
 		} else if (id == R.id.action_pause_selected) {
 			for (String tid : selectedIds) downloadService.pause(tid);
 			clearSelection();
@@ -303,13 +324,17 @@ public class DownloadActivity extends AppCompatActivity {
 
 	private void performBatch(DownloadStatus filter, java.util.function.Consumer<String> action) {
 		if (isBound && downloadService != null) {
-			List<DownloadRecord> list = getCurrentlyDisplayedRecords();
-			for (int i = list.size() - 1; i >= 0; i--) {
-				DownloadRecord r = list.get(i);
-				if (r.getStatus() == filter || (filter == DownloadStatus.RUNNING && r.getStatus() == DownloadStatus.QUEUED)) {
-					action.accept(r.getTaskId());
-				}
-			}
+			diffExecutor.execute(() -> {
+				List<DownloadRecord> list = getCurrentlyDisplayedRecords();
+				mainHandler.post(() -> {
+					for (int i = list.size() - 1; i >= 0; i--) {
+						DownloadRecord r = list.get(i);
+						if (r.getStatus() == filter || (filter == DownloadStatus.RUNNING && r.getStatus() == DownloadStatus.QUEUED)) {
+							action.accept(r.getTaskId());
+						}
+					}
+				});
+			});
 		}
 	}
 
@@ -407,20 +432,20 @@ public class DownloadActivity extends AppCompatActivity {
 		@Override
 		public void onDeleteFolder(DownloadRecord folderRecord) {
 			new MaterialAlertDialogBuilder(DownloadActivity.this).setTitle("Delete Folder").setMessage("Delete folder content?")
-							.setPositiveButton("Delete", (d, w) -> {
-								List<DownloadRecord> all = historyRepository.getAllSorted();
-								List<String> idsToRemove = new ArrayList<>();
-								for (DownloadRecord r : all) {
-									if (Objects.equals(r.getParentId(), folderRecord.getTaskId())) {
-										if (isBound && downloadService != null) downloadService.cancel(r.getTaskId());
-										DownloadStorageUtils.delete(DownloadActivity.this, r.getOutputPath());
-										idsToRemove.add(r.getTaskId());
-									}
-								}
-								idsToRemove.add(folderRecord.getTaskId());
-								historyRepository.removeBatch(idsToRemove);
-								loadRecords();
-							}).setNegativeButton("Cancel", null).show();
+							.setPositiveButton("Delete", (d, w) -> diffExecutor.execute(() -> {
+                                List<DownloadRecord> all = historyRepository.getAllSorted();
+                                List<String> idsToRemove = new ArrayList<>();
+                                for (DownloadRecord r : all) {
+                                    if (Objects.equals(r.getParentId(), folderRecord.getTaskId())) {
+                                        if (isBound && downloadService != null) downloadService.cancel(r.getTaskId());
+                                        DownloadStorageUtils.delete(DownloadActivity.this, r.getOutputPath());
+                                        idsToRemove.add(r.getTaskId());
+                                    }
+                                }
+                                idsToRemove.add(folderRecord.getTaskId());
+                                historyRepository.removeBatch(idsToRemove);
+                                mainHandler.post(DownloadActivity.this::loadRecords);
+                            })).setNegativeButton("Cancel", null).show();
 		}
 	};
 
@@ -439,16 +464,16 @@ public class DownloadActivity extends AppCompatActivity {
 
 	private void showClearHistoryDialog() {
 		new MaterialAlertDialogBuilder(this).setTitle("Clear Finished").setMessage("Remove finished items from list?")
-						.setPositiveButton("Clear", (d, w) -> {
-							List<String> toRemove = new ArrayList<>();
-							for (DownloadRecord r : historyRepository.getAllSorted()) {
-								DownloadStatus s = r.getStatus();
-								if (s == DownloadStatus.COMPLETED || s == DownloadStatus.FAILED || s == DownloadStatus.CANCELED)
-									toRemove.add(r.getTaskId());
-							}
-							historyRepository.removeBatch(toRemove);
-							loadRecords();
-						}).setNegativeButton("Cancel", null).show();
+						.setPositiveButton("Clear", (d, w) -> diffExecutor.execute(() -> {
+                            List<String> toRemove = new ArrayList<>();
+                            for (DownloadRecord r : historyRepository.getAllSorted()) {
+                                DownloadStatus s = r.getStatus();
+                                if (s == DownloadStatus.COMPLETED || s == DownloadStatus.FAILED || s == DownloadStatus.CANCELED)
+                                    toRemove.add(r.getTaskId());
+                            }
+                            historyRepository.removeBatch(toRemove);
+                            mainHandler.post(DownloadActivity.this::loadRecords);
+                        })).setNegativeButton("Cancel", null).show();
 	}
 
 	private void openRecordFile(DownloadRecord record) {
@@ -511,9 +536,17 @@ public class DownloadActivity extends AppCompatActivity {
 		}
 	}
 
+	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+		diffExecutor.shutdownNow();
+	}
+
 	private void loadRecords() {
-		adapter.updateItems(getCurrentlyDisplayedRecords());
-		findViewById(R.id.emptyView).setVisibility(adapter.getItemCount() == 0 ? View.VISIBLE : View.GONE);
+		diffExecutor.execute(() -> {
+			List<DownloadRecord> list = getCurrentlyDisplayedRecords();
+			adapter.updateItemsAsync(list, () -> findViewById(R.id.emptyView).setVisibility(adapter.getItemCount() == 0 ? View.VISIBLE : View.GONE));
+		});
 	}
 
 	private final BroadcastReceiver receiver = new BroadcastReceiver() {
@@ -550,13 +583,14 @@ public class DownloadActivity extends AppCompatActivity {
 		private final List<Object> displayItems = new ArrayList<>();
 		private final Actions actions;
 		private final boolean useGrouping;
+		private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
 		DownloadRecordsAdapter(Actions a, boolean g) {
 			this.actions = a;
 			this.useGrouping = g;
 		}
 
-		void updateItems(List<DownloadRecord> records) {
+		void updateItemsAsync(List<DownloadRecord> records, Runnable onDone) {
 			List<Object> newList = new ArrayList<>();
 			if (!useGrouping) {
 				newList.addAll(records);
@@ -570,45 +604,36 @@ public class DownloadActivity extends AppCompatActivity {
 				}
 			}
 
+			List<Object> oldList = new ArrayList<>(displayItems);
 			DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new DiffUtil.Callback() {
 				@Override
-				public int getOldListSize() {
-					return displayItems.size();
-				}
-
+				public int getOldListSize() { return oldList.size(); }
 				@Override
-				public int getNewListSize() {
-					return newList.size();
-				}
-
+				public int getNewListSize() { return newList.size(); }
 				@Override
-				public boolean areItemsTheSame(int oldPos, int newPos) {
-					Object oldItem = displayItems.get(oldPos);
-					Object newItem = newList.get(newPos);
-					if (oldItem instanceof DownloadRecord or && newItem instanceof DownloadRecord nr)
-						return or.getTaskId().equals(nr.getTaskId());
-					if (oldItem instanceof FolderHeader ofh && newItem instanceof FolderHeader nfh)
-						return ofh.record.getTaskId().equals(nfh.record.getTaskId());
+				public boolean areItemsTheSame(int op, int np) {
+					Object o = oldList.get(op), n = newList.get(np);
+					if (o instanceof DownloadRecord or && n instanceof DownloadRecord nr) return or.getTaskId().equals(nr.getTaskId());
+					if (o instanceof FolderHeader of && n instanceof FolderHeader nf) return of.record.getTaskId().equals(nf.record.getTaskId());
 					return false;
 				}
-
 				@Override
-				public boolean areContentsTheSame(int oldPos, int newPos) {
-					Object oldItem = displayItems.get(oldPos);
-					Object newItem = newList.get(newPos);
-					if (oldItem instanceof DownloadRecord or && newItem instanceof DownloadRecord nr)
+				public boolean areContentsTheSame(int op, int np) {
+					Object o = oldList.get(op), n = newList.get(np);
+					if (o instanceof DownloadRecord or && n instanceof DownloadRecord nr) 
 						return Objects.equals(or, nr) && actions.isSelected(or) == actions.isSelected(nr);
-					if (oldItem instanceof FolderHeader ofh && newItem instanceof FolderHeader nfh) {
-						return ofh.record.getUpdatedAt() == nfh.record.getUpdatedAt() 
-										&& ofh.record.getItemCount() == nfh.record.getItemCount();
-					}
+					if (o instanceof FolderHeader of && n instanceof FolderHeader nf)
+						return of.record.getUpdatedAt() == nf.record.getUpdatedAt() && of.record.getItemCount() == nf.record.getItemCount();
 					return false;
 				}
 			});
 
-			displayItems.clear();
-			displayItems.addAll(newList);
-			diffResult.dispatchUpdatesTo(this);
+			mainHandler.post(() -> {
+				displayItems.clear();
+				displayItems.addAll(newList);
+				diffResult.dispatchUpdatesTo(this);
+				if (onDone != null) onDone.run();
+			});
 		}
 
 		@SuppressLint("NotifyDataSetChanged")
@@ -642,10 +667,7 @@ public class DownloadActivity extends AppCompatActivity {
 
 		static class FolderHeader {
 			DownloadRecord record;
-
-			FolderHeader(DownloadRecord r) {
-				record = r;
-			}
+			FolderHeader(DownloadRecord r) { record = r; }
 		}
 
 		static class FolderVH extends RecyclerView.ViewHolder {
@@ -757,32 +779,18 @@ public class DownloadActivity extends AppCompatActivity {
 					m.add(0, 5, 3, "Copy Video ID");
 					p.setOnMenuItemClickListener(item -> {
 						switch (item.getItemId()) {
-							case 0:
-								a.onOpen(currentRecord);
-								break;
-							case 1:
-								a.onPause(currentRecord);
-								break;
-							case 2:
-								a.onResume(currentRecord);
-								break;
-							case 3:
-								a.onCancel(currentRecord);
-								break;
-							case 4:
-								a.onDelete(currentRecord);
-								break;
+							case 0: a.onOpen(currentRecord); break;
+							case 1: a.onPause(currentRecord); break;
+							case 2: a.onResume(currentRecord); break;
+							case 3: a.onCancel(currentRecord); break;
+							case 4: a.onDelete(currentRecord); break;
 							case 5:
 								ClipboardManager cm = (ClipboardManager) v.getContext().getSystemService(Context.CLIPBOARD_SERVICE);
 								cm.setPrimaryClip(ClipData.newPlainText("vid", getShortVideoId(currentRecord.getVideoId())));
 								Toast.makeText(v.getContext(), "ID Copied", Toast.LENGTH_SHORT).show();
 								break;
-							case 6:
-								a.onRedownload(currentRecord);
-								break;
-							case 7:
-								a.onRetry(currentRecord);
-								break;
+							case 6: a.onRedownload(currentRecord); break;
+							case 7: a.onRetry(currentRecord); break;
 						}
 						return true;
 					});

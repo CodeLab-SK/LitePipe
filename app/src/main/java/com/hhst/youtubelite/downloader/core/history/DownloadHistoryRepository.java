@@ -1,5 +1,8 @@
 package com.hhst.youtubelite.downloader.core.history;
 
+import android.os.Handler;
+import android.os.Looper;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -11,10 +14,9 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.HashSet;
+import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -23,13 +25,18 @@ import javax.inject.Singleton;
 public final class DownloadHistoryRepository {
 	public static final String KEY_DOWNLOAD_HISTORY = "download_history";
 
-	private static final Type LIST_TYPE = new TypeToken<List<DownloadRecord>>() {
-	}.getType();
+	private static final Type LIST_TYPE = new TypeToken<List<DownloadRecord>>() {}.getType();
 
 	@NonNull
 	private final MMKV mmkv;
 	@NonNull
 	private final Gson gson;
+
+	private final Map<String, DownloadRecord> cache = new LinkedHashMap<>();
+	private boolean initialized = false;
+	private final Handler mainHandler = new Handler(Looper.getMainLooper());
+	private boolean persistPending = false;
+	private final Runnable persistRunnable = this::persistInternal;
 
 	@Inject
 	public DownloadHistoryRepository(@NonNull final MMKV mmkv, @NonNull final Gson gson) {
@@ -39,7 +46,8 @@ public final class DownloadHistoryRepository {
 
 	@NonNull
 	public synchronized List<DownloadRecord> getAllSorted() {
-		final List<DownloadRecord> list = readAllInternal();
+		ensureInitialized();
+		final List<DownloadRecord> list = new ArrayList<>(cache.values());
 		list.sort(Comparator.comparingLong(DownloadRecord::getCreatedAt).reversed());
 		return list;
 	}
@@ -47,57 +55,81 @@ public final class DownloadHistoryRepository {
 	@Nullable
 	public synchronized DownloadRecord findByTaskId(@Nullable final String taskId) {
 		if (taskId == null) return null;
-		for (final DownloadRecord r : readAllInternal()) {
-			if (Objects.equals(r.getTaskId(), taskId)) return r;
-		}
-		return null;
+		ensureInitialized();
+		return cache.get(taskId);
 	}
 
 	public synchronized void upsert(@NonNull final DownloadRecord record) {
-		final List<DownloadRecord> list = readAllInternal();
-		boolean updated = false;
-		for (int i = 0; i < list.size(); i++) {
-			if (Objects.equals(list.get(i).getTaskId(), record.getTaskId())) {
-				list.set(i, record);
-				updated = true;
-				break;
-			}
+		ensureInitialized();
+		cache.put(record.getTaskId(), record);
+		
+		if (record.getStatus() == DownloadStatus.RUNNING) {
+			schedulePersist();
+		} else {
+			persistInternal();
 		}
-		if (!updated) list.add(record);
-		writeAllInternal(list);
 	}
 
 	public synchronized void remove(@NonNull final String taskId) {
-		final List<DownloadRecord> list = readAllInternal();
-		list.removeIf(r -> Objects.equals(r.getTaskId(), taskId));
-		writeAllInternal(list);
+		ensureInitialized();
+		if (cache.remove(taskId) != null) {
+			persistInternal();
+		}
 	}
 
 	public synchronized void removeBatch(@NonNull final Collection<String> taskIds) {
 		if (taskIds.isEmpty()) return;
-		final List<DownloadRecord> list = readAllInternal();
-		final Set<String> idSet = new HashSet<>(taskIds);
-		list.removeIf(r -> idSet.contains(r.getTaskId()));
-		writeAllInternal(list);
-	}
-
-	public synchronized void clear() {
-		mmkv.removeValueForKey(KEY_DOWNLOAD_HISTORY);
-	}
-
-	@NonNull
-	private List<DownloadRecord> readAllInternal() {
-		final String json = mmkv.decodeString(KEY_DOWNLOAD_HISTORY, null);
-		if (json == null || json.isBlank()) return new ArrayList<>();
-		try {
-			final List<DownloadRecord> list = gson.fromJson(json, LIST_TYPE);
-			return list != null ? list : new ArrayList<>();
-		} catch (Exception ignored) {
-			return new ArrayList<>();
+		ensureInitialized();
+		boolean removed = false;
+		for (String id : taskIds) {
+			if (cache.remove(id) != null) {
+				removed = true;
+			}
+		}
+		if (removed) {
+			persistInternal();
 		}
 	}
 
-	private void writeAllInternal(@NonNull final List<DownloadRecord> list) {
-		mmkv.encode(KEY_DOWNLOAD_HISTORY, gson.toJson(list, LIST_TYPE));
+	public synchronized void clear() {
+		synchronized (this) {
+			cache.clear();
+			mainHandler.removeCallbacks(persistRunnable);
+			persistPending = false;
+		}
+		mmkv.removeValueForKey(KEY_DOWNLOAD_HISTORY);
+	}
+
+	private void ensureInitialized() {
+		if (!initialized) {
+			final String json = mmkv.decodeString(KEY_DOWNLOAD_HISTORY, null);
+			if (json != null && !json.isBlank()) {
+				try {
+					final List<DownloadRecord> list = gson.fromJson(json, LIST_TYPE);
+					if (list != null) {
+						for (DownloadRecord r : list) {
+                            cache.put(r.getTaskId(), r);
+                        }
+					}
+				} catch (Exception ignored) {
+				}
+			}
+			initialized = true;
+		}
+	}
+
+	private void schedulePersist() {
+		if (persistPending) return;
+		persistPending = true;
+		mainHandler.postDelayed(persistRunnable, 5000);
+	}
+
+	private void persistInternal() {
+		synchronized (this) {
+			persistPending = false;
+			mainHandler.removeCallbacks(persistRunnable);
+			final List<DownloadRecord> list = new ArrayList<>(cache.values());
+			mmkv.encode(KEY_DOWNLOAD_HISTORY, gson.toJson(list, LIST_TYPE));
+		}
 	}
 }
