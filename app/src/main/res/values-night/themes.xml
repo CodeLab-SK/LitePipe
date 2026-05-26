@@ -68,6 +68,11 @@
         <item name="cornerSize">28dp</item>
     </style>
 
+    <style name="ShapeAppearance.YoutubeLite.Logo" parent="ShapeAppearance.Material3.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">24dp</item>
+    </style>
+
     <style name="AppCard" parent="Widget.Material3.CardView.Elevated">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>

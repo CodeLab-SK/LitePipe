@@ -10,12 +10,10 @@
         <item name="colorSecondaryContainer">?attr/colorSurfaceVariant</item>
         <item name="colorOnSecondaryContainer">?attr/colorOnSurfaceVariant</item>
 
-
         <item name="colorTertiary">?attr/colorSecondary</item>
         <item name="colorOnTertiary">?attr/colorOnSecondary</item>
         <item name="colorTertiaryContainer">?attr/colorSecondaryContainer</item>
         <item name="colorOnTertiaryContainer">?attr/colorOnSecondaryContainer</item>
-        <item name="tint">@android:color/transparent</item>
 
         <item name="android:windowBackground">?attr/colorSurface</item>
         <item name="android:colorBackground">?attr/colorSurface</item>
@@ -65,7 +63,6 @@
         <item name="elevationOverlayEnabled">false</item>
         <item name="android:windowBackground">@color/surface</item>
         <item name="shapeAppearanceOverlay">@style/ShapeAppearance.YoutubeLite.Dialog</item>
-        <item name="tint">@android:color/transparent</item>
     </style>
 
     <style name="Theme.YoutubeLite.BottomSheetDialog" parent="ThemeOverlay.Material3.BottomSheetDialog">
@@ -73,7 +70,6 @@
         <item name="colorOnSurface">@color/on_surface</item>
         <item name="elevationOverlayEnabled">false</item>
         <item name="bottomSheetStyle">@style/Widget.YoutubeLite.BottomSheet</item>
-        <item name="tint">@android:color/transparent</item>
     </style>
 
     <style name="Widget.YoutubeLite.BottomSheet" parent="Widget.Material3.BottomSheet.Modal">
@@ -93,6 +89,11 @@
     <style name="ShapeAppearance.YoutubeLite.Dialog" parent="ShapeAppearance.Material3.MediumComponent">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">28dp</item>
+    </style>
+
+    <style name="ShapeAppearance.YoutubeLite.Logo" parent="ShapeAppearance.Material3.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">24dp</item>
     </style>
 
     <style name="AppCard" parent="Widget.Material3.CardView.Elevated">

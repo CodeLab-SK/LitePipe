@@ -94,7 +94,7 @@ public class AboutActivity extends AppCompatActivity {
 		try {
 			PackageManager pm = getPackageManager();
 			PackageInfo pi = pm.getPackageInfo(getPackageName(), 0);
-			iconView.setImageDrawable(pi.applicationInfo.loadIcon(pm));
+			iconView.setImageResource(R.drawable.app_logo);
 			nameView.setText(R.string.app_name);
 			versionView.setText(getString(R.string.version, pi.versionName));
 		} catch (Exception e) {

@@ -17,15 +17,16 @@
         app:layout_constraintStart_toStartOf="@+id/logo"
         app:layout_constraintTop_toTopOf="@+id/logo" />
 
-    <ImageView
+    <com.google.android.material.imageview.ShapeableImageView
         android:id="@+id/logo"
         android:layout_width="108dp"
         android:layout_height="108dp"
         android:alpha="0"
         android:contentDescription="@null"
         android:elevation="4dp"
-        android:scaleType="fitCenter"
-        android:src="@mipmap/ic_launcher"
+        android:scaleType="centerCrop"
+        android:src="@drawable/app_logo"
+        app:shapeAppearanceOverlay="@style/ShapeAppearance.YoutubeLite.Logo"
         app:layout_constraintBottom_toTopOf="@+id/app_name"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
