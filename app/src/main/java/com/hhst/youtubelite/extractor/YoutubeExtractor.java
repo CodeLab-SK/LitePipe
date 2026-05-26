@@ -135,7 +135,7 @@ public final class YoutubeExtractor {
 	public static String getVideoId(@Nullable String url) {
 		if (url == null) return null;
 
-		Pattern compiledPattern = Pattern.compile("(?:v=|=v/|/v/|/u/\\\\w/|embed/|watch\\\\?v=|shorts/|youtu.be/)([a-zA-Z0-9_-]{11})");
+		Pattern compiledPattern = Pattern.compile("(?:v=|=v/|/v/|/u/\\w/|embed/|watch\\?v=|shorts/|live/|youtu.be/)([a-zA-Z0-9_-]{11})");
 		Matcher matcher = compiledPattern.matcher(url);
 
 		if (matcher.find()) {

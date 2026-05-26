@@ -43,6 +43,7 @@ public final class ErrorDialog {
 
 	public static void show(Context context, String title, String stack, DialogInterface.OnDismissListener onDismissListener) {
 		String displayTitle = (title == null) ? context.getString(R.string.error_title) : title;
+		Log.e(TAG, "Error: " + displayTitle + "\n" + stack);
 
 		if (context instanceof Activity && DeviceUtils.isInPictureInPictureMode((Activity) context))
 			return;

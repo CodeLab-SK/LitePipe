@@ -2,6 +2,7 @@ package com.hhst.youtubelite.ui;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.PendingIntent;
 import android.app.PictureInPictureParams;
 import android.app.RemoteAction;
@@ -12,26 +13,20 @@ import android.content.pm.PackageManager;
 import android.content.pm.verify.domain.DomainVerificationManager;
 import android.content.pm.verify.domain.DomainVerificationUserState;
 import android.content.res.Configuration;
-import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.drawable.Icon;
-import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
-import android.provider.OpenableColumns;
 import android.support.v4.media.session.PlaybackStateCompat;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
-import android.view.WindowManager;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -53,21 +48,17 @@ import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.hhst.youtubelite.Constant;
 import com.hhst.youtubelite.IncognitoManager;
+import com.hhst.youtubelite.LinkDetection;
 import com.hhst.youtubelite.PlaybackService;
 import com.hhst.youtubelite.R;
 import com.hhst.youtubelite.browser.TabManager;
 import com.hhst.youtubelite.browser.YoutubeWebview;
 import com.hhst.youtubelite.downloader.core.history.DownloadHistoryRepository;
-import com.hhst.youtubelite.downloader.core.history.DownloadRecord;
-import com.hhst.youtubelite.downloader.core.history.DownloadType;
-import com.hhst.youtubelite.downloader.core.history.DownloadStatus;
 import com.hhst.youtubelite.downloader.service.DownloadService;
 import com.hhst.youtubelite.downloader.ui.DownloadActivity;
 import com.hhst.youtubelite.downloader.ui.DownloadDialog;
@@ -110,7 +101,7 @@ import dagger.hilt.android.AndroidEntryPoint;
 
 @AndroidEntryPoint
 @UnstableApi
-public final class MainActivity extends AppCompatActivity {
+public final class MainActivity extends AppCompatActivity implements LinkDetection.Listener {
 	private static final String YOUTUBE_WWW_HOST = "www.youtube.com";
 	private static final int REQUEST_NOTIFICATION_CODE = 100;
 	private static final int DOUBLE_TAP_EXIT_INTERVAL_MS = 2_000;
@@ -126,6 +117,7 @@ public final class MainActivity extends AppCompatActivity {
 	@Inject QueueRepository queueRepository;
 	@Inject QueueWarmer queueWarmer;
 	@Inject DownloadHistoryRepository historyRepository;
+	@Inject LinkDetection linkDetection;
 
 	@Nullable private PlaybackService playbackService;
 	@Nullable private OnBackPressedCallback appBackCallback;
@@ -138,7 +130,6 @@ public final class MainActivity extends AppCompatActivity {
 	private int navigationBarHeight = 0;
 	private long lastBackTime = 0;
 	private boolean suppressNextUserLeaveHintPictureInPicture;
-    private boolean isActivityVisible = false;
 
 	private AlertDialog activeVideoOptionsDialog;
 
@@ -148,18 +139,9 @@ public final class MainActivity extends AppCompatActivity {
 		@Override public void onServiceConnected(ComponentName n, IBinder s) {
 			playbackService = ((PlaybackService.PlaybackBinder) s).getService();
 			if (player != null) player.attachPlaybackService(playbackService);
-			if (playbackService != null) {
-				playbackService.setClipboardListener(url -> {
-					if (isActivityVisible) {
-						fetchTitleAndShowPopup(url);
-						return true;
-					}
-					return false;
-				});
-			}
 		}
-		@Override public void onServiceDisconnected(ComponentName n) { 
-			playbackService = null; 
+		@Override public void onServiceDisconnected(ComponentName n) {
+			playbackService = null;
 		}
 	};
 
@@ -213,13 +195,13 @@ public final class MainActivity extends AppCompatActivity {
 		mainView.post(() -> handleIntent(getIntent()));
 
 		IncognitoManager.getInstance().addListener(incognitoListener);
-        IncognitoManager.getInstance().resetOnStart(() -> {
-            applyIncognitoUi(false, false);
-            runOnUiThread(() -> {
-                YoutubeWebview web = getWebview();
-                if (web != null) web.reload();
-            });
-        });
+		IncognitoManager.getInstance().resetOnStart(() -> {
+			applyIncognitoUi(false, false);
+			runOnUiThread(() -> {
+				YoutubeWebview web = getWebview();
+				if (web != null) web.reload();
+			});
+		});
 	}
 
 	private void applyIncognitoUi(boolean isIncognito, boolean showToast) {
@@ -301,10 +283,10 @@ public final class MainActivity extends AppCompatActivity {
 		nextAction.setEnabled(nav.isNextActionEnabled());
 		actions.add(nextAction);
 
-        setPictureInPictureParams(new PictureInPictureParams.Builder()
-                .setActions(actions)
-                .build());
-    }
+		setPictureInPictureParams(new PictureInPictureParams.Builder()
+				.setActions(actions)
+				.build());
+	}
 
 	@Override
 	public void onConfigurationChanged(@NonNull final Configuration newConfig) {
@@ -529,7 +511,7 @@ public final class MainActivity extends AppCompatActivity {
 	}
 
 	private void syncQueueExpandedUI(@NonNull final RecyclerView recyclerView,
-								@NonNull final TextView emptyView) {
+									 @NonNull final TextView emptyView) {
 		if (queueAdapter == null) return;
 		final List<QueueItem> items = queueRepository.getItems();
 		final String loadedVideoId = player.getLoadedVideoId();
@@ -655,7 +637,7 @@ public final class MainActivity extends AppCompatActivity {
 	@Override
 	protected void onResume() {
 		super.onResume();
-		isActivityVisible = true;
+		linkDetection.setAppVisible(true, this);
 		updateNavBarVisibility();
 		updateQueueUI();
 		if (player != null) player.refreshInternalButtonVisibility();
@@ -663,6 +645,7 @@ public final class MainActivity extends AppCompatActivity {
 		if (player != null && shouldRestoreMiniPlayerOnResume(player.isInAppMiniPlayer(), DeviceUtils.isInPictureInPictureMode(this))) {
 			player.restoreInAppMiniPlayerUiIfNeeded();
 		}
+		linkDetection.checkClipboard();
 	}
 
 	@Override
@@ -692,36 +675,15 @@ public final class MainActivity extends AppCompatActivity {
 			if (url != null) tabManager.openTab(url, UrlUtils.getPageClass(url));
 			return;
 		}
-		if ("SHOW_CLIPBOARD_DIALOG".equals(action)) {
-			String url = intent.getStringExtra("url");
-			if (url != null) fetchTitleAndShowPopup(url);
-			return;
-		}
-		if ("PLAY_LOCAL_VIDEO".equals(action)) {
-			Uri uri = intent.getParcelableExtra("uri");
-			String title = intent.getStringExtra("title");
-			String videoId = intent.getStringExtra("video_id");
-			if (uri != null) {
-                if (title == null) title = fetchLocalTitle(uri, false);
-                List<DownloadRecord> subs = null;
-                if (videoId != null) {
-                    subs = new ArrayList<>();
-                    for (DownloadRecord r : historyRepository.getAllSorted()) {
-                        if (Objects.equals(getShortVideoId(r.getVideoId()), getShortVideoId(videoId)) && r.getType() == DownloadType.SUBTITLE && r.getStatus() == DownloadStatus.COMPLETED) {
-                            subs.add(r);
-                        }
-                    }
-                }
-                player.playLocal(uri, title, subs);
-            }
-			return;
-		}
 
 		if (Intent.ACTION_VIEW.equals(action) && intent.getData() != null) {
 			Uri data = intent.getData();
 			String type = intent.getType();
 			if (type != null && type.startsWith("video/")) {
-				player.playLocal(data, fetchLocalTitle(data, false), null);
+				Intent i = new Intent(this, OfflinePlayerActivity.class);
+				i.setAction(Intent.ACTION_VIEW);
+				i.setDataAndType(data, type);
+				startActivity(i);
 				return;
 			}
 			String url = data.toString();
@@ -748,62 +710,29 @@ public final class MainActivity extends AppCompatActivity {
 			Uri uri = data.getData();
 			if (uri != null) {
 				getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
-				String label = fetchLocalTitle(uri, true);
-				player.addLocalSubtitle(uri, label);
 			}
 		}
 	}
 
-    public void showMediaItemMenuDialog(@NonNull String payloadJson) {
-        try {
-            JsonObject payload = new Gson().fromJson(payloadJson, JsonObject.class);
-            if (payload == null || !payload.has("url")) return;
-            showVideoOptionsDialog(payload.get("url").getAsString());
-        } catch (Exception ignored) {}
-    }
-
-    private String fetchLocalTitle(Uri uri, boolean keepExtension) {
-        String name = null;
-        if ("content".equals(uri.getScheme())) {
-            try (Cursor cursor = getContentResolver().query(uri, null, null, null, null)) {
-                if (cursor != null && cursor.moveToFirst()) {
-                    int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
-                    if (nameIndex != -1) {
-                        name = cursor.getString(nameIndex);
-                    }
-                }
-            } catch (Exception ignored) {}
-        }
-        if (name == null || name.isEmpty()) {
-            name = uri.getLastPathSegment();
-        }
-
-        if (name == null || name.isEmpty()) {
-            try (MediaMetadataRetriever retriever = new MediaMetadataRetriever()) {
-                retriever.setDataSource(this, uri);
-                name = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
-            } catch (Exception ignored) {}
-        }
-
-        if (name != null) {
-            if (keepExtension) return name;
-            int dot = name.lastIndexOf('.');
-            if (dot > 0) {
-                return name.substring(0, dot);
-            }
-            return name;
-        }
-        return "Video";
-    }
+	public void showMediaItemMenuDialog(@NonNull String payloadJson) {
+		try {
+			JsonObject payload = new JsonObject();
+			try {
+				payload = new Gson().fromJson(payloadJson, JsonObject.class);
+			} catch (Exception e) {
+			}
+			if (payload == null || !payload.has("url")) return;
+			showVideoOptionsDialog(payload.get("url").getAsString());
+		} catch (Exception ignored) {}
+	}
 
 	private String extractUrlFromText(String text) {
-        if (text == null) return null;
-		Matcher m = Pattern.compile("https?://[\\w./?=&%#-]+", Pattern.CASE_INSENSITIVE).matcher(text);
+		if (text == null) return null;
+		Matcher m = Pattern.compile("https?://(?:www\\.|m\\.)?(?:youtube\\.com|youtu\\.be)/(?:watch\\?v=|v/|embed/|shorts/|playlist\\?list=)?([a-zA-Z0-9_-]+)", Pattern.CASE_INSENSITIVE).matcher(text);
 		if (m.find()) {
-            String url = m.group();
-            if (url.contains("youtube.com") || url.contains("youtu.be")) return url;
-        }
-        return null;
+			return m.group();
+		}
+		return null;
 	}
 
 	public void showVideoOptionsDialog(String url) {
@@ -825,7 +754,7 @@ public final class MainActivity extends AppCompatActivity {
 
 		TextView dialogTitle = view.findViewById(R.id.dialog_title);
 		if (dialogTitle != null) {
-            dialogTitle.setText(R.string.video_options);
+			dialogTitle.setText(R.string.video_options);
 		}
 
 		View optionEnqueue = view.findViewById(R.id.option_enqueue);
@@ -1035,88 +964,32 @@ public final class MainActivity extends AppCompatActivity {
 	}
 
 	private void checkOpenByDefault() {
-        MMKV kv = MMKV.defaultMMKV();
-        if (kv.getBoolean("asked_open_by_default", false)) return;
+		MMKV kv = MMKV.defaultMMKV();
+		if (kv.getBoolean("asked_open_by_default", false)) return;
 
-        boolean alreadyVerified = false;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            DomainVerificationManager manager = getSystemService(DomainVerificationManager.class);
-            try {
-                DomainVerificationUserState userState = manager.getDomainVerificationUserState(getPackageName());
-                if (userState != null && userState.isLinkHandlingAllowed()) {
-                    alreadyVerified = true;
-                }
-            } catch (Exception ignored) {}
-        }
-        
-        if (!alreadyVerified) {
-            new LinkTutorialDialog(this).show();
-        }
-	}
-
-	private void fetchTitleAndShowPopup(final String url) {
-		executor.execute(() -> {
+		boolean alreadyVerified = false;
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+			DomainVerificationManager manager = getSystemService(DomainVerificationManager.class);
 			try {
-				VideoDetails details = youtubeExtractor.getVideoInfo(url);
-				mainHandler.post(() -> showClipboardDownloadPopup(url, details.getTitle(), details.getThumbnail()));
-			} catch (Exception e) {
-				mainHandler.post(() -> showClipboardDownloadPopup(url, null, null));
-			}
-		});
-	}
-
-	private void showClipboardDownloadPopup(final String url, @Nullable String title, @Nullable String thumbnailUrl) {
-		@SuppressLint("InflateParams") View view = LayoutInflater.from(this).inflate(R.layout.dialog_clipboard_detected, null);
-		final AlertDialog dialog = new MaterialAlertDialogBuilder(this)
-				.setView(view)
-				.create();
-
-		TextView messageView = view.findViewById(R.id.dialog_message);
-		if (messageView != null) {
-			messageView.setText(title != null ? title : url);
+				DomainVerificationUserState userState = manager.getDomainVerificationUserState(getPackageName());
+				if (userState != null && userState.isLinkHandlingAllowed()) {
+					alreadyVerified = true;
+				}
+			} catch (Exception ignored) {}
 		}
 
-		ImageView imageView = view.findViewById(R.id.dialog_image);
-		if (imageView != null && thumbnailUrl != null) {
-			Glide.with(this)
-					.load(thumbnailUrl)
-					.diskCacheStrategy(DiskCacheStrategy.ALL)
-					.into(imageView);
+		if (!alreadyVerified) {
+			new LinkTutorialDialog(this).show();
 		}
-
-		view.findViewById(R.id.btn_close).setOnClickListener(v -> dialog.dismiss());
-		view.findViewById(R.id.btn_play).setOnClickListener(v -> {
-			tabManager.openTab(url, UrlUtils.getPageClass(url));
-			dialog.dismiss();
-		});
-		view.findViewById(R.id.btn_download).setOnClickListener(v -> {
-			if (url.contains("list=") && !url.contains("list=RD")) {
-				triggerPlaylistDownload(url);
-			} else {
-				triggerDownload(url);
-			}
-			dialog.dismiss();
-		});
-
-		Window window = dialog.getWindow();
-		if (window != null) {
-			WindowManager.LayoutParams lp = window.getAttributes();
-			lp.gravity = Gravity.CENTER;
-			lp.width = (int) (getResources().getDisplayMetrics().widthPixels * 0.95);
-			lp.y = ViewUtils.dpToPx(this, 100);
-			window.setAttributes(lp);
-		}
-
-		dialog.show();
 	}
 
 	@Override protected void onStart() {
 		super.onStart();
-		isActivityVisible = true;
+		linkDetection.setAppVisible(true, this);
 	}
 
 	@Override protected void onStop() {
-		isActivityVisible = false;
+		linkDetection.setAppVisible(false, null);
 		if (player != null && shouldSuspendMiniPlayerOnStop(player.isInAppMiniPlayer(), isChangingConfigurations(), DeviceUtils.isInPictureInPictureMode(this))) {
 			player.suspendInAppMiniPlayerUiIfNeeded();
 		}
@@ -1132,9 +1005,10 @@ public final class MainActivity extends AppCompatActivity {
 		executor.shutdown();
 	}
 
-	private static String getShortVideoId(String videoId) {
-		if (videoId == null) return "";
-		int idx = videoId.indexOf(':');
-		return idx == -1 ? videoId : videoId.substring(0, idx);
+	@Override public Activity getActivity() { return this; }
+	@Override public void onPlay(String url) { tabManager.openTab(url, UrlUtils.getPageClass(url)); }
+	@Override public void onDownload(String url) {
+		if (url.contains("list=") && !url.contains("list=RD")) triggerPlaylistDownload(url);
+		else triggerDownload(url);
 	}
 }

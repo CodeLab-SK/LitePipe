@@ -5,9 +5,6 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.content.ClipData;
-import android.content.ClipboardManager;
-import android.content.ClipDescription;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
@@ -31,12 +28,10 @@ import androidx.media.app.NotificationCompat.MediaStyle;
 import androidx.media.session.MediaButtonReceiver;
 import androidx.media3.common.util.UnstableApi;
 
-import com.hhst.youtubelite.downloader.core.DownloadPrefs;
 import com.hhst.youtubelite.extractor.YoutubeExtractor;
 import com.hhst.youtubelite.player.queue.QueueNav;
 import com.hhst.youtubelite.player.engine.Engine;
 import com.hhst.youtubelite.ui.MainActivity;
-import com.tencent.mmkv.MMKV;
 
 import java.io.InterruptedIOException;
 import java.io.IOException;
@@ -46,21 +41,16 @@ import java.net.URL;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import javax.inject.Inject;
 import dagger.hilt.android.AndroidEntryPoint;
-import lombok.Setter;
 
 @AndroidEntryPoint
 @UnstableApi
 public class PlaybackService extends Service {
 	private static final String TAG = "PlaybackService";
 	private static final String CHANNEL_ID = "player_channel";
-	private static final String CLIPBOARD_CHANNEL_ID = "clipboard_detection";
 	private static final int NOTIFICATION_ID = 100;
-	private static final int CLIPBOARD_NOTIFICATION_ID = 2001;
 	private static final int CONNECT_TIMEOUT = 5000;
 	private static final int READ_TIMEOUT = 10000;
 	private static final int SEEK_RESET_DELAY = 1000;
@@ -74,22 +64,11 @@ public class PlaybackService extends Service {
 	private QueueNav queueNavigationAvailability = QueueNav.INACTIVE;
 	private MediaSessionCompat mediaSession;
 	private NotificationManager notificationManager;
-	private ClipboardManager clipboard;
-	private DownloadPrefs downloadPrefs;
-	
-	@Setter
-	private ClipboardListener clipboardListener;
-
-	private final ClipboardManager.OnPrimaryClipChangedListener primaryClipListener = this::checkClipboard;
 
 	private boolean isSeeking = false;
 	private final Runnable resetSeekFlagRunnable = () -> isSeeking = false;
 	private boolean lastIsPlayingState = false;
 	private volatile boolean destroyed = false;
-
-	public interface ClipboardListener {
-		boolean onLinkDetected(String url);
-	}
 
 	public static void start(@NonNull Context context) {
 		ContextCompat.startForegroundService(context, new Intent(context, PlaybackService.class));
@@ -106,7 +85,7 @@ public class PlaybackService extends Service {
 		super.onCreate();
 		destroyed = false;
 		notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-		
+
 		final NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Player Controls", NotificationManager.IMPORTANCE_LOW);
 		channel.setDescription("Media playback controls");
 		channel.setShowBadge(false);
@@ -116,10 +95,9 @@ public class PlaybackService extends Service {
 		channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
 		if (notificationManager != null) notificationManager.createNotificationChannel(channel);
 
-		final NotificationChannel clipChannel = new NotificationChannel(CLIPBOARD_CHANNEL_ID, "Clipboard Detection", NotificationManager.IMPORTANCE_DEFAULT);
-		if (notificationManager != null) notificationManager.createNotificationChannel(clipChannel);
-
 		mediaSession = new MediaSessionCompat(this, TAG);
+		mediaSession.setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
+				MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS);
 
 		final PlaybackStateCompat initialState = buildPlaybackState(
 				PlaybackStateCompat.STATE_NONE,
@@ -127,14 +105,6 @@ public class PlaybackService extends Service {
 				1.0f,
 				queueNavigationAvailability);
 		mediaSession.setPlaybackState(initialState);
-
-		clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-		if (clipboard != null) {
-			clipboard.addPrimaryClipChangedListener(primaryClipListener);
-		}
-		downloadPrefs = new DownloadPrefs(MMKV.defaultMMKV());
-		
-		handler.postDelayed(this::checkClipboard, 1500);
 	}
 
 	@Override
@@ -142,81 +112,6 @@ public class PlaybackService extends Service {
 		MediaSessionCompat session = mediaSession;
 		if (intent != null && session != null) MediaButtonReceiver.handleIntent(session, intent);
 		return START_STICKY;
-	}
-
-	public void checkClipboard() {
-		if (downloadPrefs == null || !downloadPrefs.isClipboardDetectionEnabled()) return;
-		if (clipboard != null && clipboard.hasPrimaryClip()) {
-			ClipDescription description = clipboard.getPrimaryClipDescription();
-			MMKV kv = MMKV.defaultMMKV();
-			
-			boolean isNewCopy = false;
-			if (description != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-				long timestamp = description.getTimestamp();
-				long lastTimestamp = kv.decodeLong("last_clipboard_timestamp", 0);
-				if (timestamp > 0 && timestamp <= lastTimestamp) {
-					return;
-				}
-				isNewCopy = true;
-			}
-
-			ClipData data = clipboard.getPrimaryClip();
-			if (data != null && data.getItemCount() > 0) {
-				CharSequence text = data.getItemAt(0).getText();
-				if (text != null) {
-					String url = extractUrlFromText(text.toString());
-					if (url != null) {
-						boolean isVideo = YoutubeExtractor.getVideoId(url) != null;
-						boolean isPlaylist = url.contains("list=") && !url.contains("list=RD");
-						
-						if (isVideo || isPlaylist) {
-							String lastUrl = kv.decodeString("last_clipboard_url", "");
-							if (!url.equals(lastUrl) || isNewCopy) {
-								kv.encode("last_clipboard_url", url);
-								if (description != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-									kv.encode("last_clipboard_timestamp", description.getTimestamp());
-								}
-								
-								if (clipboardListener == null || !clipboardListener.onLinkDetected(url)) {
-									showLinkNotification(url);
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	private String extractUrlFromText(String text) {
-		if (text == null) return null;
-		Matcher m = Pattern.compile("https?://[\\w./?=&%#-]+", Pattern.CASE_INSENSITIVE).matcher(text);
-		if (m.find()) {
-			String url = m.group();
-			if (url.contains("youtube.com") || url.contains("youtu.be")) return url;
-		}
-		return null;
-	}
-
-	private void showLinkNotification(String url) {
-		Intent intent = new Intent(this, MainActivity.class);
-		intent.setAction("SHOW_CLIPBOARD_DIALOG");
-		intent.putExtra("url", url);
-		intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-		
-		PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-		NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CLIPBOARD_CHANNEL_ID)
-				.setSmallIcon(R.drawable.ic_launcher_monochrome)
-				.setContentTitle(getString(R.string.download_clipboard_notification_title))
-				.setContentText(getString(R.string.download_clipboard_notification_msg, url))
-				.setAutoCancel(true)
-				.setContentIntent(pendingIntent)
-				.setPriority(NotificationCompat.PRIORITY_DEFAULT);
-
-		if (notificationManager != null) {
-			notificationManager.notify(CLIPBOARD_NOTIFICATION_ID, builder.build());
-		}
 	}
 
 	public void initialize(@NonNull final Engine engine) {
@@ -449,9 +344,9 @@ public class PlaybackService extends Service {
 
 	@NonNull
 	private static PlaybackStateCompat buildPlaybackState(final int state,
-	                                                      final long position,
-	                                                      final float speed,
-	                                                      @NonNull final QueueNav availability) {
+														  final long position,
+														  final float speed,
+														  @NonNull final QueueNav availability) {
 		return new PlaybackStateCompat.Builder()
 				.setActions(playbackActionsFor(availability))
 				.setState(state, position, speed)
@@ -481,9 +376,6 @@ public class PlaybackService extends Service {
 		notificationManager = null;
 		if (manager != null) {
 			manager.cancel(NOTIFICATION_ID);
-		}
-		if (clipboard != null) {
-			clipboard.removePrimaryClipChangedListener(primaryClipListener);
 		}
 		super.onDestroy();
 	}
