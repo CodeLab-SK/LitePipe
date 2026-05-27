@@ -59,7 +59,8 @@ html[page-class="shorts"] .topbar-menu-button-avatar-button,
 html[page-class="shorts"] .header-bar-search-button,
 html[page-class="shorts"] .header-search-button,
 html[page-class="shorts"] .search-button,
-html[page-class="shorts"] .header-bar-search-button-container {
+html[page-class="shorts"] .header-bar-search-button-container,
+html[page-class="shorts"] yt-list-item-view-model:has(a[href^="intent:"]) {
     display: none !important;
 }
 

@@ -35,3 +35,29 @@ header.mobile-topbar-header.cairo-settings-topbar,
 .mobile-topbar-header-content {
     overflow: visible !important;
 }
+
+yt-flexible-actions-view-model {
+    display: block !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+}
+
+yt-flexible-actions-view-model::-webkit-scrollbar {
+    display: none !important;
+}
+
+.ytFlexibleActionsViewModelActionRow {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 6px !important;
+    width: max-content !important;
+    min-width: 100% !important;
+    align-items: center !important;
+}
+
+.ytFlexibleActionsViewModelAction {
+    flex: 0 0 auto !important;
+}
+
