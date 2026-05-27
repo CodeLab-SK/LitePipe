@@ -35,7 +35,9 @@ public record Extension(String key, int description, int helpText, List<Extensio
                             new Extension(Constant.SHORTS_SHOW_LIKE, R.string.shorts_like, null),
                             new Extension(Constant.SHORTS_SHOW_DISLIKE, R.string.shorts_dislike, null),
                             new Extension(Constant.SHORTS_SHOW_COMMENTS, R.string.shorts_comments, null),
-                            new Extension(Constant.SHORTS_SHOW_SHARE, R.string.shorts_share, null)
+                            new Extension(Constant.SHORTS_SHOW_SHARE, R.string.shorts_share, null),
+                            new Extension(Constant.SHORTS_SHOW_SEARCH_SUGGESTION, R.string.shorts_search_suggestion, null),
+                            new Extension(Constant.SHORTS_SHOW_PRODUCT_BANNER, R.string.shorts_product_banner, null)
                     )),
                     new Extension(Constant.SHORTS_GESTURE_2X, R.string.shorts_gesture_2x, null),
                     new Extension(Constant.SHOW_NAV_BAR_IN_SHORTS, R.string.show_nav_bar_in_shorts, null),

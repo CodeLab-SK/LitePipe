@@ -80,6 +80,8 @@ try {
         };
 
         const INCOGNITO_ICON = 'M12 2C8.13 2 5 5.13 5 9H19C19 5.13 15.87 2 12 2ZM2 11H22V13H2V11ZM7.5 14.5C5.57 14.5 4 16.07 4 18C4 19.93 5.57 21.5 7.5 21.5C9.43 21.5 11 19.93 11 18C11 16.07 9.43 14.5 7.5 14.5ZM16.5 14.5C14.57 14.5 13 16.07 13 18C13 19.93 14.57 21.5 16.5 21.5C18.43 21.5 20 19.93 20 18C20 16.07 18.43 14.5 16.5 14.5Z';
+
+        let shortsSpeedPressState = null;
         const SHORTS_SPEED_LONG_PRESS_MS = 450, SHORTS_SPEED_DRAG_THRESHOLD = 10;
         const getPoint = (event) => event?.touches?.[0] || event?.changedTouches?.[0] || event;
 
@@ -102,7 +104,6 @@ try {
             if (toast) toast.style.display = 'none';
         };
 
-        let shortsSpeedPressState = null;
         const clearShortsSpeedPress = () => {
             if (!shortsSpeedPressState) return;
             if (shortsSpeedPressState.timerId) ct(shortsSpeedPressState.timerId);
@@ -968,6 +969,16 @@ try {
                 if (!cachedHeaderElement) cachedHeaderElement = document.querySelector('ytm-header-bar-renderer, .ytm-header-bar-renderer');
                 if (cachedHeaderElement) cachedHeaderElement.style.setProperty('display', 'none', 'important');
                 document.querySelectorAll('#home-icon, .logo-in-player, [aria-label*="Search"], .topbar-menu-button-avatar-button, .header-bar-search-button, .header-search-button, .search-button').forEach(el => el.style.setProperty('display', 'none', 'important'));
+
+                document.querySelectorAll('yt-shorts-suggested-action-view-model:not([data-lp-tagged])').forEach(el => {
+                    const text = el.textContent.toLowerCase();
+                    if (text.includes('view products')) {
+                        el.classList.add('lp-shorts-product-banner');
+                    } else if (text.includes('search "')) {
+                        el.classList.add('lp-shorts-search-suggestion');
+                    }
+                    el.dataset.lpTagged = 'true';
+                });
             } else {
                 if (!cachedHeaderElement) cachedHeaderElement = document.querySelector('ytm-header-bar-renderer');
                 if (cachedHeaderElement) {
@@ -988,6 +999,8 @@ try {
             document.documentElement.classList.toggle('lp-hide-shorts-dislike', prefs.shorts_show_dislike === false);
             document.documentElement.classList.toggle('lp-hide-shorts-comments', prefs.shorts_show_comments === false);
             document.documentElement.classList.toggle('lp-hide-shorts-share', prefs.shorts_show_share === false);
+            document.documentElement.classList.toggle('lp-hide-shorts-search-suggestion', prefs.shorts_show_search_suggestion === false);
+            document.documentElement.classList.toggle('lp-hide-shorts-product-banner', prefs.shorts_show_product_banner === false);
 
             document.querySelectorAll('.mobile-topbar-back-arrow').forEach(el => {
                 const mode = el.closest('[data-mode]')?.dataset.mode;
@@ -1007,7 +1020,7 @@ try {
                     const btns = [
                         { id: 'extensionButton', key: 'extension', icon: 'M497-120l-33-124q-15-7-30-16t-28-20l-116 50-70-121 98-88q-2-10-3-20t-1-20q0-10 1-20t3-20l-98-88 70-121 116 50q13-11 28-20t30-16l33-124h140l33 124q15 7 30 16t28 20l116-50 70 121-98 88q2 10 3 20t1 20q0 10-1 20t-3 20l98 88-70 121-116-50q-13 11-28 20t-30 16l-33 124H497Zm70-227q55 0 94-39t39-94q0-55-39-94t-94-39q-55 0-94 39t-39 94q0 55 39 94t94 39Z', fn: () => window.android?.extension() },
                         { id: 'downloadButton', key: 'downloads', icon: 'M480-336 288-528l51-51 105 105v-342h72v342l105-105 51 51-192 192ZM263.72-192Q234-192 213-213.15T192-264v-72h72v72h432v-72h72v72q0 29.7-21.16 50.85Q725.68-192 695.96-192H263.72Z', fn: () => window.android?.download() },
-                        { id: 'aboutButton', key: 'about', icon: 'M444-288h72v-240h-72v240Zm35.79-312q15.21 0 25.71-10.29t10.5-25.5q0-15.21-10.29-25.71t-25.5-10.5q-15.21 0-25.71 10.29t-10.5 25.5q0 15.21 10.29 25.71t25.5 10.5Zm.49 504Q401-96 331-126t-122.5-82.5Q156-261 126-330.96t-30-149.5Q96-560 126-629.5q30-69.5 82.5-122T330.96-834q69.96-30 149.5-30t149.04 30q69.5 30 122 82.5T834-629.28q30 69.73 30 149Q864-401 834-331t-82.5 122.5Q699-156 629.28-126q-69.73 30-149 30Zm0-72q130 0 221-91t91-221q0-130-91-221t-221-91q-130 0-221 91t-91 221q0 130 91 221t221 91Zm0-312Z', fn: () => window.android?.about() },
+                        { id: 'aboutButton', key: 'about', icon: 'M444-288h72v-240h-72v240Zm35.79-312q15.21 0 25.71-10.29t10.5-25.5q0-15.21-10.29-25.71t-25.5-10.5q-15.21 0-25.71 10.29t-10.5 25.5q0 15.21 10.29 25.71t25.5 10.5Zm.49 504Q401-96 331-126t-122.5-82.5Q156-261 126-330.96t-30-149.5Q96-560 126-629.5q30-69.5 82.5-122T330.96-834q69.96-30 149.5-30t149.04 30q69.5 30 122 82.5T834-629.28q30 69.73 30 149Q864-401 834-331t-82.5 122.5Q699-156 629.28-126q-69.73 30-149 30Zm0-72q130 0 221-91t91-221q0-130-91-221t-221-91q-130 0-221-91t-91 221q0 130 91 221t221 91Zm0-312Z', fn: () => window.android?.about() },
                     ];
                     btns.forEach(b => {
                         const el = createCustomSettingBtn(base, b.id, b.key, b.icon, b.fn);

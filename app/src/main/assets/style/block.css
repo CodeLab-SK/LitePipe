@@ -79,7 +79,11 @@ html[page-class="shorts"].lp-hide-shorts-share reel-action-bar-view-model button
 html[page-class="shorts"].lp-hide-shorts-share reel-action-bar-view-model button-view-model:has(button[aria-label*="Share"]) {
     display: none !important;
 }
-html[page-class="shorts"].lp-hide-shorts-search-suggestion yt-shorts-suggested-action-view-model,
-html[page-class="shorts"].lp-hide-shorts-search-suggestion .ytReelMetapanelViewModelMetapanelItem:has(yt-shorts-suggested-action-view-model) {
+html[page-class="shorts"].lp-hide-shorts-search-suggestion .lp-shorts-search-suggestion,
+html[page-class="shorts"].lp-hide-shorts-search-suggestion .ytReelMetapanelViewModelMetapanelItem:has(.lp-shorts-search-suggestion) {
+    display: none !important;
+}
+html[page-class="shorts"].lp-hide-shorts-product-banner .lp-shorts-product-banner,
+html[page-class="shorts"].lp-hide-shorts-product-banner .ytReelMetapanelViewModelMetapanelItem:has(.lp-shorts-product-banner) {
     display: none !important;
 }

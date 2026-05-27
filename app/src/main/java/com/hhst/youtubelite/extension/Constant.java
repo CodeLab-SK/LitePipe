@@ -43,6 +43,8 @@ public final class Constant {
     public static final String SHORTS_SHOW_DISLIKE = "shorts_show_dislike";
     public static final String SHORTS_SHOW_COMMENTS = "shorts_show_comments";
     public static final String SHORTS_SHOW_SHARE = "shorts_show_share";
+    public static final String SHORTS_SHOW_SEARCH_SUGGESTION = "shorts_show_search_suggestion";
+    public static final String SHORTS_SHOW_PRODUCT_BANNER = "shorts_show_product_banner";
 
     public static final String CUSTOMIZE_PLAYER_BUTTONS = "customize_player_buttons";
     public static final String PLAYER_SHOW_SPEED = "player_show_speed";
@@ -103,6 +105,8 @@ public final class Constant {
             Map.entry(SHORTS_SHOW_DISLIKE, true),
             Map.entry(SHORTS_SHOW_COMMENTS, true),
             Map.entry(SHORTS_SHOW_SHARE, true),
+            Map.entry(SHORTS_SHOW_SEARCH_SUGGESTION, true),
+            Map.entry(SHORTS_SHOW_PRODUCT_BANNER, true),
             Map.entry(PLAYER_SHOW_SPEED, true),
             Map.entry(PLAYER_SHOW_QUALITY, true),
             Map.entry(PLAYER_SHOW_SUBTITLES, true),
