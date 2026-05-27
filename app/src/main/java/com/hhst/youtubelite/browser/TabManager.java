@@ -256,12 +256,7 @@ public class TabManager {
 	public void playInWatch(@NonNull final String url) {
 		queueWarmer.prioritizeUrl(url);
 		litePlayer().play(url);
-		final YoutubeWebview webview = resolveWatchWebview();
-		if (webview != null) {
-			webview.loadUrl(url);
-			return;
-		}
-		openTab(url, UrlUtils.getPageClass(url));
+		openTab(url, Constant.PAGE_WATCH);
 	}
 
 	public boolean canGoBackInWatch() {

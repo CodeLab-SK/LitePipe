@@ -290,6 +290,9 @@ public class YoutubeWebview extends WebView {
 	public void init() {
 		if (isDestroyed) return;
 		initialized = true;
+
+		CookieManager.getInstance().flush();
+
 		setFocusable(true);
 		setFocusableInTouchMode(true);
 		setLayerType(View.LAYER_TYPE_HARDWARE, null);

@@ -384,7 +384,7 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 		queueAdapter = new QueueAdapter(new QueueAdapter.Actions() {
 			@Override
 			public void onPlayRequested(@NonNull final QueueItem item) {
-				if (item.getVideoUrl() != null) tabManager.openTab(item.getVideoUrl(), UrlUtils.getPageClass(item.getVideoUrl()));
+				if (item.getVideoUrl() != null) tabManager.playInWatch(item.getVideoUrl());
 			}
 
 			@Override
@@ -672,7 +672,7 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 		}
 		if ("PLAY_VIDEO".equals(action)) {
 			String url = intent.getStringExtra("url");
-			if (url != null) tabManager.openTab(url, UrlUtils.getPageClass(url));
+			if (url != null) tabManager.playInWatch(url);
 			return;
 		}
 
@@ -688,14 +688,14 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 			}
 			String url = data.toString();
 			final String clean = url.replace(YOUTUBE_WWW_HOST, Constant.YOUTUBE_MOBILE_HOST);
-			if (tabManager != null) tabManager.openTab(clean, UrlUtils.getPageClass(clean));
+			if (tabManager != null) tabManager.playInWatch(clean);
 		} else if (Intent.ACTION_SEND.equals(action)) {
 			String text = intent.getStringExtra(Intent.EXTRA_TEXT);
 			if (text != null) {
 				String url = extractUrlFromText(text);
 				if (url != null) {
 					final String clean = url.replace(YOUTUBE_WWW_HOST, Constant.YOUTUBE_MOBILE_HOST);
-					if (tabManager != null) tabManager.openTab(clean, UrlUtils.getPageClass(clean));
+					if (tabManager != null) tabManager.playInWatch(clean);
 				}
 			}
 		} else if (tabManager != null && tabManager.getWebview() == null) {
@@ -728,7 +728,7 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 
 	private String extractUrlFromText(String text) {
 		if (text == null) return null;
-		Matcher m = Pattern.compile("https?://(?:www\\.|m\\.)?(?:youtube\\.com|youtu\\.be)/(?:watch\\?v=|v/|embed/|shorts/|playlist\\?list=)?([a-zA-Z0-9_-]+)", Pattern.CASE_INSENSITIVE).matcher(text);
+		Matcher m = Pattern.compile("https?://(?:www\\.|m\\.)?(?:youtube\\.com|youtu\\.be)/(?:watch\\?v=|v/|embed/|shorts/|playlist\\?list=)?[a-zA-Z0-9_-]+(?:[?&]\\S*)?", Pattern.CASE_INSENSITIVE).matcher(text);
 		if (m.find()) {
 			return m.group();
 		}
@@ -1006,7 +1006,7 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 	}
 
 	@Override public Activity getActivity() { return this; }
-	@Override public void onPlay(String url) { tabManager.openTab(url, UrlUtils.getPageClass(url)); }
+	@Override public void onPlay(String url) { tabManager.playInWatch(url); }
 	@Override public void onDownload(String url) {
 		if (url.contains("list=") && !url.contains("list=RD")) triggerPlaylistDownload(url);
 		else triggerDownload(url);

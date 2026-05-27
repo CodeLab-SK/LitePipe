@@ -136,6 +136,10 @@ public final class YoutubeFragment extends Fragment {
 		});
 		webview.init();
 		
+		if (tabManager != null) {
+			tabManager.injectScripts(webview);
+		}
+
 		if (savedInstanceState != null) {
 			if (!isHidden()) {
 				webview.restoreState(savedInstanceState);
@@ -146,12 +150,6 @@ public final class YoutubeFragment extends Fragment {
 			loadUrl(url);
 		}
 		
-		executor.execute(() -> {
-			if (tabManager != null) {
-				tabManager.injectScripts(webview);
-			}
-		});
-
 		return view;
 	}
 

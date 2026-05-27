@@ -129,7 +129,7 @@ public class LinkDetection {
 	}
 
 	private String extractUrl(String text) {
-		Matcher m = Pattern.compile("https?://(?:www\\.|m\\.)?(?:youtube\\.com|youtu\\.be)/(?:watch\\?v=|v/|embed/|shorts/|playlist\\?list=)?([a-zA-Z0-9_-]+)", Pattern.CASE_INSENSITIVE).matcher(text);
+		Matcher m = Pattern.compile("https?://(?:www\\.|m\\.)?(?:youtube\\.com|youtu\\.be)/(?:watch\\?v=|v/|embed/|shorts/|playlist\\?list=)?[a-zA-Z0-9_-]+(?:[?&]\\S*)?", Pattern.CASE_INSENSITIVE).matcher(text);
 		if (m.find()) return m.group();
 		return null;
 	}
