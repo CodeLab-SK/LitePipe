@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name" translatable="false">LitePipe</string>
-    <string name="app_description">An advanced webview wrapper for YouTube with cool features.</string>
+    <string name="app_description">A lightweight webview wrapper for YouTube with advanced features.</string>
     <string name="version">Version: %1$s</string>
     <string name="about">About</string>
     <string name="source_code">Source Code</string>
@@ -18,6 +18,22 @@
     <string name="failed_to_export_log">Failed to export logs</string>
     <string name="debug_info_copied">Debug info copied to clipboard</string>
     <string name="press_back_again_to_exit">Press back again to exit</string>
+    <string name="open_by_default_title">Open YouTube Links</string>
+    <string name="open_by_default_message">Open Youtube links by Default</string>
+    <string name="open_by_default_settings">Allow</string>
+    <string name="open_by_default_later">Later</string>
+
+    <string name="tutorial_open_links_title">Open by Default</string>
+    <string name="tutorial_next">Next</string>
+    <string name="tutorial_back">Back</string>
+    <string name="tutorial_skip">Skip</string>
+    <string name="tutorial_finish">Open Settings</string>
+
+    <string name="tutorial_step_12_1">1. Enable the \"Open supported links\" switch.</string>
+    <string name="tutorial_step_12_2">2. Tap \"Add link\" and select all youtube.com links to verify them.</string>
+
+    <string name="tutorial_step_legacy_1">1. Tap on \"Open by default\" in the App settings.</string>
+    <string name="tutorial_step_legacy_2">2. Set \"Open supported links\" to \"Open in this app\" or \"Ask every time\".</string>
 
     <string name="error_title">Error</string>
     <string name="application_not_found">Application not found</string>
@@ -27,6 +43,7 @@
     <string name="close">Close</string>
     <string name="save">Save</string>
     <string name="copy">Copy</string>
+    <string name="video_options">Video Options</string>
     <string name="clear">Clear</string>
     <string name="change">Change</string>
     <string name="info">Info</string>
@@ -35,7 +52,7 @@
     <string name="nav_home">Home</string>
     <string name="nav_shorts">Shorts</string>
     <string name="nav_subscriptions">Subscriptions</string>
-    <string name="nav_library">Library</string>
+    <string name="nav_library">You</string>
     <string name="nav_downloads">Downloads</string>
     <string name="nav_settings">Settings</string>
 
@@ -45,16 +62,20 @@
     <string name="share_thumbnail">Share Thumbnail</string>
     <string name="failed_to_download_thumbnail">Failed to download image</string>
     <string name="return_dislike">Return Dislikes</string>
+    <string name="long_press_context_menu">Long press context menu</string>
     <string name="action_share">Share</string>
     <string name="action_remix">Remix</string>
     <string name="action_download">Download</string>
+    <string name="action_chat">Chat</string>
     <string name="action_thanks">Thanks</string>
     <string name="action_clip">Clip</string>
     <string name="action_save">Save</string>
     <string name="action_report">Report</string>
     <string name="action_ask_ai">Ask AI</string>
+    <string name="action_like_dislike">Like/Dislike</string>
 
     <string name="player">Player</string>
+    <string name="offline_player">Offline Player</string>
     <string name="action_play">Play</string>
     <string name="action_pause">Pause</string>
     <string name="action_replay">Replay</string>
@@ -78,7 +99,17 @@
     <string name="quality">Quality</string>
     <string name="audio_only">Audio</string>
     <string name="speed">Speed</string>
-    <string name="loop">Loop</string>
+    <string name="speed_0_25x">0.25x</string>
+    <string name="speed_0_5x">0.5x</string>
+    <string name="speed_0_75x">0.75x</string>
+    <string name="speed_normal">Normal</string>
+    <string name="speed_1_25x">1.25x</string>
+    <string name="speed_1_5x">1.5x</string>
+    <string name="speed_1_75x">1.75x</string>
+    <string name="speed_2_0x">2.0x</string>
+    <string name="speed_3_0x">3.0x</string>
+    <string name="speed_4_0x">4.0x</string>
+    <string name="loop">Playback Mode</string>
     <string name="more_options">MORE OPTIONS</string>
     <string name="audio_track">Audio Track</string>
     <string name="resize_mode">Resize Mode</string>
@@ -87,6 +118,7 @@
     <string name="resize_zoom">Zoom</string>
     <string name="resize_fixed_width">Fixed width</string>
     <string name="resize_fixed_height">Fixed height</string>
+    <string name="subtitle_style">Subtitle Style</string>
     <string name="bitrate">Bitrate</string>
     <string name="dropped_frames">Dropped Frames</string>
     <string name="resolution">Resolution</string>
@@ -94,63 +126,69 @@
     <string name="audio_format">Audio Format</string>
     <string name="fps">FPS</string>
     <string name="failed_to_load_video_details">Failed to load video details</string>
-    <string name="loading_streams">Loading streams…</string>
 
     <string name="Queue">Playback Queue</string>
+    <string name="queue_title_with_count">Playback Queue (%1$d)</string>
     <string name="Clear">Clear</string>
     <string name="no_queue_items">No queue items</string>
     <string name="queue_item_added">Added to queue</string>
-    <string name="queue_item_unavailable">Couldn\'t get current video info. Queue item was not added.</string>
+    <string name="queue_item_removed">Removed from queue</string>
+    <string name="queue_item_unavailable">Couldn\'t get video Info</string>
     <string name="queue_now_playing">Now playing</string>
     <string name="queue_unknown_author">Unknown author</string>
     <string name="remove_queue_item">Remove queue item</string>
     <string name="remove_queue_item_confirmation">Remove this queue item?</string>
-    <string name="clear_queue_confirmation">Clear all queue items?</string>
+    <string name="clear_queue_confirmation">Clear playback queue?</string>
+    <string name="remove_from_queue">Remove from Queue</string>
+    <string name="add_to_queue">Add to Queue</string>
 
     <string name="download">Download</string>
     <string name="downloads_default_title">Downloads</string>
     <string name="download_history">Downloads</string>
     <string name="no_download_records">No Downloads yet…</string>
     <string name="download_location">Download Location</string>
+    <string name="max_concurrent_downloads">Max Concurrent Downloads</string>
+    <string name="download_clipboard_detection">Clipboard Link Detection</string>
+    <string name="download_clipboard_detection_desc">Detect copied links for downloading</string>
+    <string name="download_clipboard_popup_title">Link Detected</string>
+    <string name="download_clipboard_popup_msg">You have copied a link:\n\n%1$s\n\nWhat would you like to do?</string>
+    <string name="download_clipboard_notification_title">YouTube Link Copied</string>
+    <string name="download_clipboard_notification_msg">Tap to download or play: %1$s</string>
     <string name="preparing_download">Preparing download…</string>
-    <string name="download_tasks_added">Download task added</string>
-    <string name="download_tasks_added_count">%1$d download tasks added</string>
+    <string name="fetching_details">Fetching details…</string>
     <string name="select_something_first">Select something to download</string>
-    <string name="failed_to_download">Failed to start download</string>
     <string name="status_queued">Queued</string>
-    <string name="status_downloading">Downloading (%1$d%%)</string>
+    <string name="status_downloading">Downloading</string>
     <string name="status_paused">Paused</string>
-    <string name="status_merging">Merging…</string>
-    <string name="status_completed">Completed</string>
+    <string name="status_merging">Merging</string>
+    <string name="status_completed">Downloaded</string>
     <string name="status_cancelled">Cancelled</string>
     <string name="status_failed">Failed</string>
-    <string name="download_progress_with_total">%1$s / %2$s (%3$d%%)</string>
-    <string name="download_progress_simple">%1$s</string>
-    <string name="download_status_with_type">%1$s • %2$s</string>
+    <string name="download_progress_with_total">%1$s / %2$s MB (%3$d%%)</string>
+    <string name="download_progress_simple">%1$s MB</string>
     <string name="filename">Filename</string>
     <string name="videos_count">%1$d videos</string>
     <string name="type_video">Video</string>
     <string name="type_audio">Audio</string>
     <string name="type_subtitle">Subtitle</string>
     <string name="type_thumbnail">Thumbnail</string>
+    <string name="type_playlist">Playlist</string>
     <string name="delete_local_file">Delete local file</string>
     <string name="delete_local_files">Delete local files</string>
     <string name="clear_history">Clear history</string>
 
     <string name="litepipe_settings">LitePipe Settings</string>
     <string name="general">General</string>
-    <string name="miscellaneous">Miscellaneous</string>
+    <string name="show_search_suggestions">Search Suggestions</string>
+    <string name="hide_comments">Hide Comments</string>
 
     <string name="custom_navigation">Navigation Bar</string>
     <string name="hide_nav_bar_labels">Hide Navigation Labels</string>
-    <string name="show_nav_bar_in_shorts">Shorts Navigation Bar </string>
-    <string name="hide_shorts">Hide Shorts</string>
-    <string name="hide_shorts_desc">Remove Shorts from the app</string>
-    <string name="hide_comments">Hide Comments</string>
-    <string name="hide_recommendations">Hide Recommendations</string>
 
     <string name="player_gestures">Gestures</string>
-    <string name="player_gestures_desc">Brightness, volume, and seek gestures</string>
+    <string name="brightness">Brightness</string>
+    <string name="volume">Volume</string>
+    <string name="Seek">Seek</string>
     <string name="remember_last_position">Resume Playback</string>
     <string name="remember_resize_mode">Remember Resize Mode</string>
     <string name="default_quality">Default Video Quality</string>
@@ -159,22 +197,79 @@
     <string name="background_play">Background Playback</string>
     <string name="background_play_desc">Continue audio in the background</string>
     <string name="pip">Picture-in-Picture</string>
-    <string name="pip_desc">Play videos in a floating window</string>
     <string name="in_app_mini_player">Mini-Player</string>
     <string name="in_app_mini_player_desc">Minimize videos within the app</string>
     <string name="player_buttons">Player Controls</string>
     <string name="player_buttons_desc">Customize on-screen controls</string>
     <string name="custom_action_bar">Action Buttons</string>
     <string name="custom_action_bar_desc">Customize buttons below the player</string>
+    <string name="double_tap_seek_amount">Double Tap Seek Amount</string>
+    <string name="gesture_fullscreen_swipe">Fullscreen Swipe</string>
+    <string name="gesture_miniplayer_swipe">Mini-Player Swipe</string>
+    <string name="show_remaining_duration">Remaining Duration</string>
+
+    <string name="shorts">Shorts</string>
+    <string name="shorts_gesture_2x">Hold to 2x Speed</string>
+    <string name="show_nav_bar_in_shorts">Shorts Navigation Bar </string>
+    <string name="hide_shorts">Hide Shorts</string>
+    <string name="shorts_buttons">Action Buttons</string>
+    <string name="shorts_buttons_desc">Customize player buttons</string>
+    <string name="shorts_like">Like</string>
+    <string name="shorts_dislike">Dislike</string>
+    <string name="shorts_comments">Comments</string>
+    <string name="shorts_share">Share</string>
+    <string name="shorts_search_suggestion">Search Suggestion</string>
+    <string name="shorts_product_banner">Product Banner</string>
 
     <string name="sponsorblock">SponsorBlock</string>
-    <string name="skip_sponsors">Skip Sponsored Segments</string>
+    <string name="skip_sponsored_segments">Skip Sponsored Segments</string>
     <string name="skip_sponsors_selfpromo">Skip Self-Promotion</string>
     <string name="skip_sponsors_highlight">Skip Highlights</string>
+    <string name="undo_skip">Undo Skip</string>
     <string name="segments">Chapters</string>
     <string name="threads">Threads</string>
+    <string name="no_chapters">No chapters found</string>
 
     <string name="reset_extension_title">Reset Settings</string>
     <string name="reset_extension_message">Reset all settings to default?</string>
     <string name="reset">Reset</string>
+
+    <string name="playlist_download_title_placeholder">Playlist</string>
+    <string name="playlist_download_summary" tools:ignore="PluralsCandidate">%1$d selected / %2$d ready / %3$d total</string>
+    <string name="playlist_download_select_all">Select all</string>
+    <string name="playlist_download_options">Download options</string>
+    <string name="playlist_download_loading">Loading playlist…</string>
+    <string name="playlist_download_failed_initial">Failed to load playlist</string>
+    <string name="playlist_download_empty">Playlist is empty</string>
+    <string name="playlist_download_prepare_progress">Preparing %1$d / %2$d</string>
+    <string name="playlist_download_status_loading">Loading</string>
+    <string name="playlist_download_status_ready">Ready</string>
+    <string name="playlist_download_status_unavailable">Unavailable</string>
+    <string name="playlist_download_status_failed">Failed</string>
+    <string name="playlist_download_status_preparing">Preparing</string>
+    <string name="playlist_download_status_queued">Queued</string>
+    <string name="playlist_download_status_partial">Partial</string>
+    <string name="playlist_download_status_canceled">Canceled</string>
+    <string name="playlist_download_batch_added" tools:ignore="PluralsCandidate">%1$d items added</string>
+    <string name="playlist_download_batch_added_before_cancel" tools:ignore="PluralsCandidate">%1$d items added before batch was canceled</string>
+    <string name="playlist_download_batch_segment_partial" tools:ignore="PluralsCandidate">%1$d partial</string>
+    <string name="playlist_download_batch_segment_failed" tools:ignore="PluralsCandidate">%1$d failed</string>
+    <string name="playlist_download_started">Playlist download started</string>
+
+    <string name="splash_tagline_simple">Simple</string>
+    <string name="splash_tagline_fast">Fast</string>
+    <string name="splash_tagline_minimal">Minimal</string>
+    <string name="splash_premium_experience">Premium Experience</string>
+    <string name="splash_dot">\u2022</string>
+
+    <string name="incognito_on">Incognito mode turned on</string>
+    <string name="incognito_off">Incognito mode turned off</string>
+    <string name="share_video">Share Video</string>
+
+    <string name="volume_booster">Volume Boost (200%)</string>
+    <string name="volume_booster_warning_title">High Volume Warning</string>
+    <string name="volume_booster_warning_message">Using high volume may damage your speakers.</string>
+    <string name="dont_show_again">Don\'t show again</string>
+    <string name="ok">OK</string>
+
 </resources>
