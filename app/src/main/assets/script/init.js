@@ -3,6 +3,13 @@ try {
         const st = setTimeout.bind(window), si = setInterval.bind(window);
         const ct = clearTimeout.bind(window), ci = clearInterval.bind(window);
 
+        if (!document.getElementById('_lp_ab_style')) {
+            const styleEl = document.createElement('style');
+            styleEl.id = '_lp_ab_style';
+            styleEl.textContent = `ytm-slim-video-action-bar-renderer:not([data-lp-processed]) { visibility: hidden !important; }`;
+            (document.head || document.documentElement).appendChild(styleEl);
+        }
+
         const getLocalizedText = (key) => {
             const languages = {
                 'zh': { 'download': '下载', 'downloads': '下载', 'extension': 'LitePipe 设置', 'chat': '聊天室', 'about': '关于', 'pip': '画中画', 'incognito': '无痕模式', 'incognito_off': '关闭无痕模式' },
@@ -203,192 +210,192 @@ try {
             }, { passive: false });
         };
 
-        const createNativeYtButton = (label, iconPath, isOn, clickFn, sourceEl = null) => {
-            const source =
-                sourceEl ||
-                document.querySelector(
-                    'button-view-model.ytSpecButtonViewModelHost'
-                ) ||
-                document.querySelector(
-                    '.slim_video_action_bar_renderer_button'
-                );
+        const replaceTextInNode = (root, label) => {
+            if (!root) return;
+            const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+            const textNodes = [];
+            while (walker.nextNode()) {
+                const n = walker.currentNode;
+                if (n.parentElement && n.parentElement.closest('svg')) continue;
+                if (n.textContent.trim()) textNodes.push(n);
+            }
+            if (textNodes.length > 0) {
+                textNodes[0].textContent = label;
+                for (let i = 1; i < textNodes.length; i++) textNodes[i].textContent = '';
+            }
+        };
 
+        const createLibraryIncognitoButton = (label, iconPath, isOn, onClick) => {
+            const row = document.querySelector('.ytFlexibleActionsViewModelActionRow');
+            if (!row) return null;
+
+            let source = row.querySelector('.ytFlexibleActionsViewModelActionRowAction button');
+            if (!source) {
+                source = document.querySelector('button-view-model.ytSpecButtonViewModelHost button') ||
+                         document.querySelector('ytm-topbar-menu-button-renderer button');
+            }
             if (!source) return null;
 
+            const wrapper = document.createElement('div');
+            wrapper.className = 'ytFlexibleActionsViewModelAction ytFlexibleActionsViewModelActionRowAction';
+
             const clone = source.cloneNode(true);
-            clone.style.overflow = 'visible';
             clone.removeAttribute('id');
-
-            const isActionBarButton = !!(source && (source.classList?.contains('slim_video_action_bar_renderer_button') || source.matches?.('.slim_video_action_bar_renderer_button') || source.closest?.('.slim_video_action_bar_renderer_button')));
-
-            const clickable =
-                clone.querySelector('button, a');
-
-            if (!clickable) return null;
-
-            if (clickable.tagName.toLowerCase() === 'a') {
-                const btn = document.createElement('button');
-
-                [...clickable.attributes].forEach(attr => {
-                    if (attr.name !== 'href') {
-                        btn.setAttribute(attr.name, attr.value);
-                    }
-                });
-
-                btn.className = clickable.className;
-                btn.innerHTML = clickable.innerHTML;
-
-                clickable.replaceWith(btn);
-            }
-
-            const btn =
-                clone.querySelector('button');
-
+            const btn = clone.tagName === 'BUTTON' ? clone : clone.querySelector('button');
             if (!btn) return null;
 
             btn.removeAttribute('href');
             btn.removeAttribute('target');
-            btn.removeAttribute('rel');
-
             btn.setAttribute('aria-label', label);
-
-            const textEl =
-                clone.querySelector(
-                    '.ytSpecButtonShapeNextButtonTextContent'
-                );
-
-            if (textEl) {
-                textEl.textContent = label;
-            }
-
-            (function updateIcon() {
-                const spanHost = clone.querySelector('span.yt-icon-shape, span.ytSpecIconShapeHost, .yt-icon-shape');
-                const useLargeViewBox = /-?\d{3,}/.test(iconPath);
-                const viewBox = useLargeViewBox ? '0 -960 960 960' : '0 0 24 24';
-                const ns = 'http://www.w3.org/2000/svg';
-                const makeSvg = (d) => {
-                    const s = document.createElementNS(ns, 'svg');
-                    s.setAttribute('viewBox', viewBox);
-                    const iconSize = isActionBarButton ? '28' : '24';
-                    s.setAttribute('width', iconSize);
-                    s.setAttribute('height', iconSize);
-                    s.setAttribute('aria-hidden', 'true');
-                    s.setAttribute('fill', 'currentColor');
-                    s.setAttribute('focusable', 'false');
-                    s.style.cssText = 'width:' + iconSize + 'px;height:' + iconSize + 'px;display:block;';
-                    s.innerHTML = '<path d="' + d + '"></path>';
-                    return s;
-                };
-
-                if (spanHost) {
-                    try {
-                        const existing = spanHost.querySelector('svg');
-                        if (existing && existing instanceof SVGElement) {
-                            existing.setAttribute('viewBox', viewBox);
-                            existing.setAttribute('width', '24'); existing.setAttribute('height', '24');
-                            const p = existing.querySelector('path');
-                            if (p) p.setAttribute('d', iconPath); else existing.innerHTML = '<path d="' + iconPath + '"></path>';
-                        } else {
-                            while (spanHost.firstChild) spanHost.removeChild(spanHost.firstChild);
-                            const wrapperDiv = document.createElement('div');
-                            wrapperDiv.style.cssText = 'width:100%;height:100%;display:block;fill:currentcolor;';
-                            const s = makeSvg(iconPath);
-                            wrapperDiv.appendChild(s);
-                            spanHost.appendChild(wrapperDiv);
-                            try { spanHost.style.width = '100%'; spanHost.style.height = '100%'; } catch (e) {}
-                        }
-                    } catch (e) {}
-                    return;
-                }
-
-                const containerSelectors = [
-                    '.yt-spec-button-shape-next__icon',
-                    '.yt-spec-button-shape__icon',
-                    '.ytm-button__icon',
-                    '.yt-spec-icon-shape',
-                    '.ytm-spec-icon-shape',
-                    '.icon',
-                    '.ytm-settings-item-icon'
-                ];
-
-                let container = null;
-                for (const sel of containerSelectors) {
-                    container = clone.querySelector(sel);
-                    if (container) break;
-                }
-
-                let svg = container ? container.querySelector('svg') : null;
-                if (!svg) svg = clone.querySelector('svg');
-
-                const ensureSvg = (parent) => {
-                    let s = parent.querySelector('svg');
-                    if (s && s instanceof SVGElement) return s;
-                    s = document.createElementNS(ns, 'svg');
-                    const iconSize = isActionBarButton ? '28' : '24';
-
-                    s.setAttribute('width', iconSize); s.setAttribute('height', iconSize);
-                    parent.appendChild(s);
-                    return s;
-                };
-
-                const host = container || (svg && svg.parentElement) || clone;
-                if (!host) return;
-
-                const targetSvg = ensureSvg(host);
-                targetSvg.setAttribute('viewBox', viewBox);
-                targetSvg.setAttribute('aria-hidden', 'true');
-                targetSvg.setAttribute('fill', 'currentColor');
-                targetSvg.setAttribute('focusable', 'false');
-                const targetSize = isActionBarButton ? '28' : '24';
-                targetSvg.style.cssText = 'width:' + targetSize + 'px;height:' + targetSize + 'px;display:block;flex-shrink:0;';
-                const path = targetSvg.querySelector('path');
-                if (path) path.setAttribute('d', iconPath); else targetSvg.innerHTML = '<path d="' + iconPath + '"></path>';
-
-                const custom = host.querySelector('yt-icon, c3-icon, ytm-icon');
-                if (custom && custom.parentElement && !custom.querySelector('svg')) {
-                    try {
-                        const s = makeSvg(iconPath);
-                        custom.insertAdjacentElement('afterend', s);
-                    } catch (e) {}
-                }
-            })();
-
-            if (isActionBarButton) {
-                try {
-                    const host = clone.querySelector('.yt-spec-button-shape-next__icon, .yt-spec-button-shape__icon, .ytm-button__icon, .yt-spec-icon-shape, .ytm-spec-icon-shape, .icon, span.yt-icon-shape') || clone;
-                    const targetSize = '24';
-                    if (host && host.style) {
-                        host.style.display = 'inline-flex';
-                        host.style.alignItems = 'center';
-                        host.style.justifyContent = 'center';
-                        host.style.width = host.style.width || targetSize + 'px';
-                        host.style.height = host.style.height || targetSize + 'px';
-                        host.style.minWidth = host.style.minWidth || targetSize + 'px';
-                    }
-                    if (textEl && textEl.style) {
-                        textEl.style.display = 'inline-flex';
-                        textEl.style.alignItems = 'center';
-                        textEl.style.height = targetSize + 'px';
-                        textEl.style.lineHeight = targetSize + 'px';
-                    }
-                } catch (e) {}
-            }
 
             if (isOn) {
                 btn.style.outline = '2px solid currentColor';
+                btn.style.outlineOffset = '-2px';
             } else {
                 btn.style.outline = '';
+                btn.style.outlineOffset = '';
             }
 
-            const newBtn = btn.cloneNode(true);
-            btn.replaceWith(newBtn);
-            newBtn.addEventListener('click', (e) => {
+            const iconContainer = btn.querySelector('.yt-spec-button-shape-next__icon, .yt-icon-shape, yt-icon');
+            if (iconContainer) {
+                let svg = iconContainer.querySelector('svg');
+                const ns = 'http://www.w3.org/2000/svg';
+                if (!svg) {
+                    svg = document.createElementNS(ns, 'svg');
+                    svg.setAttribute('viewBox', '0 0 24 24');
+                    iconContainer.innerHTML = '';
+                    iconContainer.appendChild(svg);
+                }
+                svg.setAttribute('width', '24');
+                svg.setAttribute('height', '24');
+                svg.style.fill = 'currentColor';
+                const path = svg.querySelector('path');
+                if (path) path.setAttribute('d', iconPath);
+                else svg.innerHTML = `<path d="${iconPath}"></path>`;
+            }
+
+            replaceTextInNode(btn, label);
+
+            const hasAnyText = (function() {
+                const w = document.createTreeWalker(btn, NodeFilter.SHOW_TEXT);
+                while (w.nextNode()) { if (w.currentNode.textContent.trim()) return true; }
+                return false;
+            })();
+            if (!hasAnyText) {
+                const textSpan = document.createElement('span');
+                textSpan.className = 'yt-core-attributed-string yt-core-attributed-string--white-space-no-wrap yt-spec-button-shape-next__button-text-content';
+                textSpan.textContent = label;
+                btn.appendChild(textSpan);
+            }
+
+            wrapper.appendChild(clone);
+            bindListener(btn, 'click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onClick();
+            }, true);
+            return wrapper;
+        };
+
+        let watchButtonTemplate = null;
+
+        const createWatchButton = (label, iconPath, id, onClick) => {
+            const actionBar = document.querySelector('ytm-slim-video-action-bar-renderer');
+
+            let liveSource = null;
+            if (actionBar) {
+                const actionsContainer = actionBar.querySelector('.slim-video-action-bar-actions');
+                if (actionsContainer) {
+                    liveSource = actionsContainer.querySelector(':scope > ytm-button-renderer:not([data-lp-custom])') ||
+                                actionsContainer.querySelector(':scope > button-view-model:not([data-lp-custom])') ||
+                                actionsContainer.querySelector(':scope > .slim_video_action_bar_renderer_button:not([data-lp-custom])') ||
+                                actionsContainer.querySelector(':scope > :not(ytm-segmented-like-dislike-button-renderer):not(segmented-like-dislike-button-view-model):not([data-lp-custom])');
+                }
+                if (!liveSource) {
+                    liveSource = actionBar.querySelector('ytm-button-renderer:not([data-lp-custom])') ||
+                                 actionBar.querySelector('button-view-model:not([data-lp-custom])') ||
+                                 actionBar.querySelector('.slim_video_action_bar_renderer_button:not([data-lp-custom])');
+                }
+            }
+            if (!liveSource) {
+                liveSource = document.querySelector('ytm-button-renderer:not([data-lp-custom])') ||
+                             document.querySelector('button-view-model:not([data-lp-custom])') ||
+                             document.querySelector('.slim_video_action_bar_renderer_button:not([data-lp-custom])');
+            }
+
+            if (liveSource) {
+                watchButtonTemplate = liveSource.cloneNode(true);
+                watchButtonTemplate.removeAttribute('id');
+                watchButtonTemplate.removeAttribute('hidden');
+                watchButtonTemplate.style.removeProperty('display');
+                watchButtonTemplate.querySelectorAll('[style]').forEach(el => {
+                    if (el.style.display) el.style.removeProperty('display');
+                });
+                watchButtonTemplate.querySelectorAll('[hidden]').forEach(el => el.removeAttribute('hidden'));
+                const tmplBtn = watchButtonTemplate.querySelector('button') || watchButtonTemplate;
+                tmplBtn.removeAttribute('id');
+            }
+
+            const source = watchButtonTemplate || liveSource;
+            if (!source) return null;
+            const clone = source.cloneNode(true);
+
+            clone.removeAttribute('id');
+            clone.id = id;
+            clone.dataset.lpCustom = 'true';
+            clone.removeAttribute('hidden');
+            clone.style.removeProperty('display');
+            clone.querySelectorAll('[style]').forEach(el => {
+                if (el.style.display) el.style.removeProperty('display');
+            });
+            clone.querySelectorAll('[hidden]').forEach(el => el.removeAttribute('hidden'));
+
+            const btn = clone.querySelector('button') || clone;
+            btn.removeAttribute('href');
+            btn.removeAttribute('target');
+            btn.setAttribute('aria-label', label);
+            btn.dataset.lpCustom = 'true';
+
+            const iconContainer = clone.querySelector('.yt-spec-button-shape-next__icon, .yt-icon-shape, yt-icon');
+            if (iconContainer) {
+                let svg = iconContainer.querySelector('svg');
+                const ns = 'http://www.w3.org/2000/svg';
+                if (!svg) {
+                    svg = document.createElementNS(ns, 'svg');
+                    svg.setAttribute('viewBox', '0 0 24 24');
+                    iconContainer.innerHTML = '';
+                    iconContainer.appendChild(svg);
+                }
+                svg.setAttribute('width', '24');
+                svg.setAttribute('height', '24');
+                svg.style.fill = 'currentColor';
+                const path = svg.querySelector('path');
+                if (path) path.setAttribute('d', iconPath);
+                else svg.innerHTML = `<path d="${iconPath}"></path>`;
+            } else {
+                const ns = 'http://www.w3.org/2000/svg';
+                const svg = document.createElementNS(ns, 'svg');
+                svg.setAttribute('viewBox', '0 0 24 24');
+                svg.setAttribute('width', '24');
+                svg.setAttribute('height', '24');
+                svg.style.fill = 'currentColor';
+                svg.innerHTML = `<path d="${iconPath}"></path>`;
+                const flexContainer = document.createElement('div');
+                flexContainer.className = 'yt-spec-button-shape-next__icon';
+                flexContainer.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;';
+                flexContainer.appendChild(svg);
+                if (btn.firstChild) btn.insertBefore(flexContainer, btn.firstChild);
+                else btn.appendChild(flexContainer);
+            }
+
+            replaceTextInNode(clone, label);
+
+            bindListener(btn, 'click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
-                clickFn?.();
+                onClick();
             }, true);
-
             return clone;
         };
 
@@ -429,44 +436,6 @@ try {
             } catch (err) { return null; }
         };
 
-        const createYtActionButton = (id, textKey, iconD, clickFn) => {
-            if (document.getElementById(id)) return null;
-            const label = getLocalizedText(textKey);
-            const source =
-                document.querySelector(
-                    '.slim_video_action_bar_renderer_button'
-                ) ||
-                document.querySelector(
-                    'ytm-slim-video-action-bar-renderer button'
-                ) ||
-                document.querySelector(
-                    'ytm-toggle-button-renderer'
-                ) ||
-                document.querySelector(
-                    'button-view-model.ytSpecButtonViewModelHost'
-                );
-
-            const wrapper =
-                createNativeYtButton(
-                    label,
-                    iconD,
-                    false,
-                    clickFn,
-                    source
-                );
-            if (!wrapper) return null;
-            wrapper.id = id;
-            return wrapper;
-        };
-
-        const updateIncognitoChip = (chip, isOn) => {
-            const btn = chip.querySelector('button');
-            btn.style.overflow = 'visible';
-            const textEl = chip.querySelector('.ytSpecButtonShapeNextButtonTextContent');
-            if (textEl) textEl.textContent = isOn ? getLocalizedText('incognito_off') : getLocalizedText('incognito');
-            if (btn) btn.style.outline = isOn ? '2px solid currentColor' : '';
-        };
-
         const injectIncognitoFallbackBanner = () => {
             if (document.getElementById('_lp_incognito_banner')) return;
             const banner = document.createElement('div');
@@ -501,279 +470,72 @@ try {
             if (b) { b.remove(); document.body.style.paddingTop = ''; }
         };
 
-        const _ensureHeaderStyles = () => {
-            if (document.getElementById('_lp_header_styles')) return;
-            const style = document.createElement('style');
-            style.id = '_lp_header_styles';
-            style.textContent = `
-            yt-flexible-actions-view-model::-webkit-scrollbar {
-                display:none !important;
-            }
-
-            .ytFlexibleActionsViewModelActionRow {
-                -webkit-tap-highlight-color:transparent !important;
-                user-select:none !important;
-                outline:none !important;
-
-                display:flex !important;
-                flex-wrap:nowrap !important;
-                width:max-content !important;
-                min-width:100% !important;
-                align-items:center !important;
-            }
-
-            .ytFlexibleActionsViewModelActionRow * {
-                -webkit-tap-highlight-color:transparent !important;
-                outline:none !important;
-                -webkit-user-drag:none !important;
-            }
-
-            .ytFlexibleActionsViewModelAction:empty {
-                display:none !important;
-            }
-            `;
-
-            document.head.appendChild(style);
-        };
-
-        let incognitoObserver = null;
-        let currentActionRow = null;
-        let injectScheduled = false;
-
-        const getActionRow = () => {
-            return (
-                document.querySelector(
-                    'yt-flexible-actions-view-model .ytFlexibleActionsViewModelActionRow'
-                ) ||
-                document.querySelector(
-                    '.ytFlexibleActionsViewModelActionRow'
-                )
-            );
-        };
-
-        const scheduleInject = () => {
-            if (injectScheduled) return;
-
-            injectScheduled = true;
-
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    injectScheduled = false;
-                    injectIncognito();
-                });
-            });
-        };
-
-        const injectIncognito = () => {
+        const ensureLibraryButton = () => {
             const pc = getCachedPageClass(location.href);
-
             if (pc !== 'you' && pc !== 'library') {
                 removeIncognitoFallbackBanner();
                 return;
             }
-
-            const row = getActionRow();
-            const isOn = window.android?.isIncognito?.() === true;
-
+            const row = document.querySelector('yt-flexible-actions-view-model .ytFlexibleActionsViewModelActionRow') || document.querySelector('.ytFlexibleActionsViewModelActionRow');
             if (!row) {
+                const isOn = window.android?.isIncognito?.() === true;
                 if (isOn) injectIncognitoFallbackBanner();
                 return;
             }
-
             removeIncognitoFallbackBanner();
-
-            if (
-                currentActionRow !== row ||
-                !document.contains(currentActionRow)
-            ) {
-                currentActionRow = row;
-                attachRowObserver(row);
-            }
-
-            let chip = row.querySelector('#_lp_incognito_chip');
-
+            const isOn = window.android?.isIncognito?.() === true;
+            let chip = document.getElementById('_lp_incognito_chip');
             if (!chip) {
-                chip = createNativeYtButton(
-                    isOn
-                        ? getLocalizedText('incognito_off')
-                        : getLocalizedText('incognito'),
+                chip = createLibraryIncognitoButton(
+                    isOn ? getLocalizedText('incognito_off') : getLocalizedText('incognito'),
                     INCOGNITO_ICON,
                     isOn,
                     () => {
-                        if (window.android?.toggleIncognito) {
-                            android.toggleIncognito();
-                        }
-
-                        requestAnimationFrame(() => {
-                            scheduleInject();
-                        });
+                        if (window.android?.toggleIncognito) android.toggleIncognito();
+                        st(ensureLibraryButton, 100);
                     }
                 );
-
-                if (!chip) return;
-
-                chip.id = '_lp_incognito_chip';
-                chip.dataset.lpIncognito = 'true';
-
-                const wrap = document.createElement('div');
-                wrap.className =
-                    'ytFlexibleActionsViewModelAction ytFlexibleActionsViewModelActionRowAction';
-                wrap.appendChild(chip);
-                row.prepend(wrap);
-                wrap.dataset.lpProtected = 'true';
-            }
-
-            updateIncognitoChip(chip, isOn);
-            document.documentElement.classList.remove('lp-actionbar-hidden');
-
-            const chipWrap = chip.parentElement;
-
-            if (chipWrap && row.firstElementChild !== chipWrap) {
-                row.prepend(chipWrap);
-            }
-        };
-
-        const attachRowObserver = (row) => {
-            if (incognitoObserver) {
-                incognitoObserver.disconnect();
-            }
-
-            incognitoObserver = new MutationObserver(() => {
-
-                if (!document.contains(row)) {
-                    currentActionRow = null;
-                    scheduleInject();
-                    return;
+                if (chip) {
+                    chip.id = '_lp_incognito_chip';
+                    row.prepend(chip);
                 }
+            } else {
+                const btn = chip.querySelector('button');
+                const currentLabel = isOn ? getLocalizedText('incognito_off') : getLocalizedText('incognito');
+                replaceTextInNode(chip, currentLabel);
 
-                if (!row.querySelector('#_lp_incognito_chip')) {
-                    scheduleInject();
+                if (btn) {
+                    if (isOn) {
+                        btn.style.outline = '2px solid currentColor';
+                        btn.style.outlineOffset = '-2px';
+                    } else {
+                        btn.style.outline = '';
+                        btn.style.outlineOffset = '';
+                    }
                 }
-
-                if (!row.querySelector('[data-lp-protected="true"]')) {
-                    scheduleInject();
-                }
-            });
-
-            incognitoObserver.observe(row, {
-                childList: true
-            });
-        };
-
-        const startIncognitoSystem = () => {
-            _ensureHeaderStyles();
-            document.documentElement.classList.add('lp-actionbar-hidden');
-            scheduleInject();
-
-            [
-                'yt-navigate-finish',
-                'yt-page-data-updated',
-                'yt-page-type-changed'
-            ].forEach(evt => {
-                document.addEventListener(evt, () => {
-                    currentActionRow = null;
-
-                    requestAnimationFrame(() => {
-                        requestAnimationFrame(() => {
-                            scheduleInject();
-                        });
-                    });
-                }, true);
-            });
-        };
-
-        startIncognitoSystem();
-
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) { const pc = getCachedPageClass(location.href); if (pc === 'you' || pc === 'library') scheduleInject(); }
-        }, { passive: true });
-
-        const updatePageClass = (url) => {
-            cachedPageClass = null;
-            const pc = getCachedPageClass(url || location.href);
-            if (pc && window.pageClass !== pc) {
-                window.pageClass = pc;
-                document.documentElement.setAttribute('page-class', pc);
-                window.dispatchEvent(new Event('onPageClassChange'));
             }
         };
 
-        window.addEventListener('onProgressChangeFinish', () => { updatePageClass(); if (window.android?.finishRefresh) android.finishRefresh(); });
-        window.addEventListener('onRefresh', () => location.reload());
-        window.addEventListener('doUpdateVisitedHistory', () => {
-            const pc = getCachedPageClass(location.href);
-            if (window.android?.setRefreshLayoutEnabled) android.setRefreshLayoutEnabled(['home', 'subscriptions', '@'].includes(pc));
-            if (window.android?.finishRefresh) android.finishRefresh();
-        });
-
-        const handlePlayerVisibility = () => {
-            const url = location.href;
-            cachedPageClass = null;
-            updatePageClass(url);
-            const pc = getCachedPageClass(url);
-            if (pc === 'watch' && window.android?.play) android.play(url);
-            if (pc === 'shorts') st(() => { if (!document.querySelector('ytm-shorts, shorts-video, #shorts-container, ytm-reel-watch-sequence')) location.href = url; }, 1200);
-            if (pc === 'you' || pc === 'library') {
-                window.watchInjected = false;
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        scheduleInject();
-                    });
+        let libraryObserver = null;
+        const startLibraryObserver = () => {
+            if (libraryObserver) libraryObserver.disconnect();
+            const container = document.querySelector('yt-flexible-actions-view-model');
+            if (container) {
+                libraryObserver = new MutationObserver(() => {
+                    ensureLibraryButton();
                 });
+                libraryObserver.observe(container, { childList: true, subtree: true });
+                ensureLibraryButton();
+            } else {
+                libraryObserver = new MutationObserver((mutations, obs) => {
+                    if (document.querySelector('yt-flexible-actions-view-model')) {
+                        obs.disconnect();
+                        startLibraryObserver();
+                    }
+                });
+                libraryObserver.observe(document.body, { childList: true, subtree: true });
             }
         };
-
-        window.addEventListener('popstate', handlePlayerVisibility);
-        ['pushState', 'replaceState'].forEach(name => {
-            const original = history[name];
-            history[name] = function() {
-                original.apply(this, arguments);
-                window.watchInjected = false;
-                handlePlayerVisibility();
-            };
-        });
-
-        const resizeObserver = new ResizeObserver(() => {
-            if (getCachedPageClass(location.href) !== 'watch') return;
-            const p = document.querySelector('#movie_player');
-            if (p && p.clientHeight > 10 && window.android?.setPlayerHeight) android.setPlayerHeight(p.clientHeight);
-        });
-
-        window.__liteSyncInFlight = false;
-        window.__syncNativeProgress = function(seconds) {
-            const p = document.querySelector('#movie_player');
-            if (!p || window.__liteSyncInFlight) return false;
-            window.__liteSyncInFlight = true;
-            try {
-                p.mute?.(); p.seekTo?.(seconds); p.playVideo?.();
-                setTimeout(() => { p.pauseVideo?.(); window.__liteSyncInFlight = false; }, 2000);
-                return true;
-            } catch (e) { window.__liteSyncInFlight = false; return false; }
-        };
-
-               document.addEventListener('animationstart', (e) => {
-                   if (e.animationName !== 'nodeInserted') return;
-                   const node = e.target, pc = getCachedPageClass(location.href);
-                   if (node.id === 'movie_player') {
-                       if (pc === 'watch') {
-                           node.mute?.();
-                           const resumePos = (window.android?.getResumePosition ? android.getResumePosition(getVideoId(location.href)) : 0) / 1000;
-                           node.seekTo?.(resumePos || (node.getDuration() / 2));
-                           node.addEventListener('onStateChange', s => { if (s === 1 && !window.__liteSyncInFlight) node.pauseVideo?.(); });
-
-                           document.body.style.setProperty('overflow', 'auto', 'important');
-                           document.documentElement.style.setProperty('overflow', 'auto', 'important');
-                           document.body.style.setProperty('position', 'relative', 'important');
-                       }
-                       resizeObserver.disconnect(); resizeObserver.observe(node);
-                   } else if (pc === 'watch' && node.classList.contains('watch-below-the-player')) {
-                       node.style.setProperty('overflow', 'visible', 'important');
-                       node.style.setProperty('height', 'auto', 'important');
-                       node.style.setProperty('touch-action', 'auto', 'important');
-                   }
-               }, false);
-
-        bindShortsGesture();
 
         let cachedPrefs = null, lastPrefCheckTime = 0;
         const PREF_CACHE_DURATION = 1500;
@@ -795,6 +557,7 @@ try {
                 'segmented-like-dislike-button-view-model',
                 'button-view-model',
             ].join(',')).forEach((btn) => {
+                if (btn.dataset.lpCustom === 'true' || btn.closest('[data-lp-custom="true"]')) return;
                 const label = (btn.getAttribute('aria-label') || btn.textContent || '').toLowerCase().trim();
                 const id = btn.id || '';
                 const tag = btn.tagName.toLowerCase();
@@ -834,23 +597,32 @@ try {
             }
         };
 
-        const watchObserver = new MutationObserver(() => {
+        let watchObserver = null;
+        const startWatchObserver = () => {
+            if (watchObserver) watchObserver.disconnect();
+            const container = document.querySelector('ytm-slim-video-action-bar-renderer');
+            if (container) {
+                watchObserver = new MutationObserver(() => {
+                    ensureWatchButtons();
+                });
+                watchObserver.observe(container, { childList: true, subtree: true });
+                ensureWatchButtons();
+            }
+        };
+
+        const ensureWatchButtons = () => {
+            if (getCachedPageClass(location.href) !== 'watch') return;
             const actionBar = document.querySelector('ytm-slim-video-action-bar-renderer');
-            if (!actionBar || getCachedPageClass(location.href) !== 'watch') return;
-
+            if (!actionBar) return;
             const prefs = getPrefs();
-            actionBar.style.overflow = 'visible';
-
-            const container = actionBar.querySelector('#menu') || actionBar.querySelector('.slim-video-action-bar-actions') || actionBar;
+            const container = actionBar.querySelector('.slim-video-action-bar-actions') || actionBar;
             let anchor = container.querySelector('ytm-segmented-like-dislike-button-renderer') ||
                          container.querySelector('ytm-toggle-button-renderer') ||
                          container.querySelector('segmented-like-dislike-button-view-model') ||
                          container.firstElementChild;
             if (!anchor) return;
-
             const moviePlayer = document.querySelector('#movie_player');
             const isLive = moviePlayer?.getPlayerResponse?.()?.playabilityStatus?.liveStreamability && location.href.includes('/watch');
-
             const targetOrder = [];
             if (!isLive) {
                 targetOrder.push({
@@ -930,7 +702,7 @@ try {
 
             targetOrder.forEach(item => {
                 let btn = document.getElementById(item.id);
-                if (!btn) btn = createYtActionButton(item.id, item.key, item.icon, item.fn);
+                if (!btn) btn = createWatchButton(getLocalizedText(item.key), item.icon, item.id, item.fn);
                 if (btn) {
                     if (anchor.nextElementSibling !== btn) anchor.after(btn);
                     anchor = btn;
@@ -938,10 +710,102 @@ try {
             });
 
             applyActionBarVisibility(actionBar, prefs);
-
+            actionBar.setAttribute('data-lp-processed', 'true');
             window.watchInjected = true;
+        };
+
+        startLibraryObserver();
+        startWatchObserver();
+
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) { const pc = getCachedPageClass(location.href); if (pc === 'you' || pc === 'library') ensureLibraryButton(); }
+        }, { passive: true });
+
+        const updatePageClass = (url) => {
+            cachedPageClass = null;
+            const pc = getCachedPageClass(url || location.href);
+            if (pc && window.pageClass !== pc) {
+                window.pageClass = pc;
+                document.documentElement.setAttribute('page-class', pc);
+                window.dispatchEvent(new Event('onPageClassChange'));
+            }
+        };
+
+        window.addEventListener('onProgressChangeFinish', () => { updatePageClass(); if (window.android?.finishRefresh) android.finishRefresh(); });
+        window.addEventListener('onRefresh', () => location.reload());
+        window.addEventListener('doUpdateVisitedHistory', () => {
+            const pc = getCachedPageClass(location.href);
+            if (window.android?.setRefreshLayoutEnabled) android.setRefreshLayoutEnabled(['home', 'subscriptions', '@'].includes(pc));
+            if (window.android?.finishRefresh) android.finishRefresh();
         });
-        watchObserver.observe(document.body, { childList: true, subtree: true });
+
+        const handlePlayerVisibility = () => {
+            const url = location.href;
+            cachedPageClass = null;
+            updatePageClass(url);
+            const pc = getCachedPageClass(url);
+            if (pc === 'watch' && window.android?.play) android.play(url);
+            if (pc === 'shorts') st(() => { if (!document.querySelector('ytm-shorts, shorts-video, #shorts-container, ytm-reel-watch-sequence')) location.href = url; }, 1200);
+            if (pc === 'you' || pc === 'library') {
+                window.watchInjected = false;
+                ensureLibraryButton();
+            }
+            if (pc === 'watch') {
+                startWatchObserver();
+            }
+        };
+
+        window.addEventListener('popstate', handlePlayerVisibility);
+        ['pushState', 'replaceState'].forEach(name => {
+            const original = history[name];
+            history[name] = function() {
+                original.apply(this, arguments);
+                window.watchInjected = false;
+                handlePlayerVisibility();
+            };
+        });
+
+        const resizeObserver = new ResizeObserver(() => {
+            if (getCachedPageClass(location.href) !== 'watch') return;
+            const p = document.querySelector('#movie_player');
+            if (p && p.clientHeight > 10 && window.android?.setPlayerHeight) android.setPlayerHeight(p.clientHeight);
+        });
+
+        window.__liteSyncInFlight = false;
+        window.__syncNativeProgress = function(seconds) {
+            const p = document.querySelector('#movie_player');
+            if (!p || window.__liteSyncInFlight) return false;
+            window.__liteSyncInFlight = true;
+            try {
+                p.mute?.(); p.seekTo?.(seconds); p.playVideo?.();
+                setTimeout(() => { p.pauseVideo?.(); window.__liteSyncInFlight = false; }, 2000);
+                return true;
+            } catch (e) { window.__liteSyncInFlight = false; return false; }
+        };
+
+               document.addEventListener('animationstart', (e) => {
+                   if (e.animationName !== 'nodeInserted') return;
+                   const node = e.target, pc = getCachedPageClass(location.href);
+                   if (node.id === 'movie_player') {
+                       if (pc === 'watch') {
+                           node.mute?.();
+                           const resumePos = (window.android?.getResumePosition ? android.getResumePosition(getVideoId(location.href)) : 0) / 1000;
+                           node.seekTo?.(resumePos || (node.getDuration() / 2));
+                           node.addEventListener('onStateChange', s => { if (s === 1 && !window.__liteSyncInFlight) node.pauseVideo?.(); });
+
+                           document.body.style.setProperty('overflow', 'auto', 'important');
+                           document.documentElement.style.setProperty('overflow', 'auto', 'important');
+                           document.body.style.setProperty('position', 'relative', 'important');
+                       }
+                       resizeObserver.disconnect(); resizeObserver.observe(node);
+                   } else if (pc === 'watch' && node.classList.contains('watch-below-the-player')) {
+                       node.style.setProperty('overflow', 'visible', 'important');
+                       node.style.setProperty('height', 'auto', 'important');
+                       node.style.setProperty('touch-action', 'auto', 'important');
+                   }
+               }, false);
+
+        bindShortsGesture();
 
         let lastPC = null, cachedHeaderElement = null, cachedSuggestionsElement = null;
 
@@ -950,7 +814,7 @@ try {
             const pc = getCachedPageClass(location.href);
             const prefs = getPrefs();
             if (pc === 'you' || pc === 'library') {
-                scheduleInject();
+                ensureLibraryButton();
             } else {
                 removeIncognitoFallbackBanner();
             }
@@ -958,6 +822,7 @@ try {
             if (pc !== lastPC) { cachedHeaderElement = null; lastPC = pc; }
 
             if (pc === 'watch') {
+                ensureWatchButtons();
                 if (!cachedHeaderElement) cachedHeaderElement = document.querySelector('ytm-header-bar-renderer');
                 if (cachedHeaderElement) cachedHeaderElement.style.setProperty('display', 'none', 'important');
                 document.body.style.setProperty('padding-top', '0', 'important');
@@ -1020,8 +885,7 @@ try {
                     const btns = [
                         { id: 'extensionButton', key: 'extension', icon: 'M497-120l-33-124q-15-7-30-16t-28-20l-116 50-70-121 98-88q-2-10-3-20t-1-20q0-10 1-20t3-20l-98-88 70-121 116 50q13-11 28-20t30-16l33-124h140l33 124q15 7 30 16t28 20l116-50 70 121-98 88q2 10 3 20t1 20q0 10-1 20t-3 20l98 88-70 121-116-50q-13 11-28 20t-30 16l-33 124H497Zm70-227q55 0 94-39t39-94q0-55-39-94t-94-39q-55 0-94 39t-39 94q0 55 39 94t94 39Z', fn: () => window.android?.extension() },
                         { id: 'downloadButton', key: 'downloads', icon: 'M480-336 288-528l51-51 105 105v-342h72v342l105-105 51 51-192 192ZM263.72-192Q234-192 213-213.15T192-264v-72h72v72h432v-72h72v72q0 29.7-21.16 50.85Q725.68-192 695.96-192H263.72Z', fn: () => window.android?.download() },
-                        { id: 'aboutButton', key: 'about', icon: 'M444-288h72v-240h-72v240Zm35.79-312q15.21 0 25.71-10.29t10.5-25.5q0-15.21-10.29-25.71t-25.5-10.5q-15.21 0-25.71 10.29t-10.5 25.5q0 15.21 10.29 25.71t25.5 10.5Zm.49 504Q401-96 331-126t-122.5-82.5Q156-261 126-330.96t-30-149.5Q96-560 126-629.5q30-69.5 82.5-122T330.96-834q69.96-30 149.5-30t149.04 30q69.5 30 122 82.5T834-629.28q30 69.73 30 149Q864-401 834-331t-82.5 122.5Q699-156 629.28-126q-69.73 30-149 30Zm0-72q130 0 221-91t91-221q0-130-91-221t-221-91q-130 0-221-91t-91 221q0 130 91 221t221 91Zm0-312Z', fn: () => window.android?.about() },
-                    ];
+                        { id: 'aboutButton', key: 'about', icon: 'M444-288h72v-240h-72v240Zm35.79-312q15.21 0 25.71-10.29t10.5-25.5q0-15.21-10.29-25.71t-25.5-10.5q-15.21 0-25.71 10.29t-10.5 25.5q0 15.21 10.29 25.71t25.5 10.5Zm.49 504Q401-96 331-126t-122.5-82.5Q156-261 126-330.96t-30-149.5Q96-560 126-629.5q30-69.5 82.5-122T330.96-834q69.96-30 149.5-30t149.04 30q69.5 30 122 82.5T834-629.28q30 69.73 30 149Q864-401 834-331t-82.5 122.5Q699-156 629.28-126q-69.73 30-149 30Zm0-72q130 0 221-91t91-221q0-130-91-221t-221-91q-130 0-221 91t-91 221q0 130 91 221t221 91Zm0-312Z', fn: () => window.android?.about() }, ];
                     btns.forEach(b => {
                         const el = createCustomSettingBtn(base, b.id, b.key, b.icon, b.fn);
                         if (el) b.id === 'aboutButton' ? settings.appendChild(el) : settings.insertBefore(el, settings.firstElementChild);
