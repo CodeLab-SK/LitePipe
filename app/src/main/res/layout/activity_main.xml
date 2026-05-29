@@ -181,7 +181,6 @@
         android:layout_height="wrap_content"
         android:background="#212121"
         android:gravity="center"
-        android:paddingVertical="4dp"
         android:text="You're incognito"
         android:textColor="#FFFFFF"
         android:textSize="12sp"

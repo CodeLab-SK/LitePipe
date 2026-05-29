@@ -438,36 +438,108 @@ try {
 
         const injectIncognitoFallbackBanner = () => {
             if (document.getElementById('_lp_incognito_banner')) return;
+
+            const isDark = document.documentElement.getAttribute('dark') === 'true' || window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const bg = isDark ? '#0f0f0f' : '#f9f9f9';
+            const fg = isDark ? '#e8eaed' : '#202124';
+            const subFg = isDark ? '#9aa0a6' : '#5f6368';
+            const cardBg = isDark ? '#1c1c1e' : '#ffffff';
+
+            const headerHeight = (() => {
+                const h = document.querySelector('ytm-header-bar-renderer');
+                return h ? h.offsetHeight : 56;
+            })();
+
             const banner = document.createElement('div');
             banner.id = '_lp_incognito_banner';
-            banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99998;display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:48px;background:#212121;color:#fff;font-size:14px;font-family:inherit;box-sizing:border-box;';
+            banner.style.cssText = `position:fixed;top:${headerHeight - 8}px;left:0;right:0;bottom:-60px;z-index:99990;display:flex;flex-direction:column;align-items:center;justify-content:center;background:${bg};color:${fg};font-family:"YouTube Sans","Roboto",sans-serif;padding:24px 28px 60px;box-sizing:border-box;overflow:hidden;`; const card = document.createElement('div');
+            card.style.cssText = `display:flex;flex-direction:column;align-items:center;justify-content:center;background:${cardBg};border-radius:20px;padding:36px 28px 32px;box-shadow:0 4px 24px rgba(0,0,0,${isDark ? '0.5' : '0.10'});max-width:340px;width:100%;box-sizing:border-box;`;
+
             const ns = 'http://www.w3.org/2000/svg';
-            const iconWrap = document.createElement('span');
-            iconWrap.style.cssText = 'display:inline-flex;align-items:center;gap:8px;font-weight:500;';
             const svg = document.createElementNS(ns, 'svg');
-            svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('width', '20'); svg.setAttribute('height', '20');
-            svg.style.cssText = 'fill:currentColor;display:block;flex-shrink:0;';
-            const p = document.createElementNS(ns, 'path');
-            p.setAttribute('d', INCOGNITO_ICON);
-            svg.appendChild(p);
-            const lbl = document.createElement('span');
-            lbl.textContent = getLocalizedText('incognito_off');
-            iconWrap.appendChild(svg); iconWrap.appendChild(lbl);
+            svg.setAttribute('viewBox', '0 0 40 40');
+            svg.setAttribute('width', '120');
+            svg.setAttribute('height', '120');
+            svg.style.cssText = `display:block;margin-bottom:20px;`;
+
+            const defs = document.createElementNS(ns, 'defs');
+            const grad = document.createElementNS(ns, 'radialGradient');
+            grad.setAttribute('id', '_lp_ig_grad');
+            grad.setAttribute('cx', '50%'); grad.setAttribute('cy', '40%');
+            grad.setAttribute('r', '55%');
+            const s1 = document.createElementNS(ns, 'stop');
+            s1.setAttribute('offset', '0%'); s1.setAttribute('stop-color', isDark ? '#9aa0a6' : '#bdc1c6');
+            const s2 = document.createElementNS(ns, 'stop');
+            s2.setAttribute('offset', '100%'); s2.setAttribute('stop-color', isDark ? '#5f6368' : '#80868b');
+            grad.appendChild(s1); grad.appendChild(s2); defs.appendChild(grad);
+            svg.appendChild(defs);
+
+            const hatPath = document.createElementNS(ns, 'path');
+            hatPath.setAttribute('d', 'M20 3C13.37 3 8 8.37 8 15H32C32 8.37 26.63 3 20 3Z');
+            hatPath.setAttribute('fill', 'url(#_lp_ig_grad)');
+            svg.appendChild(hatPath);
+
+            const brimRect = document.createElementNS(ns, 'rect');
+            brimRect.setAttribute('x', '2'); brimRect.setAttribute('y', '15');
+            brimRect.setAttribute('width', '36'); brimRect.setAttribute('height', '4');
+            brimRect.setAttribute('rx', '2');
+            brimRect.setAttribute('fill', isDark ? '#9aa0a6' : '#bdc1c6');
+            svg.appendChild(brimRect);
+
+            [
+                { cx: '12', cy: '27', r: '5.5' },
+                { cx: '28', cy: '27', r: '5.5' },
+            ].forEach(attrs => {
+                const circle = document.createElementNS(ns, 'circle');
+                Object.entries(attrs).forEach(([k, v]) => circle.setAttribute(k, v));
+                circle.setAttribute('fill', isDark ? '#9aa0a6' : '#bdc1c6');
+                svg.appendChild(circle);
+                const lens = document.createElementNS(ns, 'circle');
+                lens.setAttribute('cx', attrs.cx); lens.setAttribute('cy', attrs.cy);
+                lens.setAttribute('r', '3.5');
+                lens.setAttribute('fill', isDark ? '#1c1c1e' : '#f1f3f4');
+                svg.appendChild(lens);
+            });
+
+            card.appendChild(svg);
+
+            const title = document.createElement('div');
+            title.textContent = "You're Incognito";
+            title.style.cssText = `font-size:22px;font-weight:700;text-align:center;color:${fg};letter-spacing:-0.3px;margin-bottom:10px;`;
+            card.appendChild(title);
+
+            const subtitle = document.createElement('div');
+            subtitle.textContent = "Your activity in this session won't be saved to your YouTube history.";
+            subtitle.style.cssText = `font-size:13px;text-align:center;color:${subFg};line-height:1.5;margin-bottom:28px;`;
+            card.appendChild(subtitle);
+
             const offBtn = document.createElement('button');
             offBtn.textContent = getLocalizedText('incognito_off');
-            offBtn.style.cssText = 'background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:13px;font-weight:500;padding:6px 14px;border-radius:18px;cursor:pointer;font-family:inherit;white-space:nowrap;-webkit-tap-highlight-color:transparent;';
+            offBtn.style.cssText = `background:#1a73e8;border:none;color:#ffffff;font-size:15px;font-weight:600;padding:13px 0;border-radius:24px;cursor:pointer;font-family:inherit;white-space:nowrap;-webkit-tap-highlight-color:transparent;width:100%;letter-spacing:0.01em;box-shadow:0 2px 12px rgba(26,115,232,0.45),0 0 0 0 rgba(26,115,232,0);transition:box-shadow 0.15s,transform 0.1s;`;
+            offBtn.addEventListener('pointerdown', () => {
+                offBtn.style.transform = 'scale(0.97)';
+                offBtn.style.boxShadow = '0 1px 6px rgba(26,115,232,0.55),0 0 18px rgba(26,115,232,0.3)';
+            }, { passive: true });
+            offBtn.addEventListener('pointerup', () => {
+                offBtn.style.transform = '';
+                offBtn.style.boxShadow = '0 2px 12px rgba(26,115,232,0.45)';
+            }, { passive: true });
             offBtn.addEventListener('click', (e) => {
                 e.preventDefault(); e.stopPropagation();
                 if (window.android?.toggleIncognito) android.toggleIncognito();
             }, true);
-            banner.appendChild(iconWrap); banner.appendChild(offBtn);
+            card.appendChild(offBtn);
+
+            banner.appendChild(card);
             document.body.appendChild(banner);
-            document.body.style.paddingTop = '48px';
+            if (window.android?.setRefreshLayoutEnabled) android.setRefreshLayoutEnabled(false);
+
         };
 
         const removeIncognitoFallbackBanner = () => {
             const b = document.getElementById('_lp_incognito_banner');
-            if (b) { b.remove(); document.body.style.paddingTop = ''; }
+            if (b) b.remove();
+            if (window.android?.setRefreshLayoutEnabled) android.setRefreshLayoutEnabled(false);
         };
 
         const ensureLibraryButton = () => {
