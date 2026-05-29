@@ -26,7 +26,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         ndk {
-            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a"))
+            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86"))
         }
 
     }
@@ -60,6 +60,9 @@ android {
     }
 
     packaging {
+        resources {
+            excludes += "META-INF/services/javax.script.ScriptEngineFactory"
+        }
         jniLibs {
             useLegacyPackaging = true
         }
@@ -68,6 +71,9 @@ android {
 
 dependencies {
     implementation(libs.core.splashscreen)
+    implementation(libs.lifecycle.process)
+    implementation(libs.lifecycle.livedata)
+    implementation(libs.lifecycle.viewmodel)
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
     coreLibraryDesugaring(libs.desugar.jdk.libs.nio)
@@ -84,6 +90,7 @@ dependencies {
     implementation(libs.activity)
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.exoplayer.dash)
+    implementation(libs.media3.exoplayer.hls)
     implementation(libs.media3.ui)
     implementation(libs.media3.datasource)
     implementation(libs.media3.datasource.okhttp)

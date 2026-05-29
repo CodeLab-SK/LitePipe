@@ -1,0 +1,50 @@
+Changelog v1.1.0
+
+* Added a custom Navigation Bar.
+* Added an option to hide the navigation bar in Shorts.
+* Introduced a Local Playback Queue.
+* Added options to hide action buttons below and inside the player for a cleaner interface.
+* Added support for custom download locations and improved playlist detection.
+* Moved the Picture-in-Picture (PiP) button below the player.
+* Fixed an issue where the Next and Previous buttons did not work in PiP mode.
+* Fixed aspect ratio stretching when switching between PiP and Fullscreen modes.
+* Merged session authentication and optimized the JavaScript engine.
+* Improved timestamp click handling.
+* Added Hold-to-2x-Speed gesture for Shorts.
+* Added separate toggles for player gestures.
+* Merged mini-player.
+* Implemented a rotate gesture to enter Fullscreen mode.
+* Added a drag-down gesture to enter mini-player.
+* Overhauled the playlist downloader and stream extractor.
+* Added multiple theme improvements.
+* Improved download resume functionality.
+* Fixed duplicate audio track issues.
+* Added and updated missing translations.
+* The app now automatically uses your device language by default.
+* Added the ability to customize the double-tap seek duration.
+* Fixed the persistent status bar issue in Fullscreen mode.
+* Removed the Watch Page header for a cleaner viewing experience.
+* Fixed external link handling(remember signed in state).
+* Fixed an issue where the back button did not work correctly in WebView.
+* Improved the captions toggle experience.
+* Fixed download notification issues.
+* Added network speed and ETA indicators for downloads.
+* Added action buttons to download notifications.
+* Added an Undo Skip option for SponsorBlock.
+* Added support for playing downloads and device videos in the in-app player.
+* Added remaining playback duration in the player.
+* Added a dedicated Downloads tab to download videos without opening the app.
+* Fixed incorrect durations in downloaded videos.
+* Added an option to set the maximum number of concurrent downloads.
+* Added support for downloading videos directly from copied links.
+* Added a fully functional Incognito Mode.
+* Limited gestures to the middle 3/5th area of the screen.
+* Added a toggle for the long-press context menu.
+* Refined back-press handling for YouTube containers.
+* Added a toggle for search suggestions.
+* Synced watch history and playback position between the native player and WebView player.
+* Added tutorial for opening links by default.
+* Added toggle for shorts player buttons.
+* Added options to hide comments bar below player.
+* Added 200% volume boost feature to player.
+* Added Innertube as a fallback extractor.

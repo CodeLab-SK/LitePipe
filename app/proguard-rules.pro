@@ -5,7 +5,7 @@
 -optimizationpasses 5
 -allowaccessmodification
 -mergeinterfacesaggressively
--repackageclasses ''
+# -repackageclasses '' # Removed as it often breaks reflection-based bridges like Rhino
 -overloadaggressively
 
 # General keeps
@@ -42,6 +42,13 @@
 -keep class org.schabi.newpipe.extractor.** { *; }
 -dontwarn org.schabi.newpipe.extractor.**
 -keep class org.schabi.newpipe.extractor.timeago.patterns.** { *; }
+
+# Rhino
+# ---------------------------------
+-keep class org.mozilla.javascript.** { *; }
+-dontwarn org.mozilla.javascript.**
+-keep class org.mozilla.classfile.** { *; }
+-dontwarn org.mozilla.classfile.**
 
 # OkHttp / Okio
 # -------------
@@ -83,6 +90,10 @@
 -keep class androidx.media3.common.util.UnstableApi
 -keep class androidx.media3.exoplayer.dash.DashMediaSource$Factory
 -dontwarn androidx.media3.**
+
+# JSoup / RE2J
+# ------------
+-dontwarn com.google.re2j.**
 
 # Suppress common library warnings
 # --------------------------------

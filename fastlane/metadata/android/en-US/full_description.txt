@@ -2,6 +2,7 @@ LitePipe is an advanced webview wrapper for YouTube.
 
 <b>Features</b>
 * <b>Ad-free playback</b>
+* <b>SponsorBlock</b>
 * <b>Background & Picture-in-Picture support</b>
-* <b>Built-in video downloader</b>
+* <b>Built-in video and audio downloader</b>
 * <b>Live stream chat support, etc.</b>

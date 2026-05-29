@@ -1,7 +1,0 @@
-- Fixed fullscreen dimming
-- Fixed long filename error
-- Fixed crash on output removal
-- Improved caching
-- Added thumbnail viewer
-- Added extension toggle
-- Added Shorts blocker
