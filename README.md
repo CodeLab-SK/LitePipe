@@ -17,13 +17,14 @@
 -  **Ad-free:** Completely ad-free YouTube experience.
 -  **SponsorBlock:** Automatically skip sponsors, intros, outros, and reminders.
 -  **Return YouTube Dislike:** See dislikes again.
--  **Powerful Downloader:** Built-in video, audio, caption, and thumbnail downloader.
+-  **Powerful Downloader:** Built-in video, audio, caption, playlist and thumbnail downloader.
 -  **Advanced Player:** Custom player supporting subtitles, multiple audio tracks, and gesture controls.
 -  **Background Play:** Listen to videos while using other apps or with the screen off.
 - ️ **Picture-in-Picture (PiP):** Multitask with a floating video window.
 -  **Live Chat:** Full support for live chat during streams.
 -  **Modern UI:** Clean Material 3 interface that is fast and responsive.
--  **Playlist Support:** Full support for downloading playlists.
+-  **Incognito Mode:** Watch videos without saving history.
+-  **Playback Queue:** Add videos in a queue to keep watching.
 
 ## 📸 Screenshots
 
@@ -65,12 +66,6 @@ cd LitePipe
 ```
 The APK will be available in `app/build/outputs/apk/debug/`.
 
-## 🚀 How to Use
-1. **Install and Open:** Launch the LitePipe app.
-2. **Browse:** Search or browse YouTube just like the official app.
-3. **Download:** Long-press any video thumbnail to bring up the **Video Options** menu or Press Download button under the Player.
-4. **Player Controls:** Use intuitive gestures (swipe for volume/brightness) while watching.
-
 ## 🤝 Contributing
 Whether you have ideas, bug reports, translations, design improvements, code cleanups, or major feature changes — **all help is welcome**!
 
@@ -79,31 +74,34 @@ Whether you have ideas, bug reports, translations, design improvements, code cle
 - **Have an idea or feature request?** → Open a new issue
 - **Want to contribute code?** → Fork the repo and submit a Pull Request
 
-You can open and build the project like any other normal Android project using **Android Studio**.
-
-**Development Guidelines:**
-- Follow the [Code of Conduct](Code of Conduct.md).
-- Use clear **conventional commit** messages (e.g., `feat: add playlist support`).
-
 ## ❓ FAQ
 **Q: Is this app safe?**  
 **A:** Yes. LitePipe uses the official YouTube mobile site as a base, providing the same level of security while adding powerful enhancements.
 
 **Q: Why use LitePipe instead of the official YouTube app?**  
-**A:** LitePipe offers an ad-free experience, skips sponsors, supports background play, and includes a powerful downloader — all while being lighter on battery and storage.
+**A:** LitePipe provides features not available in the official app, including ad blocking, SponsorBlock integration, background playback, advanced download options, and a lightweight design that uses less storage and system resources.
 
-**Q: Does it support playlists?**  
-**A:** Yes! Simply long-press any playlist to see the "Download Playlist" option.
+**Q: Can I sign in with my Google account?**                                                          
+**A:** Yes. You can sign in through YouTube's official login page to access subscriptions, playlists, watch history, and other account features.
 
-**Q: Can I download videos in the background?**  
-**A:** Yes. Downloads are managed via a foreground service and will continue even if you switch apps.
+**Q: Does LitePipe require YouTube Premium?**                                                               
+**A:** No. Many advanced features are built directly into LitePipe and are available without a YouTube Premium subscription.
 
+**Q: Can I use LitePipe alongside the official YouTube app?**                                                        
+**A:** Yes. LitePipe is completely separate from the official YouTube application and can be installed and used at the same time.
 
-## 📜 License
+**Q: Can I download a video using a link?**                                                                       
+**A:** Yes, copy a link and you will get a popup to play/download that video.
 
-LitePipe is **Free Software** licensed under the [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl.html).
+**Q: Can I download videos from Youtube app?**                                                                            
+**A:** Yes. Simply share a video from the Youtube app and select **"LitePipe Download"** from the share menu to start downloading without opening LitePipe.
 
----
+**Q: Can I set it as default app for Youtube videos?**                                                     
+**A:** Yes. Litepipe supoprts all youtube links and you can set it as a default app in the android settings.
+
+**Q: Can I upload videos to Youtube?**                                                         
+**A:** Unfortunately, Litepipe doesn't support uploading videos or notifications yet.
+
 <div align="center">
-Made with ❤️ by <a href="https://github.com/CodeLab-SK">Sahil Kumar</a> for the Open Source Community
+Made with ❤️ by <a href="https://github.com/CodeLab-SK">Sahil Kumar.</a>
 </div>
