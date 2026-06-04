@@ -63,6 +63,7 @@ public class DownloadService extends Service {
 	private static final long FAILED_TEMP_CLEANUP_THRESHOLD = TimeUnit.DAYS.toMillis(1);
 
 	private final Set<String> activeTaskIds = ConcurrentHashMap.newKeySet();
+	private final Set<String> resumingTaskIds = ConcurrentHashMap.newKeySet();
 	private final Map<String, String> activeTaskNames = new ConcurrentHashMap<>();
 	private final Map<String, Task> activeTasks = new ConcurrentHashMap<>();
 	private final Map<String, Integer> activeProgress = new ConcurrentHashMap<>();
@@ -178,6 +179,7 @@ public class DownloadService extends Service {
 
 	private void startTask(@NonNull Task task) {
 		final String taskId = task.videoId();
+		resumingTaskIds.remove(taskId);
 		activeTasks.put(taskId, task);
 		activeTaskIds.add(taskId);
 		activeTaskNames.put(taskId, task.fileName());
@@ -221,6 +223,7 @@ public class DownloadService extends Service {
 		}
 		historyRepository.upsert(record);
 		broadcastRecordUpdated(taskId, true);
+		updateParentRecord(record.getParentId());
 
 		activeDownloaded.put(taskId, record.getDownloadedSize());
 		activeTotal.put(taskId, record.getTotalSize());
@@ -312,6 +315,7 @@ public class DownloadService extends Service {
 		record.setUpdatedAt(System.currentTimeMillis());
 		historyRepository.upsert(record);
 		broadcastRecordUpdated(taskId, true);
+		updateParentRecord(record.getParentId());
 	}
 
 	private void updateRecordStatus(String taskId, DownloadStatus status) {
@@ -322,13 +326,59 @@ public class DownloadService extends Service {
 			record.setUpdatedAt(System.currentTimeMillis());
 			historyRepository.upsert(record);
 			broadcastRecordUpdated(taskId, true);
+			updateParentRecord(record.getParentId());
 		}
+	}
+
+	private void updateParentRecord(@Nullable String parentId) {
+		if (parentId == null || parentId.isBlank()) return;
+		DownloadRecord parent = historyRepository.findByTaskId(parentId);
+		if (parent == null) return;
+		List<DownloadRecord> children = historyRepository.getChildrenSorted(parentId);
+		if (children.isEmpty()) return;
+
+		int itemCount = parent.getItemCount();
+		if (itemCount <= 0) itemCount = children.size();
+		
+		int done = 0;
+		int failed = 0;
+		int running = 0;
+		int paused = 0;
+
+		for (DownloadRecord child : children) {
+			switch (child.getStatus()) {
+				case COMPLETED -> done++;
+				case FAILED, CANCELED -> failed++;
+				case PAUSED -> paused++;
+				default -> running++;
+			}
+		}
+
+		parent.setDoneCount(done);
+		parent.setFailedCount(failed);
+		parent.setRunningCount(running);
+		parent.setProgress(itemCount == 0 ? 0 : Math.min(100, (done * 100) / itemCount));
+		parent.setUpdatedAt(System.currentTimeMillis());
+
+		if (running > 0) {
+			parent.setStatus(DownloadStatus.RUNNING);
+		} else if (paused > 0) {
+			parent.setStatus(DownloadStatus.PAUSED);
+		} else if (done >= itemCount) {
+			parent.setStatus(DownloadStatus.COMPLETED);
+		} else if (failed > 0) {
+			parent.setStatus(DownloadStatus.FAILED);
+		}
+		
+		historyRepository.upsert(parent);
+		broadcastRecordUpdated(parentId, true);
 	}
 
 	public void pause(@NonNull String vid) {
 		liteDL.pause(vid);
 		updateRecordStatus(vid, DownloadStatus.PAUSED);
 		activeTaskIds.remove(vid);
+		resumingTaskIds.remove(vid);
 		activeProgress.remove(vid);
 		activeSpeeds.remove(vid);
 		activeDownloaded.remove(vid);
@@ -340,9 +390,12 @@ public class DownloadService extends Service {
 	}
 
 	public void resume(@NonNull String vid) {
+		if (activeTaskIds.contains(vid) || resumingTaskIds.contains(vid)) return;
+		
 		updateRecordStatus(vid, DownloadStatus.QUEUED);
 		DownloadRecord record = historyRepository.findByTaskId(vid);
 		if (record != null) {
+			resumingTaskIds.add(vid);
 			ensureForeground();
 			updateNotification(vid);
 			new Thread(() -> reExtractAndResume(record)).start();
@@ -351,6 +404,8 @@ public class DownloadService extends Service {
 
 	private void reExtractAndResume(DownloadRecord record) {
 		try {
+			if (!resumingTaskIds.contains(record.getTaskId())) return;
+			
 			PlaybackDetails details = youtubeExtractor.getPlaybackDetails("https://www.youtube.com/watch?v=" + record.getVideoId(), null);
 			int vItag = itagPrefs.getInt(record.getTaskId() + "_v_itag", -1);
 			int aItag = itagPrefs.getInt(record.getTaskId() + "_a_itag", -1);
@@ -389,6 +444,7 @@ public class DownloadService extends Service {
 			mainHandler.post(() -> startTask(newTask));
 		} catch (Exception e) {
 			Log.e("DownloadService", "Resume extraction failed", e);
+			resumingTaskIds.remove(record.getTaskId());
 			mainHandler.post(() -> {
 				updateRecordStatus(record.getTaskId(), DownloadStatus.FAILED);
 				onTaskCompleted(record.getTaskId(), record.getFileName(), false);
@@ -398,6 +454,7 @@ public class DownloadService extends Service {
 
 	public void cancel(@NonNull String vid) {
 		liteDL.cancel(vid);
+		resumingTaskIds.remove(vid);
 		updateRecordStatus(vid, DownloadStatus.CANCELED);
 		onTaskCancelled(vid);
 		broadcastRecordUpdated(vid, true);
@@ -512,8 +569,8 @@ public class DownloadService extends Service {
 	}
 
 	private void handleNoActiveDownloads() {
-		boolean hasPaused = !activeTasks.isEmpty();
-		if (hasPaused) {
+		boolean hasTasks = !activeTasks.isEmpty();
+		if (hasTasks) {
 			NotificationCompat.Builder pausedBuilder = new NotificationCompat.Builder(this, CHANNEL_ID)
 							.setSmallIcon(R.drawable.ic_download)
 							.setContentTitle("Downloads paused")
@@ -566,6 +623,7 @@ public class DownloadService extends Service {
 
 	private synchronized void onTaskCompleted(@NonNull final String taskId, @NonNull final String fileName, final boolean success) {
 		activeTaskIds.remove(taskId);
+		resumingTaskIds.remove(taskId);
 		activeTaskNames.remove(taskId);
 		activeTasks.remove(taskId);
 		activeProgress.remove(taskId);
@@ -583,6 +641,7 @@ public class DownloadService extends Service {
 
 	private synchronized void onTaskCancelled(@NonNull final String taskId) {
 		activeTaskIds.remove(taskId);
+		resumingTaskIds.remove(taskId);
 		activeTaskNames.remove(taskId);
 		activeTasks.remove(taskId);
 		activeProgress.remove(taskId);

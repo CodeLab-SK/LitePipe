@@ -59,6 +59,19 @@ public final class DownloadHistoryRepository {
 		return cache.get(taskId);
 	}
 
+	@NonNull
+	public synchronized List<DownloadRecord> getChildrenSorted(@NonNull String parentId) {
+		ensureInitialized();
+		List<DownloadRecord> children = new ArrayList<>();
+		for (DownloadRecord r : cache.values()) {
+			if (parentId.equals(r.getParentId())) {
+				children.add(r);
+			}
+		}
+		children.sort(Comparator.comparingLong(DownloadRecord::getCreatedAt));
+		return children;
+	}
+
 	public synchronized void upsert(@NonNull final DownloadRecord record) {
 		ensureInitialized();
 		cache.put(record.getTaskId(), record);

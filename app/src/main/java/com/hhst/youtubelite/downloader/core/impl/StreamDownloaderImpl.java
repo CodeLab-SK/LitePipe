@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 
 import javax.inject.Inject;
@@ -59,7 +60,7 @@ public class StreamDownloaderImpl implements StreamDownloader {
 						.readTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
 						.build();
 		this.mmkv = mmkv;
-		this.executor = new ThreadPoolExecutor(4, 16, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), r -> new Thread(r, "dl-worker"));
+		this.executor = new ThreadPoolExecutor(8, 16, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), r -> new Thread(r, "dl-worker"));
 		this.executor.allowCoreThreadTimeOut(true);
 	}
 
@@ -72,11 +73,22 @@ public class StreamDownloaderImpl implements StreamDownloader {
 
 	@Override
 	public CompletableFuture<File> download(@NonNull String key, @NonNull String url, @NonNull File out, @Nullable ProgressCallback cb) {
-		CompletableFuture<File> future = new CompletableFuture<>();
-		TaskContext ctx = new TaskContext(key, url, out, future, cb);
-		tasks.put(key, ctx);
-		executor.execute(() -> runTask(ctx));
-		return future;
+		TaskContext ctx = tasks.get(key);
+		if (ctx == null) {
+			ctx = new TaskContext(key, url, out, new CompletableFuture<>(), cb);
+			tasks.put(key, ctx);
+		} else {
+			ctx.url = url;
+			ctx.cb = cb;
+			ctx.error.set(null);
+			ctx.paused.set(false);
+			if (ctx.future.isDone() || ctx.future.isCancelled()) {
+				ctx.future = new CompletableFuture<>();
+			}
+		}
+		final TaskContext finalCtx = ctx;
+		executor.execute(() -> runTask(finalCtx));
+		return finalCtx.future;
 	}
 
 	private void runTask(TaskContext ctx) {
@@ -87,6 +99,7 @@ public class StreamDownloaderImpl implements StreamDownloader {
 			long total = mmkv.decodeLong(stateKey + "_total", -1);
 			boolean rangeSupported = mmkv.decodeBool(stateKey + "_range", false);
 
+			// Re-probe if we don't have metadata or if we suspect the URL changed
 			if (total <= 0) {
 				Request probeRequest = new Request.Builder().url(ctx.url).header("Range", "bytes=0-0").build();
 				try (Response resp = client.newCall(probeRequest).execute()) {
@@ -124,6 +137,7 @@ public class StreamDownloaderImpl implements StreamDownloader {
 			long initialDownloaded = calculateDownloaded(stateKey, bits, numBlocks, finalTotal);
 			ctx.downloadedBytes.set(initialDownloaded);
 			ctx.startTime.set(System.currentTimeMillis());
+			ctx.sessionDownloaded.set(0);
 			reportProgress(ctx, finalTotal);
 
 			if (raf.length() > finalTotal) raf.setLength(finalTotal);
@@ -146,6 +160,7 @@ public class StreamDownloaderImpl implements StreamDownloader {
 			}
 
 			if (bits.cardinality() < numBlocks) {
+				if (ctx.isInactive()) return;
 				throw new IOException("Download incomplete: " + bits.cardinality() + "/" + numBlocks + " blocks");
 			}
 
@@ -211,7 +226,7 @@ public class StreamDownloaderImpl implements StreamDownloader {
 					return;
 				}
 			} catch (Exception e) {
-				if (e.getMessage() != null && (e.getMessage().contains("expired") || e.getMessage().contains("URL expired"))) {
+				if (isExpiredError(e)) {
 					ctx.error.compareAndSet(null, e);
 					return;
 				}
@@ -276,7 +291,7 @@ public class StreamDownloaderImpl implements StreamDownloader {
 
 	private boolean isExpiredError(Exception e) {
 		String m = e.getMessage();
-		return m != null && (m.contains("expired") || m.contains("URL expired"));
+		return m != null && (m.contains("expired") || m.contains("URL expired") || m.contains("403") || m.contains("410"));
 	}
 
 	private void cleanupState(String stateKey, int numBlocks) {
@@ -298,8 +313,7 @@ public class StreamDownloaderImpl implements StreamDownloader {
 	public void resume(@NonNull String key) {
 		TaskContext ctx = tasks.get(key);
 		if (ctx != null && ctx.paused.compareAndSet(true, false)) {
-			ctx.sessionDownloaded.set(0);
-			ctx.startTime.set(System.currentTimeMillis());
+			ctx.error.set(null);
 			executor.execute(() -> runTask(ctx));
 		}
 	}
@@ -323,10 +337,10 @@ public class StreamDownloaderImpl implements StreamDownloader {
 
 	private static class TaskContext {
 		final String key;
-		final String url;
+		@NonNull String url;
 		final File out;
-		final CompletableFuture<File> future;
-		final ProgressCallback cb;
+		@NonNull CompletableFuture<File> future;
+		@Nullable ProgressCallback cb;
 		final AtomicBoolean paused = new AtomicBoolean(false);
 		final AtomicBoolean cancelled = new AtomicBoolean(false);
 		final AtomicLong downloadedBytes = new AtomicLong(0);
@@ -335,7 +349,7 @@ public class StreamDownloaderImpl implements StreamDownloader {
 		final AtomicLong lastReportTime = new AtomicLong(0);
 		final AtomicInteger lastProgress = new AtomicInteger(-1);
 		final Object stateLock = new Object();
-		final java.util.concurrent.atomic.AtomicReference<Exception> error = new java.util.concurrent.atomic.AtomicReference<>();
+		final AtomicReference<Exception> error = new AtomicReference<>();
 
 		TaskContext(String key, String url, File out, CompletableFuture<File> future, ProgressCallback cb) {
 			this.key = key;

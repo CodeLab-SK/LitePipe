@@ -20,6 +20,7 @@ import java.io.File;
 import java.net.URL;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -45,6 +46,7 @@ public class LiteDownloaderImpl implements LiteDownloader {
 	private final Map<String, ProgressCallback2> cbs = new ConcurrentHashMap<>();
 	
 	private final Queue<Task> pendingTasks = new ConcurrentLinkedQueue<>();
+	private final Set<String> runningTasks = ConcurrentHashMap.newKeySet();
 	private final AtomicInteger activeCount = new AtomicInteger(0);
 
 	@Inject
@@ -75,8 +77,18 @@ public class LiteDownloaderImpl implements LiteDownloader {
 
 	@Override
 	public synchronized void download(@NonNull Task t) {
+		final boolean exists = tasks.containsKey(t.videoId());
 		tasks.put(t.videoId(), t);
-		pendingTasks.offer(t);
+		
+		if (runningTasks.contains(t.videoId())) {
+			// If already running, we still want to update the URLs in streamDL
+			resume(t.videoId());
+			return;
+		}
+
+		if (!pendingTasks.contains(t)) {
+			pendingTasks.offer(t);
+		}
 		checkQueue();
 	}
 
@@ -84,8 +96,10 @@ public class LiteDownloaderImpl implements LiteDownloader {
 		while (activeCount.get() < prefs.getMaxConcurrentDownloads() && !pendingTasks.isEmpty()) {
 			Task t = pendingTasks.poll();
 			if (t != null) {
-				activeCount.incrementAndGet();
-				startDownloadInternal(t);
+				if (runningTasks.add(t.videoId())) {
+					activeCount.incrementAndGet();
+					startDownloadInternal(t);
+				}
 			}
 		}
 	}
@@ -108,7 +122,7 @@ public class LiteDownloaderImpl implements LiteDownloader {
 			} catch (Exception e) {
 				throw new CompletionException(e);
 			} finally {
-				taskFinished();
+				taskFinished(t.videoId());
 			}
 		}, executor).exceptionally(e -> handleErr(t, e));
 	}
@@ -133,7 +147,7 @@ public class LiteDownloaderImpl implements LiteDownloader {
 		if (combined != null) {
 			combined.thenRun(() -> {
 				try {
-					if (!tasks.containsKey(t.videoId())) return;
+					if (!tasks.containsKey(t.videoId()) || !runningTasks.contains(t.videoId())) return;
 					if (vFut != null && aFut != null) {
 						notify(t.videoId(), ProgressCallback2::onMerge);
 						File mF = tmp(t, "_m");
@@ -154,18 +168,20 @@ public class LiteDownloaderImpl implements LiteDownloader {
 				} catch (Exception e) {
 					throw new CompletionException(e);
 				} finally {
-					taskFinished();
+					taskFinished(t.videoId());
 				}
 			}).exceptionally(e -> {
-				taskFinished();
+				taskFinished(t.videoId());
 				return handleErr(t, e);
 			});
 		}
 	}
 
-	private void taskFinished() {
-		activeCount.decrementAndGet();
-		checkQueue();
+	private void taskFinished(String videoId) {
+		if (runningTasks.remove(videoId)) {
+			activeCount.decrementAndGet();
+			checkQueue();
+		}
 	}
 
 	@Override
@@ -174,6 +190,7 @@ public class LiteDownloaderImpl implements LiteDownloader {
 		if (t != null) {
 			if (t.video() != null) streamDL.pause(videoId + "_v");
 			if (t.audio() != null) streamDL.pause(videoId + "_a");
+			taskFinished(videoId);
 		}
 	}
 
@@ -181,6 +198,12 @@ public class LiteDownloaderImpl implements LiteDownloader {
 	public void resume(@NonNull String videoId) {
 		Task t = tasks.get(videoId);
 		if (t != null) {
+			if (!runningTasks.contains(videoId)) {
+				if (!pendingTasks.contains(t)) {
+					pendingTasks.offer(t);
+				}
+				checkQueue();
+			}
 			if (t.video() != null) streamDL.resume(videoId + "_v");
 			if (t.audio() != null) streamDL.resume(videoId + "_a");
 			progress(videoId, -1, -1, -1, 0);
@@ -197,6 +220,7 @@ public class LiteDownloaderImpl implements LiteDownloader {
 			notify(videoId, ProgressCallback2::onCancel);
 			clean(t);
 		} finally {
+			taskFinished(videoId);
 			clearCallback(videoId);
 		}
 	}
@@ -219,6 +243,7 @@ public class LiteDownloaderImpl implements LiteDownloader {
 				tasks.remove(t.videoId());
 			}
 		} finally {
+			taskFinished(t.videoId());
 			clearCallback(t.videoId());
 		}
 		return null;
