@@ -302,6 +302,9 @@ public final class JavascriptInterface {
     @android.webkit.JavascriptInterface
     public void toggleIncognito() {
         handler.post(() -> IncognitoManager.getInstance().toggle(() -> handler.post(() -> {
+            webview.clearCache(true);
+            webview.clearHistory();
+            webview.clearFormData();
             tabManager.openTab(Constant.HOME_URL, Constant.PAGE_HOME);
             YoutubeWebview web = tabManager.getWebview();
             if (web != null) {

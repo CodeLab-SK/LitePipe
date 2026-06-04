@@ -68,6 +68,8 @@ public class IncognitoManager {
             CookieManager.getInstance().removeAllCookies(result -> {
                 CookieManager.getInstance().flush();
                 WebStorage.getInstance().deleteAllData();
+                kv.removeValueForKey("visitor_data");
+                kv.removeValueForKey("visitor_data_v2");
                 restoreCookies(() -> {
                     notifyListeners();
                     if (onComplete != null) onComplete.run();
@@ -96,6 +98,8 @@ public class IncognitoManager {
             CookieManager.getInstance().removeAllCookies(result -> {
                 CookieManager.getInstance().flush();
                 WebStorage.getInstance().deleteAllData();
+                kv.removeValueForKey("visitor_data");
+                kv.removeValueForKey("visitor_data_v2");
                 notifyListeners();
                 if (onComplete != null) onComplete.run();
             });
@@ -106,6 +110,8 @@ public class IncognitoManager {
             CookieManager.getInstance().removeAllCookies(result -> {
                 CookieManager.getInstance().flush();
                 WebStorage.getInstance().deleteAllData();
+                kv.removeValueForKey("visitor_data");
+                kv.removeValueForKey("visitor_data_v2");
                 restoreCookies(() -> {
                     notifyListeners();
                     if (onComplete != null) onComplete.run();

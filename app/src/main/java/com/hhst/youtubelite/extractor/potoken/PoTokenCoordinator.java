@@ -35,7 +35,6 @@ public final class PoTokenCoordinator {
     private final Object lock = new Object();
     private final AtomicLong requestCounter = new AtomicLong();
     private PoTokenSession session;
-    private volatile String cachedVisitorData;
 
     @Inject
     public PoTokenCoordinator(Gson gson, PoTokenBridge poTokenBridge, PoTokenHost poTokenHost, 
@@ -46,7 +45,6 @@ public final class PoTokenCoordinator {
         this.scope = scope;
         this.okHttpClient = okHttpClient;
         this.kv = kv;
-        this.cachedVisitorData = kv.decodeString("visitor_data");
     }
 
     @Nullable
@@ -89,7 +87,7 @@ public final class PoTokenCoordinator {
         AuthContext auth = currentSession != null ? currentSession.getAuth() : null;
         if (auth != null && auth.visitorData() != null) return auth.visitorData();
         
-        String visitorData = cachedVisitorData;
+        String visitorData = kv.decodeString("visitor_data");
         if (visitorData != null) return visitorData;
 
         try {
@@ -102,7 +100,6 @@ public final class PoTokenCoordinator {
                 null, false);
             
             if (visitorData != null) {
-                cachedVisitorData = visitorData;
                 kv.encode("visitor_data", visitorData);
             }
             return visitorData;

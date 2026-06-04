@@ -20,12 +20,10 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
 import androidx.media3.common.util.UnstableApi;
 
 import com.hhst.youtubelite.Constant;
+import com.hhst.youtubelite.IncognitoManager;
 import com.hhst.youtubelite.R;
 import com.hhst.youtubelite.browser.TabManager;
 import com.hhst.youtubelite.downloader.ui.DownloadActivity;
@@ -66,12 +64,6 @@ public class NavigationBar extends HorizontalScrollView {
         container.setGravity(Gravity.CENTER_VERTICAL);
         addView(container, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(56)));
         kv = MMKV.defaultMMKV();
-        
-        ViewCompat.setOnApplyWindowInsetsListener(this, (v, insets) -> {
-            Insets navInsets = insets.getInsets(WindowInsetsCompat.Type.navigationBars());
-            v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), navInsets.bottom);
-            return insets;
-        });
     }
 
     public void setup(ExtensionManager extensionManager, TabManager tabManager) {
@@ -106,6 +98,7 @@ public class NavigationBar extends HorizontalScrollView {
         String[] order = orderStr.split(",");
 
         boolean signedIn = isUserSignedIn();
+        boolean isIncognito = IncognitoManager.getInstance().isIncognito();
         List<NavItemInfo> visibleItems = new ArrayList<>();
 
         for (String key : order) {
@@ -125,12 +118,14 @@ public class NavigationBar extends HorizontalScrollView {
                         visibleItems.add(new NavItemInfo(R.drawable.ic_shorts, R.string.nav_shorts, pageClass.equals(Constant.PAGE_SHORTS), () -> tabManager.openTab("https://m.youtube.com/shorts", Constant.PAGE_SHORTS)));
                     break;
                 case "subscriptions":
-                    if (signedIn && extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.NAV_BAR_SHOW_SUBSCRIPTIONS))
+                    if (signedIn && !isIncognito && extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.NAV_BAR_SHOW_SUBSCRIPTIONS))
                         visibleItems.add(new NavItemInfo(R.drawable.ic_subscriptions, R.string.nav_subscriptions, pageClass.equals(Constant.PAGE_SUBSCRIPTIONS), () -> tabManager.openTab("https://m.youtube.com/feed/subscriptions", Constant.PAGE_SUBSCRIPTIONS)));
                     break;
                 case "library":
-                    if (extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.NAV_BAR_SHOW_LIBRARY))
-                        visibleItems.add(new NavItemInfo(R.drawable.ic_library, R.string.nav_library, pageClass.equals(Constant.PAGE_LIBRARY), () -> tabManager.openTab("https://m.youtube.com/feed/library", Constant.PAGE_LIBRARY)));
+                    if (extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.NAV_BAR_SHOW_LIBRARY)) {
+                        int icon = isIncognito ? R.drawable.ic_incognito : R.drawable.ic_library;
+                        visibleItems.add(new NavItemInfo(icon, R.string.nav_library, pageClass.equals(Constant.PAGE_LIBRARY), () -> tabManager.openTab("https://m.youtube.com/feed/library", Constant.PAGE_LIBRARY)));
+                    }
                     break;
                 case "downloads":
                     if (extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.NAV_BAR_SHOW_DOWNLOADS))

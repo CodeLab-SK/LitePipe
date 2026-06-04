@@ -160,11 +160,15 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 		UrlUtils.setYoutubePreferences(this);
 
 		final View mainView = findViewById(R.id.main);
+		final View bottomNavContainer = findViewById(R.id.bottom_navigation_container);
 		ViewCompat.setOnApplyWindowInsetsListener(mainView, (v, insets) -> {
 			final Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
 			final Insets navInsets = insets.getInsets(WindowInsetsCompat.Type.navigationBars());
 			navigationBarHeight = navInsets.bottom;
 			v.setPadding(systemBars.left, systemBars.top, systemBars.right, 0);
+			if (bottomNavContainer != null) {
+				bottomNavContainer.setPadding(0, 0, 0, navigationBarHeight);
+			}
 			updateQueueBarPosition();
 			return insets;
 		});
@@ -206,19 +210,15 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 
 	private void applyIncognitoUi(boolean isIncognito, boolean showToast) {
 		runOnUiThread(() -> {
-			Window window = getWindow();
 			View banner = findViewById(R.id.incognito_banner);
 			if (isIncognito) {
-				window.setStatusBarColor(Color.parseColor("#212121"));
-				if (navBar != null) navBar.setBackgroundColor(Color.parseColor("#212121"));
 				if (banner != null) banner.setVisibility(View.VISIBLE);
 				if (showToast) Toast.makeText(this, R.string.incognito_on, Toast.LENGTH_SHORT).show();
 			} else {
-				window.setStatusBarColor(Color.TRANSPARENT);
-				if (navBar != null) navBar.setBackgroundColor(Color.TRANSPARENT);
 				if (banner != null) banner.setVisibility(View.GONE);
 				if (showToast) Toast.makeText(this, R.string.incognito_off, Toast.LENGTH_SHORT).show();
 			}
+			if (navBar != null) navBar.update();
 		});
 	}
 

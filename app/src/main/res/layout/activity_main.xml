@@ -17,7 +17,7 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@+id/incognito_banner" />
+        app:layout_constraintBottom_toTopOf="@+id/bottom_navigation_container" />
 
     <com.hhst.youtubelite.player.LitePlayerView
         android:id="@+id/playerView"
@@ -43,7 +43,7 @@
         android:orientation="vertical"
         android:visibility="gone"
         app:layout_constraintTop_toBottomOf="@+id/playerView"
-        app:layout_constraintBottom_toTopOf="@+id/incognito_banner">
+        app:layout_constraintBottom_toTopOf="@+id/bottom_navigation_container">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -136,7 +136,7 @@
         app:strokeWidth="1dp"
         app:strokeColor="?attr/colorOutline"
         app:layout_constraintTop_toBottomOf="@+id/playerView"
-        app:layout_constraintBottom_toTopOf="@+id/incognito_banner"
+        app:layout_constraintBottom_toTopOf="@+id/bottom_navigation_container"
         app:layout_constraintVertical_bias="1.0">
 
         <LinearLayout
@@ -175,35 +175,38 @@
 
     </com.google.android.material.card.MaterialCardView>
 
-    <TextView
-        android:id="@+id/incognito_banner"
+    <LinearLayout
+        android:id="@+id/bottom_navigation_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#212121"
-        android:gravity="center"
-        android:text="You're incognito"
-        android:textColor="#FFFFFF"
-        android:textSize="12sp"
-        android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@+id/nav_bar_divider" />
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent">
 
-    <View
-        android:id="@+id/nav_bar_divider"
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="?attr/colorOutline"
-        android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@+id/custom_nav_bar" />
+        <View
+            android:id="@+id/nav_bar_divider"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?attr/colorOutline"
+            android:visibility="gone" />
 
-    <com.hhst.youtubelite.ui.NavigationBar
-        android:id="@+id/custom_nav_bar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="?attr/colorSurface"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        <com.hhst.youtubelite.ui.NavigationBar
+            android:id="@+id/custom_nav_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="?attr/colorSurface"
+            android:visibility="gone" />
 
+        <TextView
+            android:id="@+id/incognito_banner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#212121"
+            android:gravity="center"
+            android:text="@string/you_re_incognito"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:visibility="gone" />
+
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -264,6 +264,7 @@
 
     <string name="incognito_on">Incognito mode turned on</string>
     <string name="incognito_off">Incognito mode turned off</string>
+    <string name="you_re_incognito">You\'re incognito</string>
     <string name="share_video">Share Video</string>
 
     <string name="volume_booster">Volume Boost (200%)</string>
