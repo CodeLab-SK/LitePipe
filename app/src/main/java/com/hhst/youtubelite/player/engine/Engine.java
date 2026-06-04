@@ -4,6 +4,7 @@ import android.content.Context;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.webkit.MimeTypeMap;
 
 import androidx.annotation.NonNull;
@@ -14,6 +15,7 @@ import androidx.media3.common.Format;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.MimeTypes;
+import androidx.media3.common.PlaybackException;
 import androidx.media3.common.PlaybackParameters;
 import androidx.media3.common.Player;
 import androidx.media3.common.TrackGroup;
@@ -22,9 +24,9 @@ import androidx.media3.common.Tracks;
 import androidx.media3.common.VideoSize;
 import androidx.media3.common.text.CueGroup;
 import androidx.media3.common.util.UnstableApi;
+import androidx.media3.datasource.HttpDataSource;
 import androidx.media3.datasource.cache.SimpleCache;
 import androidx.media3.exoplayer.DecoderCounters;
-import androidx.media3.exoplayer.DefaultLoadControl;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
 import androidx.media3.exoplayer.trackselection.AdaptiveTrackSelection;
@@ -60,12 +62,17 @@ import org.schabi.newpipe.extractor.stream.StreamSegment;
 import org.schabi.newpipe.extractor.stream.SubtitlesStream;
 import org.schabi.newpipe.extractor.stream.VideoStream;
 
+import java.net.ConnectException;
+import java.net.NoRouteToHostException;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
@@ -77,7 +84,8 @@ import lombok.Getter;
 @UnstableApi
 @ActivityScoped
 public class Engine {
-	static final String NO_PLAYABLE_SOURCE_MESSAGE = "No  playable stream found";
+	private static final String TAG = "Engine";
+	static final String NO_PLAYABLE_SOURCE_MESSAGE = "No playable stream found";
 	private static final int SAFE_ZONE_MS = 5000;
 	private static final long SYNC_INTERVAL_MS = 30000;
 
@@ -160,6 +168,8 @@ public class Engine {
 	private PlaybackPlan playbackPlan;
 	@Nullable
 	private VideoStream videoStream;
+	@NonNull
+	private final Set<String> failedAdaptiveCandidates = new HashSet<>();
 
 	@Inject
 	public Engine(@NonNull @ApplicationContext Context context,
@@ -177,11 +187,9 @@ public class Engine {
 		this.sources = new PlayerDataSource(simpleCache);
 		DefaultTrackSelector trackSelector = new DefaultTrackSelector(context, new AdaptiveTrackSelection.Factory());
 		
-		DefaultLoadControl loadControl = PlayerLoadControl.create();
-
 		this.player = new ExoPlayer.Builder(context)
 						.setTrackSelector(trackSelector)
-						.setLoadControl(loadControl)
+						.setLoadControl(PlayerLoadControl.create())
 						.setAudioAttributes(new AudioAttributes.Builder()
 										.setUsage(C.USAGE_MEDIA)
 										.setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
@@ -286,6 +294,12 @@ public class Engine {
 	}
 
 	@NonNull
+	private static String candidateKey(@Nullable StreamCandidate candidate) {
+		if (candidate == null) return "null";
+		return candidate.getKind() + "|" + candidate.getSourceClient() + "|" + candidate.getUrl();
+	}
+
+	@NonNull
 	private static DefaultTrackSelector.Parameters.Builder params(@NonNull DefaultTrackSelector trackSelector) {
 		return Objects.requireNonNull(trackSelector.buildUponParameters());
 	}
@@ -376,6 +390,9 @@ public class Engine {
 		VideoDetails video = details.video();
 		PlaybackPlan plan = details.plan();
 		List<SubtitlesStream> subtitles = details.subtitles();
+		if (!Objects.equals(this.videoId, video.getId())) {
+			failedAdaptiveCandidates.clear();
+		}
 		this.videoId = video.getId();
 		this.videoDetails = video;
 		this.streamCatalog = details.catalog();
@@ -482,6 +499,74 @@ public class Engine {
 		setSubtitlesEnabled(true);
 	}
 
+	public boolean recoverFromPlaybackError(@NonNull PlaybackException error) {
+		PlaybackRecoveryReason reason = playbackRecoveryReason(error);
+		if (reason == null) {
+			return false;
+		}
+		State state = state();
+		if (state == null || state.plan().getMode() != PlaybackMode.ADAPTIVE) {
+			return false;
+		}
+		rememberFailedAdaptiveCandidates(state.plan());
+		PlaybackPlan adaptiveFallback = PlaybackPlanner.adaptiveFallbackPlan(
+						state.deliveries(),
+						prefs.getQuality(),
+						null,
+						this::isFailedAdaptiveCandidate);
+		if (adaptiveFallback != null) {
+			return recoverWithPlan(state, adaptiveFallback, reason, false);
+		}
+		PlaybackPlan muxedFallback = PlaybackPlanner.muxedFallbackPlan(
+						state.deliveries(),
+						prefs.getQuality());
+		if (muxedFallback == null) {
+			return false;
+		}
+		return recoverWithPlan(state, muxedFallback, reason, true);
+	}
+
+	private boolean recoverWithPlan(@NonNull State state,
+	                                @NonNull PlaybackPlan fallback,
+	                                @NonNull PlaybackRecoveryReason reason,
+	                                boolean rememberVideoFallback) {
+		long position = Math.max(0L, player.getCurrentPosition());
+		PlaybackParameters speed = player.getPlaybackParameters();
+		boolean playWhenReady = player.getPlayWhenReady();
+		try {
+			playbackPlan = fallback;
+			videoStream = selectedVideo(fallback);
+			player.setMediaSource(PlaybackSourceFactory.create(sources,
+							new PlaybackDetails(state.video(), state.catalog(), state.deliveries(),
+											fallback, segments, subtitles),
+							fallback));
+			player.seekTo(position);
+			player.setPlaybackParameters(speed);
+			player.prepare();
+			player.setPlayWhenReady(playWhenReady);
+			if (rememberVideoFallback && reason == PlaybackRecoveryReason.HTTP_403) {
+				prefs.markAdaptiveMuxedFallback(state.video().getId());
+			}
+			Log.w(TAG, "recovered from adaptive " + reason.logLabel + " with " + fallback.getMode()
+							+ " videoId=" + state.video().getId());
+			return true;
+		} catch (RuntimeException e) {
+			Log.w(TAG, fallback.getMode() + " fallback failed", e);
+			return false;
+		}
+	}
+
+	private void rememberFailedAdaptiveCandidates(@NonNull PlaybackPlan plan) {
+		String video = candidateKey(plan.getVideoCandidate());
+		String audio = candidateKey(plan.getAudioCandidate());
+		failedAdaptiveCandidates.add(video);
+		failedAdaptiveCandidates.add(audio);
+	}
+
+	private boolean isFailedAdaptiveCandidate(@NonNull StreamCandidate candidate) {
+		return failedAdaptiveCandidates.contains(candidateKey(candidate));
+	}
+
 	private String inferSubtitleMime(String fileName) {
 		String lower = fileName.toLowerCase();
 		if (lower.endsWith(".srt")) return MimeTypes.APPLICATION_SUBRIP;
@@ -586,8 +671,8 @@ public class Engine {
 		boolean playlistContext = !queueContext && hasPlaylist;
 		if (queueContext) {
 			QueueItem item = queueRepository.findRelative(watchId, 1);
-			if (item != null && item.getUrl() != null) {
-				tabManager.playInWatch(item.getUrl());
+			if (item != null && item.getVideoUrl() != null) {
+				tabManager.playInWatch(item.getVideoUrl());
 			}
 			return;
 		}
@@ -614,8 +699,8 @@ public class Engine {
 				return;
 			}
 			QueueItem item = queueRepository.findRelative(watchId, -1);
-			if (item != null && item.getUrl() != null) {
-				tabManager.playInWatch(item.getUrl());
+			if (item != null && item.getVideoUrl() != null) {
+				tabManager.playInWatch(item.getVideoUrl());
 				return;
 			}
 			if (canGoBack) {
@@ -654,8 +739,8 @@ public class Engine {
 		boolean playlistContext = !queueContext && hasPlaylist;
 		if (queueContext) {
 			QueueItem item = queueRepository.findRandom(watchId);
-			if (item != null && item.getUrl() != null) {
-				tabManager.playInWatch(item.getUrl());
+			if (item != null && item.getVideoUrl() != null) {
+				tabManager.playInWatch(item.getVideoUrl());
 			}
 			return;
 		}
@@ -752,16 +837,7 @@ public class Engine {
 				}
 			}
 		}
-		resolutions.sort((a, b) -> {
-			try {
-				int h1 = Integer.parseInt(a.replace("p", ""));
-				int h2 = Integer.parseInt(b.replace("p", ""));
-				return Integer.compare(h2, h1);
-			} catch (NumberFormatException e) {
-				return a.compareTo(b);
-			}
-		});
-		return resolutions;
+		return PlayerUtils.sortResolutionLabels(resolutions);
 	}
 
 	public void onQualitySelected(@Nullable String res) {
@@ -994,6 +1070,48 @@ public class Engine {
 						|| plan.getMode() == PlaybackMode.LIVE_HLS);
 	}
 
+	@Nullable
+	static PlaybackRecoveryReason playbackRecoveryReason(@NonNull Throwable throwable) {
+		List<Throwable> pending = new ArrayList<>();
+		List<Throwable> visited = new ArrayList<>();
+		pending.add(throwable);
+		for (int i = 0; i < pending.size(); i++) {
+			Throwable current = pending.get(i);
+			if (current == null || visited.contains(current)) {
+				continue;
+			}
+			visited.add(current);
+			if (current instanceof HttpDataSource.InvalidResponseCodeException http
+							&& http.responseCode == 403) {
+				return PlaybackRecoveryReason.HTTP_403;
+			}
+			if (current instanceof HttpDataSource.HttpDataSourceException http
+							&& http.type == HttpDataSource.HttpDataSourceException.TYPE_OPEN
+							&& hasCause(http, SocketTimeoutException.class, ConnectException.class, NoRouteToHostException.class)) {
+				return PlaybackRecoveryReason.CONNECTION_OPEN_FAILED;
+			}
+			if (current.getCause() != null) {
+				pending.add(current.getCause());
+			}
+			Collections.addAll(pending, current.getSuppressed());
+		}
+		return null;
+	}
+
+	private static boolean hasCause(@NonNull Throwable throwable,
+	                                @NonNull Class<? extends Throwable>... causeTypes) {
+		Throwable current = throwable;
+		while (current != null) {
+			for (Class<? extends Throwable> causeType : causeTypes) {
+				if (causeType.isInstance(current)) {
+					return true;
+				}
+			}
+			current = current.getCause();
+		}
+		return false;
+	}
+
 	private void triggerSync() {
 		triggerSync(player.getCurrentPosition());
 	}
@@ -1025,5 +1143,17 @@ public class Engine {
 	                     @NonNull StreamCatalog catalog,
 	                     @NonNull DeliveryCatalog deliveries,
 	                     @NonNull PlaybackPlan plan) {
+	}
+
+	enum PlaybackRecoveryReason {
+		HTTP_403("HTTP 403"),
+		CONNECTION_OPEN_FAILED("connection open failure");
+
+		@NonNull
+		private final String logLabel;
+
+		PlaybackRecoveryReason(@NonNull String logLabel) {
+			this.logLabel = logLabel;
+		}
 	}
 }

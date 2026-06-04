@@ -15,9 +15,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @UnstableApi
 public final class PlayerUtils {
+	private static final Pattern FPS_SUFFIX = Pattern.compile("p(\\d+)$", Pattern.CASE_INSENSITIVE);
 
 	public static boolean isPortrait(@NonNull final Engine engine) {
 		final int videoWidth = engine.getVideoSize().width;
@@ -33,19 +36,44 @@ public final class PlayerUtils {
 
 		for (final VideoStream stream : streams) {
 			final String res = stream.getResolution();
-			final VideoStream existing = bestMap.get(res);
+			final String key = res + "#" + stream.getFps();
+			final VideoStream existing = bestMap.get(key);
 
-			if (existing == null || isBetterStream(stream, existing)) bestMap.put(res, stream);
+			if (existing == null || isBetterStream(stream, existing)) bestMap.put(key, stream);
 		}
 
 		final List<VideoStream> result = new ArrayList<>(bestMap.values());
 		result.sort((s1, s2) -> {
-			final int h1 = s1.getHeight();
-			final int h2 = s2.getHeight();
+			final int h1 = streamHeight(s1);
+			final int h2 = streamHeight(s2);
 			if (h1 != h2) return Integer.compare(h2, h1);
 			return Integer.compare(s2.getFps(), s1.getFps());
 		});
 		return result;
+	}
+
+	@NonNull
+	public static List<String> sortResolutionLabels(@NonNull List<String> resolutions) {
+		List<String> sorted = new ArrayList<>(resolutions);
+		sorted.sort((left, right) -> {
+			int height = Integer.compare(StringUtils.parseHeight(right), StringUtils.parseHeight(left));
+			if (height != 0) return height;
+			int fps = Integer.compare(parseFps(right), parseFps(left));
+			if (fps != 0) return fps;
+			return left.compareTo(right);
+		});
+		return sorted;
+	}
+
+	private static int streamHeight(@NonNull VideoStream stream) {
+		int height = stream.getHeight();
+		return height > 0 ? height : StringUtils.parseHeight(stream.getResolution());
+	}
+
+	private static int parseFps(@Nullable String resolution) {
+		if (resolution == null) return 0;
+		Matcher matcher = FPS_SUFFIX.matcher(resolution);
+		return matcher.find() ? Integer.parseInt(matcher.group(1)) : 0;
 	}
 
 	public static boolean isBetterStream(@NonNull final VideoStream s1, @NonNull final VideoStream s2) {

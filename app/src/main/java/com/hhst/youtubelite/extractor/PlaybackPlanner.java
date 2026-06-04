@@ -15,6 +15,8 @@ import org.schabi.newpipe.extractor.stream.VideoStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * Planner that selects the best playback delivery path.
@@ -78,6 +80,42 @@ public final class PlaybackPlanner {
 							PlayerUtils.selectAudioStream(tracks, null)));
 		}
 		return plan;
+	}
+
+	@Nullable
+	public static PlaybackPlan muxedFallbackPlan(@NonNull DeliveryCatalog deliveries,
+	                                             @Nullable String preferredQuality) {
+		Delivery muxed = deliveries.first(PlaybackMode.MUXED);
+		if (muxed == null) {
+			return null;
+		}
+		VideoStream selected = PlayerUtils.selectVideoStream(muxed.muxedStreams(), preferredQuality);
+		PlaybackPlan plan = new PlaybackPlan();
+		plan.setStreamType(deliveries.getStreamType());
+		plan.setMode(PlaybackMode.MUXED);
+		plan.setDelivery(muxed);
+		plan.setMuxedCandidate(findVideoCandidate(muxed.getMuxed(), selected));
+		return plan.getMuxedCandidate() != null ? plan : null;
+	}
+
+	@Nullable
+	public static PlaybackPlan adaptiveFallbackPlan(@NonNull DeliveryCatalog deliveries,
+	                                                @Nullable String preferredQuality,
+	                                                @Nullable String preferredAudioLanguage,
+	                                                @NonNull Predicate<StreamCandidate> blocked) {
+		Delivery adaptive = deliveries.first(PlaybackMode.ADAPTIVE);
+		if (adaptive == null) {
+			return null;
+		}
+		List<StreamCandidate> video = adaptive.getVideo().stream()
+						.filter(candidate -> !blocked.test(candidate))
+						.collect(Collectors.toList());
+		List<StreamCandidate> audio = adaptive.getAudio().stream()
+						.filter(candidate -> !blocked.test(candidate))
+						.collect(Collectors.toList());
+		PlaybackPlan plan = adaptivePlan(new PlaybackPlan(), adaptive, video, audio,
+						preferredQuality, preferredAudioLanguage);
+		return plan.getVideoCandidate() != null && plan.getAudioCandidate() != null ? plan : null;
 	}
 
 	@Nullable
@@ -163,12 +201,45 @@ public final class PlaybackPlanner {
 	                                         @NonNull Delivery delivery,
 	                                         @Nullable String preferredQuality,
 	                                         @Nullable String preferredAudioLanguage) {
+		return adaptivePlan(plan, delivery, delivery.getVideo(), delivery.getAudio(),
+						preferredQuality, preferredAudioLanguage);
+	}
+
+	@NonNull
+	private static PlaybackPlan adaptivePlan(@NonNull PlaybackPlan plan,
+	                                         @NonNull Delivery delivery,
+	                                         @NonNull List<StreamCandidate> videoCandidates,
+	                                         @NonNull List<StreamCandidate> audioCandidates,
+	                                         @Nullable String preferredQuality,
+	                                         @Nullable String preferredAudioLanguage) {
 		plan.setMode(delivery.getMode());
 		plan.setDelivery(delivery);
-		VideoStream video = PlayerUtils.selectVideoStream(delivery.videoStreams(), preferredQuality);
-		List<AudioStream> tracks = reorderAudioTracks(delivery.audioStreams(), preferredAudioLanguage);
-		plan.setVideoCandidate(findVideoCandidate(delivery.getVideo(), video));
-		plan.setAudioCandidate(findAudioCandidate(delivery.getAudio(), PlayerUtils.selectAudioStream(tracks, null)));
+		VideoStream video = PlayerUtils.selectVideoStream(videoStreams(videoCandidates), preferredQuality);
+		List<AudioStream> tracks = reorderAudioTracks(audioStreams(audioCandidates), preferredAudioLanguage);
+		plan.setVideoCandidate(findVideoCandidate(videoCandidates, video));
+		plan.setAudioCandidate(findAudioCandidate(audioCandidates, PlayerUtils.selectAudioStream(tracks, null)));
 		return plan;
+	}
+
+	@NonNull
+	private static List<VideoStream> videoStreams(@NonNull List<StreamCandidate> candidates) {
+		List<VideoStream> streams = new ArrayList<>();
+		for (StreamCandidate candidate : candidates) {
+			if (candidate.getVideoStream() != null) {
+				streams.add(candidate.getVideoStream());
+			}
+		}
+		return streams;
+	}
+
+	@NonNull
+	private static List<AudioStream> audioStreams(@NonNull List<StreamCandidate> candidates) {
+		List<AudioStream> streams = new ArrayList<>();
+		for (StreamCandidate candidate : candidates) {
+			if (candidate.getAudioStream() != null) {
+				streams.add(candidate.getAudioStream());
+			}
+		}
+		return streams;
 	}
 }

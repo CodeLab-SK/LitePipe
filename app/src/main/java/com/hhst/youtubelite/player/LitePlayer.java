@@ -156,7 +156,9 @@ public class LitePlayer {
 
 			@Override
 			public void onPlayerError(@NonNull PlaybackException error) {
-				invalidatePlaybackCacheIfSourceOpenFailure();
+				if (engine.recoverFromPlaybackError(error)) {
+					return;
+				}
 				
 				if (isCodecError(error)) {
 					handleCodecError(error);
@@ -588,10 +590,6 @@ public class LitePlayer {
 		if (onClose == null) return;
 		stopAndCloseFromMiniPlayer();
 		onClose.run();
-	}
-
-	void invalidatePlaybackCacheIfSourceOpenFailure() {
-
 	}
 
 	private void cancelCurrentExtraction() {
