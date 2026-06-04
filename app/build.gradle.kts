@@ -68,6 +68,7 @@ android {
 
 dependencies {
     implementation(libs.core.splashscreen)
+    implementation(libs.androidx.media3.exoplayer.hls)
     compileOnly(libs.lombok)
     annotationProcessor(libs.lombok)
     coreLibraryDesugaring(libs.desugar.jdk.libs.nio)
