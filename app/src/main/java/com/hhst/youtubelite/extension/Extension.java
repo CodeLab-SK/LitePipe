@@ -48,6 +48,7 @@ public record Extension(String key, int description, int helpText, List<Extensio
                 new Extension(Constant.ACTION_BAR_ORDER, R.string.custom_action_bar, R.string.custom_action_bar_desc, List.of(
                     new Extension(Constant.ACTION_BAR_SHOW_LIKE_DISLIKE, R.string.action_like_dislike, null),
                     new Extension(Constant.ACTION_BAR_SHOW_DOWNLOAD, R.string.action_download, null),
+                    new Extension(Constant.ACTION_BAR_SHOW_QUEUE, R.string.add_to_queue, null),
                     new Extension(ENABLE_PIP, R.string.pip, null),
                     new Extension(Constant.ACTION_BAR_SHOW_CHAT, R.string.action_chat, null),
                     new Extension(Constant.ACTION_BAR_SHOW_SHARE, R.string.action_share, null),

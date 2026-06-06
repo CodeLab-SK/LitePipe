@@ -3,23 +3,26 @@ try {
         const st = setTimeout.bind(window), si = setInterval.bind(window);
         const ct = clearTimeout.bind(window), ci = clearInterval.bind(window);
 
-        if (!document.getElementById('_lp_ab_style')) {
+        if (!document.getElementById('_lp_style')) {
             const styleEl = document.createElement('style');
-            styleEl.id = '_lp_ab_style';
-            styleEl.textContent = `ytm-slim-video-action-bar-renderer:not([data-lp-processed]) { visibility: hidden !important; }`;
+            styleEl.id = '_lp_style';
+            styleEl.textContent = `
+                html.lp-library-loading .YtmBrowseHost { opacity: 0 !important; }
+                html.lp-library-loaded .YtmBrowseHost { opacity: 1; transition: opacity 0.7s ease; }
+            `;
             (document.head || document.documentElement).appendChild(styleEl);
         }
 
         const getLocalizedText = (key) => {
             const languages = {
-                'zh': { 'download': '下载', 'downloads': '下载', 'extension': 'LitePipe 设置', 'chat': '聊天室', 'about': '关于', 'pip': '画中画', 'incognito': '无痕模式', 'incognito_off': '关闭无痕模式' },
-                'zt': { 'download': '下載', 'downloads': '下載', 'extension': 'LitePipe 設置', 'chat': '聊天室', 'about': '關於', 'pip': '畫中畫', 'incognito': '無痕模式', 'incognito_off': '關閉無痕模式' },
-                'en': { 'download': 'Download', 'downloads': 'Downloads', 'extension': 'LitePipe Settings', 'chat': 'Chat', 'about': 'About', 'pip': 'PiP', 'incognito': 'Turn on Incognito', 'incognito_off': 'Turn off Incognito' },
-                'ja': { 'download': 'ダウンロード', 'downloads': 'ダウンロード', 'extension': 'LitePipe 設定', 'chat': 'チャット', 'about': '詳細', 'pip': 'PiP', 'incognito': 'シークレットをオン', 'incognito_off': 'シークレットをオフ' },
-                'ko': { 'download': '다운로드', 'downloads': '다운로드', 'extension': 'LitePipe 플러그인', 'chat': '채팅', 'about': '정보', 'pip': 'PiP', 'incognito': '시크릿 모드 켜기', 'incognito_off': '시크릿 모드 끄기' },
-                'fr': { 'download': 'Télécharger', 'downloads': 'Téléchargements', 'extension': 'Paramètres LitePipe', 'chat': 'Chat', 'about': 'À propos', 'pip': 'PiP', 'incognito': 'Activer navigation privée', 'incognito_off': 'Désactiver navigation privée' },
-                'ru': { 'download': 'Скачать', 'downloads': 'Загрузки', 'extension': 'Настройки LitePipe', 'chat': 'Чат', 'about': 'О программе', 'pip': 'PiP', 'incognito': 'Вкл. инкогнито', 'incognito_off': 'Выкл. инкогнито' },
-                'tr': { 'download': 'İndir', 'downloads': 'İndirilenler', 'extension': 'LitePipe Ayarları', 'chat': 'Sohbet', 'about': 'Hakkında', 'pip': 'PiP', 'incognito': 'Gizli modu aç', 'incognito_off': 'Gizli modu kapat' },
+                'zh': { 'download': '下载', 'add_to_queue': '加入队列', 'downloads': '下载', 'extension': 'LitePipe 设置', 'chat': '聊天室', 'about': '关于', 'pip': '画中画', 'incognito': '无痕模式', 'incognito_off': '关闭无痕模式' },
+                'zt': { 'download': '下載', 'add_to_queue': '加入佇列', 'downloads': '下載', 'extension': 'LitePipe 設置', 'chat': '聊天室', 'about': '關於', 'pip': '畫中畫', 'incognito': '無痕模式', 'incognito_off': '關閉無痕模式' },
+                'en': { 'download': 'Download', 'add_to_queue': 'Add to queue', 'downloads': 'Downloads', 'extension': 'LitePipe Settings', 'chat': 'Chat', 'about': 'About', 'pip': 'PiP', 'incognito': 'Turn on Incognito', 'incognito_off': 'Turn off Incognito' },
+                'ja': { 'download': 'ダウンロード', 'add_to_queue': 'キューに追加', 'downloads': 'ダウンロード', 'extension': 'LitePipe 設定', 'chat': 'チャット', 'about': '詳細', 'pip': 'PiP', 'incognito': 'シークレットをオン', 'incognito_off': 'シークレットをオフ' },
+                'ko': { 'download': '다운로드', 'add_to_queue': '대기열에 추가', 'downloads': '다운로드', 'extension': 'LitePipe 플러그인', 'chat': '채팅', 'about': '정보', 'pip': 'PiP', 'incognito': '시릿 모드 켜기', 'incognito_off': '시릿 모드 끄기' },
+                'fr': { 'download': 'Télécharger', 'add_to_queue': 'Ajouter à la file', 'downloads': 'Téléchargements', 'extension': 'Paramètres LitePipe', 'chat': 'Chat', 'about': 'À propos', 'pip': 'PiP', 'incognito': 'Activer navigation privée', 'incognito_off': 'Désactiver navigation privée' },
+                'ru': { 'download': 'Скачать', 'add_to_queue': 'Добавить в очередь', 'downloads': 'Загрузки', 'extension': 'Настройки LitePipe', 'chat': 'Чат', 'about': 'О программе', 'pip': 'PiP', 'incognito': 'Вкл. инкогнито', 'incognito_off': 'Выкл. инкогнито' },
+                'tr': { 'download': 'İndir', 'add_to_queue': 'Kuyruğa ekle', 'downloads': 'İndirilenler', 'extension': 'LitePipe Ayarları', 'chat': 'Sohbet', 'about': 'Hakkında', 'pip': 'PiP', 'incognito': 'Gizli modu aç', 'incognito_off': 'Gizli modu kapat' },
             };
             const lang = (document.documentElement.lang || 'en').toLowerCase();
             let keyLang = lang.substring(0, 2);
@@ -86,7 +89,7 @@ try {
             obj.addEventListener(type, fn, options);
         };
 
-        const INCOGNITO_ICON = 'M12 2C8.13 2 5 5.13 5 9H19C19 5.13 15.87 2 12 2ZM2 11H22V13H2V11ZM7.5 14.5C5.57 14.5 4 16.07 4 18C4 19.93 5.57 21.5 7.5 21.5C9.43 21.5 11 19.93 11 18C11 16.07 9.43 14.5 7.5 14.5ZM16.5 14.5C14.57 14.5 13 16.07 13 18C13 19.93 14.57 21.5 16.5 21.5C18.43 21.5 20 19.93 20 18C20 16.07 18.43 14.5 16.5 14.5Z';
+        const INCOGNITO_ICON = 'M17.06 13C15.2 13 13.64 14.33 13.24 16.1C12.29 15.69 11.42 15.8 10.76 16.09C10.35 14.31 8.79 13 6.94 13C4.77 13 3 14.79 3 17C3 19.21 4.77 21 6.94 21C9 21 10.68 19.38 10.84 17.32C11.18 17.08 12.07 16.63 13.16 17.34C13.34 19.39 15 21 17.06 21C19.23 21 21 19.21 21 17C21 14.79 19.23 13 17.06 13M6.94 19.86C5.38 19.86 4.13 18.58 4.13 17S5.39 14.14 6.94 14.14C8.5 14.14 9.75 15.42 9.75 17S8.5 19.86 6.94 19.86M17.06 19.86C15.5 19.86 14.25 18.58 14.25 17S15.5 14.14 17.06 14.14C18.62 14.14 19.88 15.42 19.88 17S18.61 19.86 17.06 19.86M22 10.5H2V12H22V10.5M15.53 2.63C15.31 2.14 14.75 1.88 14.22 2.05L12 2.79L9.77 2.05L9.72 2.04C9.19 1.89 8.63 2.17 8.43 2.68L6 9H18L15.56 2.68L15.53 2.63Z';
 
         let shortsSpeedPressState = null;
         const SHORTS_SPEED_LONG_PRESS_MS = 450, SHORTS_SPEED_DRAG_THRESHOLD = 10;
@@ -297,8 +300,6 @@ try {
             return wrapper;
         };
 
-        let watchButtonTemplate = null;
-
         const createWatchButton = (label, iconPath, id, onClick) => {
             const actionBar = document.querySelector('ytm-slim-video-action-bar-renderer');
 
@@ -323,22 +324,8 @@ try {
                              document.querySelector('.slim_video_action_bar_renderer_button:not([data-lp-custom])');
             }
 
-            if (liveSource) {
-                watchButtonTemplate = liveSource.cloneNode(true);
-                watchButtonTemplate.removeAttribute('id');
-                watchButtonTemplate.removeAttribute('hidden');
-                watchButtonTemplate.style.removeProperty('display');
-                watchButtonTemplate.querySelectorAll('[style]').forEach(el => {
-                    if (el.style.display) el.style.removeProperty('display');
-                });
-                watchButtonTemplate.querySelectorAll('[hidden]').forEach(el => el.removeAttribute('hidden'));
-                const tmplBtn = watchButtonTemplate.querySelector('button') || watchButtonTemplate;
-                tmplBtn.removeAttribute('id');
-            }
-
-            const source = watchButtonTemplate || liveSource;
-            if (!source) return null;
-            const clone = source.cloneNode(true);
+            if (!liveSource) return null;
+            const clone = liveSource.cloneNode(true);
 
             clone.removeAttribute('id');
             clone.id = id;
@@ -358,6 +345,7 @@ try {
 
             const iconContainer = clone.querySelector('.yt-spec-button-shape-next__icon, .yt-icon-shape, yt-icon');
             if (iconContainer) {
+                iconContainer.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;flex-shrink:0;';
                 let svg = iconContainer.querySelector('svg');
                 const ns = 'http://www.w3.org/2000/svg';
                 if (!svg) {
@@ -368,7 +356,7 @@ try {
                 }
                 svg.setAttribute('width', '24');
                 svg.setAttribute('height', '24');
-                svg.style.fill = 'currentColor';
+                svg.style.cssText = 'width:24px;height:24px;fill:currentColor;flex-shrink:0;';
                 const path = svg.querySelector('path');
                 if (path) path.setAttribute('d', iconPath);
                 else svg.innerHTML = `<path d="${iconPath}"></path>`;
@@ -378,11 +366,11 @@ try {
                 svg.setAttribute('viewBox', '0 0 24 24');
                 svg.setAttribute('width', '24');
                 svg.setAttribute('height', '24');
-                svg.style.fill = 'currentColor';
+                svg.style.cssText = 'width:24px;height:24px;fill:currentColor;flex-shrink:0;';
                 svg.innerHTML = `<path d="${iconPath}"></path>`;
                 const flexContainer = document.createElement('div');
                 flexContainer.className = 'yt-spec-button-shape-next__icon';
-                flexContainer.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;';
+                flexContainer.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;flex-shrink:0;';
                 flexContainer.appendChild(svg);
                 if (btn.firstChild) btn.insertBefore(flexContainer, btn.firstChild);
                 else btn.appendChild(flexContainer);
@@ -452,7 +440,8 @@ try {
 
             const banner = document.createElement('div');
             banner.id = '_lp_incognito_banner';
-            banner.style.cssText = `position:fixed;top:${headerHeight - 8}px;left:0;right:0;bottom:-60px;z-index:99990;display:flex;flex-direction:column;align-items:center;justify-content:center;background:${bg};color:${fg};font-family:"YouTube Sans","Roboto",sans-serif;padding:24px 28px 60px;box-sizing:border-box;overflow:hidden;`; const card = document.createElement('div');
+            banner.style.cssText = `position:fixed;top:${headerHeight - 8}px;left:0;right:0;bottom:-60px;z-index:99990;display:flex;flex-direction:column;align-items:center;justify-content:center;background:${bg};color:${fg};font-family:"YouTube Sans","Roboto",sans-serif;padding:24px 28px 60px;box-sizing:border-box;overflow:hidden;`;
+            const card = document.createElement('div');
             card.style.cssText = `display:flex;flex-direction:column;align-items:center;justify-content:center;background:${cardBg};border-radius:20px;padding:36px 28px 32px;box-shadow:0 4px 24px rgba(0,0,0,${isDark ? '0.5' : '0.10'});max-width:340px;width:100%;box-sizing:border-box;`;
 
             const ns = 'http://www.w3.org/2000/svg';
@@ -532,28 +521,32 @@ try {
 
             banner.appendChild(card);
             document.body.appendChild(banner);
-            if (window.android?.setRefreshLayoutEnabled) android.setRefreshLayoutEnabled(false);
-
+            if (window.android?.setRefreshLayoutEnabled) android.setRefreshLayoutEnabled(true);
         };
 
         const removeIncognitoFallbackBanner = () => {
             const b = document.getElementById('_lp_incognito_banner');
             if (b) b.remove();
-            if (window.android?.setRefreshLayoutEnabled) android.setRefreshLayoutEnabled(false);
+            if (window.android?.setRefreshLayoutEnabled) android.setRefreshLayoutEnabled(true);
         };
 
         const ensureLibraryButton = () => {
             const pc = getCachedPageClass(location.href);
             if (pc !== 'you' && pc !== 'library') {
                 removeIncognitoFallbackBanner();
+                document.documentElement.classList.remove('lp-library-loading', 'lp-library-loaded');
                 return;
             }
             const row = document.querySelector('yt-flexible-actions-view-model .ytFlexibleActionsViewModelActionRow') || document.querySelector('.ytFlexibleActionsViewModelActionRow');
             if (!row) {
+                document.documentElement.classList.add('lp-library-loading');
+                document.documentElement.classList.remove('lp-library-loaded');
                 const isOn = window.android?.isIncognito?.() === true;
                 if (isOn) injectIncognitoFallbackBanner();
                 return;
             }
+            document.documentElement.classList.add('lp-library-loaded');
+            document.documentElement.classList.remove('lp-library-loading');
             removeIncognitoFallbackBanner();
             const isOn = window.android?.isIncognito?.() === true;
             let chip = document.getElementById('_lp_incognito_chip');
@@ -619,173 +612,459 @@ try {
             return cachedPrefs;
         };
 
-        const applyActionBarVisibility = (actionBar, prefs) => {
-            actionBar.querySelectorAll([
-                '.ytSpecButtonViewModelHost',
-                'ytm-toggle-button-renderer',
-                'ytm-button-renderer',
-                '.slim_video_action_bar_renderer_button',
-                'ytm-segmented-like-dislike-button-renderer',
-                'segmented-like-dislike-button-view-model',
-                'button-view-model',
-            ].join(',')).forEach((btn) => {
-                if (btn.dataset.lpCustom === 'true' || btn.closest('[data-lp-custom="true"]')) return;
-                const label = (btn.getAttribute('aria-label') || btn.textContent || '').toLowerCase().trim();
-                const id = btn.id || '';
-                const tag = btn.tagName.toLowerCase();
-                const isLikeDislike = (
-                    tag === 'ytm-segmented-like-dislike-button-renderer' ||
-                    tag === 'segmented-like-dislike-button-view-model' ||
-                    btn.classList.contains('ytSegmentedLikeDislikeButtonViewModelHost') ||
-                    btn.closest?.('ytm-segmented-like-dislike-button-renderer, segmented-like-dislike-button-view-model') !== null ||
-                    (label.includes('like') && !label.includes('dislike') && tag !== 'div') ||
-                    label === 'like' || label === 'dislike' ||
-                    label.includes('like this video') || label.includes('dislike this video')
-                );
-                let hide = false;
-                if (prefs.action_bar_show_like_dislike === false && isLikeDislike) hide = true;
-                if (prefs.action_bar_show_download === false && (label.includes('download') || id === 'downloadButton')) hide = true;
-                if (prefs.enable_pip === false && id === 'pipButton') hide = true;
-                if (prefs.action_bar_show_chat === false && (label.includes('chat') || id === 'chatButton')) hide = true;
-                if (prefs.action_bar_show_share === false && label.includes('share')) hide = true;
-                if (prefs.action_bar_show_remix === false && label.includes('remix')) hide = true;
-                if (prefs.action_bar_show_thanks === false && label.includes('thanks')) hide = true;
-                if (prefs.action_bar_show_clip === false && label.includes('clip')) hide = true;
-                if (prefs.action_bar_show_save === false && (label.includes('save') || label.includes('playlist'))) hide = true;
-                if (prefs.action_bar_show_report === false && label.includes('report')) hide = true;
-                if (prefs.action_bar_show_ask_ai === false && (label.includes('ask') || label.includes('ai'))) hide = true;
-                if (hide) btn.style.setProperty('display', 'none', 'important');
-                else btn.style.removeProperty('display');
-            });
+               const applyActionBarVisibility = (actionBar, prefs) => {
+                   actionBar.querySelectorAll([
+                       '.ytSpecButtonViewModelHost',
+                       'ytm-toggle-button-renderer',
+                       'ytm-button-renderer',
+                       '.slim_video_action_bar_renderer_button',
+                       'ytm-segmented-like-dislike-button-renderer',
+                       'segmented-like-dislike-button-view-model',
+                       'button-view-model',
+                   ].join(',')).forEach((btn) => {
+                       if (btn.dataset.lpCustom === 'true' || btn.closest('[data-lp-custom="true"]')) return;
+                       const label = (btn.getAttribute('aria-label') || btn.textContent || '').toLowerCase().trim();
+                       const id = btn.id || '';
+                       const tag = btn.tagName.toLowerCase();
+                       const isLikeDislike = (
+                           tag === 'ytm-segmented-like-dislike-button-renderer' ||
+                           tag === 'segmented-like-dislike-button-view-model' ||
+                           btn.classList.contains('ytSegmentedLikeDislikeButtonViewModelHost') ||
+                           btn.closest?.('ytm-segmented-like-dislike-button-renderer, segmented-like-dislike-button-view-model') !== null ||
+                           (label.includes('like') && !label.includes('dislike') && tag !== 'div') ||
+                           label === 'like' || label === 'dislike' ||
+                           label.includes('like this video') || label.includes('dislike this video')
+                       );
+                       let hide = false;
+                       if (prefs.action_bar_show_like_dislike === false && isLikeDislike) hide = true;
+                       if (prefs.action_bar_show_download === false && (label.includes('download') || id === 'downloadButton')) hide = true;
+                       if (prefs.action_bar_show_queue === false && (label.includes('add to queue') || id === 'queueButton')) hide = true;
+                       if (prefs.enable_pip === false && id === 'pipButton') hide = true;
+                       if (prefs.action_bar_show_chat === false && (label.includes('chat') || id === 'chatButton')) hide = true;
+                       if (prefs.action_bar_show_share === false && label.includes('share')) hide = true;
+                       if (prefs.action_bar_show_remix === false && label.includes('remix')) hide = true;
+                       if (prefs.action_bar_show_thanks === false && label.includes('thanks')) hide = true;
+                       if (prefs.action_bar_show_clip === false && label.includes('clip')) hide = true;
+                       if (prefs.action_bar_show_save === false && (label.includes('save') || label.includes('playlist'))) hide = true;
+                       if (prefs.action_bar_show_report === false && label.includes('report')) hide = true;
+                       if (prefs.action_bar_show_ask_ai === false && (label.includes('ask') || label.includes('ai'))) hide = true;
+                       if (hide) btn.style.setProperty('display', 'none', 'important');
+                       else btn.style.removeProperty('display');
+                   });
 
-            if (prefs.action_bar_show_like_dislike === false) {
-                actionBar.querySelectorAll('ytm-segmented-like-dislike-button-renderer, segmented-like-dislike-button-view-model').forEach(el => {
-                    el.style.setProperty('display', 'none', 'important');
-                });
+                   if (prefs.action_bar_show_like_dislike === false) {
+                       actionBar.querySelectorAll('ytm-segmented-like-dislike-button-renderer, segmented-like-dislike-button-view-model').forEach(el => {
+                           el.style.setProperty('display', 'none', 'important');
+                       });
+                   } else {
+                       actionBar.querySelectorAll('ytm-segmented-like-dislike-button-renderer, segmented-like-dislike-button-view-model').forEach(el => {
+                           el.style.removeProperty('display');
+                       });
+                   }
+               };
+
+               let watchObserver = null, watchDebounce = null;
+               const startWatchObserver = () => {
+                   if (watchObserver) watchObserver.disconnect();
+                   const container = document.querySelector('ytm-slim-video-action-bar-renderer');
+                   if (container) {
+                       watchObserver = new MutationObserver(() => {
+                           ct(watchDebounce);
+                           watchDebounce = st(ensureWatchButtons, 50);
+                       });
+                       watchObserver.observe(container, { childList: true, subtree: true });
+                       ensureWatchButtons();
+                   }
+               };
+
+               const ensureWatchButtons = () => {
+                   if (getCachedPageClass(location.href) !== 'watch') return;
+                   const actionBar = document.querySelector('ytm-slim-video-action-bar-renderer');
+                   if (!actionBar) return;
+                   const prefs = getPrefs();
+                   const container = actionBar.querySelector('.slim-video-action-bar-actions') || actionBar;
+                   let anchor = container.querySelector('ytm-segmented-like-dislike-button-renderer') ||
+                                container.querySelector('ytm-toggle-button-renderer') ||
+                                container.querySelector('segmented-like-dislike-button-view-model') ||
+                                container.firstElementChild;
+                   if (!anchor) return;
+                   const moviePlayer = document.querySelector('#movie_player');
+                   const isLive = moviePlayer?.getPlayerResponse?.()?.playabilityStatus?.liveStreamability && location.href.includes('/watch');
+                   const targetOrder = [];
+                   if (!isLive) {
+                       targetOrder.push({
+                           id: 'downloadButton', key: 'download',
+                           icon: 'M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z',
+                           fn: () => window.android?.download(location.href),
+                       });
+                   }
+
+                   targetOrder.push({
+                       id: 'queueButton', key: 'add_to_queue',
+                       icon: 'M4 10h12v2H4zm0-4h12v2H4zm0 8h8v2H4zm10 0v6l5-3z',
+                       fn: () => {
+                           const videoId = getVideoId(location.href);
+                           if (!videoId) return;
+                           const metadata = {
+                               url: location.href,
+                               videoId: videoId,
+                               title: document.querySelector('.slim-video-information-title, .watch-title, ytm-slim-video-metadata-renderer .title')?.textContent?.trim() || videoId,
+                               author: document.querySelector('.slim-owner-name, .channel-name, ytm-slim-owner-renderer .ytm-slim-owner-renderer-text')?.textContent?.trim() || '',
+                               thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+                           };
+                           if (window.android?.addToQueue) android.addToQueue(JSON.stringify(metadata));
+                       }
+                   });
+
+                   if (isLive) {
+                       targetOrder.push({
+                           id: 'chatButton', key: 'chat',
+                           icon: 'M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z',
+                           fn: () => {
+                               let chatContainer = document.getElementById('live_chat_container');
+                               if (chatContainer) {
+                                   if (chatContainer.style.display === 'none') {
+                                       chatContainer.style.display = 'flex';
+                                       document.body.style.overflow = 'hidden';
+                                       document.documentElement.style.overflow = 'hidden';
+                                       history.pushState({ chatOpen: true }, '', location.href + '#chat');
+                                   } else {
+                                       chatContainer.style.display = 'none';
+                                       document.body.style.overflow = '';
+                                       document.documentElement.style.overflow = '';
+                                       if (location.hash === '#chat') history.back();
+                                   }
+                                   return;
+                               }
+                               const panelContainer = document.querySelector('#panel-container') || document.querySelector('.watch-below-the-player');
+                               if (!panelContainer) return;
+                               chatContainer = document.createElement('div');
+                               chatContainer.id = 'live_chat_container';
+                               chatContainer.style.cssText = 'position:fixed;top:calc(56.25vw + 48px);bottom:0;left:0;right:0;z-index:4;display:flex;flex-direction:column;box-shadow:0 -2px 10px rgba(0,0,0,0.1);border-top-left-radius:12px;border-top-right-radius:12px;overflow:hidden;';
+                               document.body.style.overflow = 'hidden'; document.documentElement.style.overflow = 'hidden';
+                               history.pushState({ chatOpen: true }, '', location.href + '#chat');
+                               const header = document.createElement('div');
+                               header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--yt-spec-10-percent-layer);background-color:inherit;border-top-left-radius:12px;border-top-right-radius:12px;';
+                               const title = document.createElement('h2');
+                               title.className = 'engagement-panel-section-list-header-title';
+                               title.innerText = getLocalizedText('chat');
+                               title.style.cssText = 'font-family:"YouTube Sans","Roboto",sans-serif;font-size:1.8rem;font-weight:600;color:var(--yt-spec-text-primary);margin:0;';
+                               const closeBtn = document.createElement('div');
+                               const closeSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                               closeSvg.setAttribute('viewBox', '0 0 24 24'); closeSvg.setAttribute('width', '24'); closeSvg.setAttribute('height', '24');
+                               closeSvg.setAttribute('fill', 'currentColor'); closeSvg.style.display = 'block';
+                               const closePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                               closePath.setAttribute('d', 'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z');
+                               closeSvg.appendChild(closePath); closeBtn.appendChild(closeSvg);
+                               closeBtn.style.cssText = 'cursor:pointer;color:var(--yt-spec-text-primary);padding:4px;';
+                               closeBtn.onclick = (e) => { e.stopPropagation(); chatContainer.style.display = 'none'; document.body.style.overflow = ''; document.documentElement.style.overflow = ''; if (location.hash === '#chat') history.back(); };
+                               header.appendChild(title); header.appendChild(closeBtn); chatContainer.appendChild(header);
+                               const videoId = getVideoId(location.href);
+                               if (videoId) {
+                                   const iframe = document.createElement('iframe');
+                                   const isDark = document.documentElement.getAttribute('dark') === 'true' || window.matchMedia('(prefers-color-scheme: dark)').matches;
+                                   chatContainer.style.backgroundColor = isDark ? '#0f0f0f' : '#ffffff';
+                                   iframe.src = `https://www.youtube.com/live_chat?v=${videoId}&embed_domain=${location.hostname}${isDark ? '&dark_theme=1' : ''}`;
+                                   iframe.style.cssText = 'width:100%;height:100%;border:none;flex:1;background-color:transparent;';
+                                   chatContainer.appendChild(iframe);
+                                   panelContainer.insertBefore(chatContainer, panelContainer.firstChild);
+                                   bindListener(window, 'popstate', () => {
+                                       if (chatContainer && chatContainer.style.display !== 'none' && !location.hash.includes('chat')) {
+                                           chatContainer.style.display = 'none'; document.body.style.overflow = ''; document.documentElement.style.overflow = '';
+                                       }
+                                   });
+                               }
+                           },
+                       });
+                   }
+                   if (prefs.enable_pip) {
+                       targetOrder.push({
+                           id: 'pipButton', key: 'pip',
+                           icon: 'M19 11h-8v6h8v-6zm4 8V4.98C23 3.88 22.1 3 21 3H3c-1.1 0-2 .88-2 1.98V19c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2zm-2 .02H3V4.97h18v14.05z',
+                           fn: () => window.android?.pip(),
+                       });
+                   }
+
+                   targetOrder.forEach(item => {
+                       let btn = document.getElementById(item.id);
+                       if (!btn) btn = createWatchButton(getLocalizedText(item.key), item.icon, item.id, item.fn);
+                       if (btn) {
+                           if (anchor.nextElementSibling !== btn) anchor.after(btn);
+                           anchor = btn;
+                       }
+                   });
+
+                   applyActionBarVisibility(actionBar, prefs);
+                   window.watchInjected = true;
+               };
+
+        const closeBottomSheet = () => {
+            const scrimBtn = document.querySelector('.ytWebScrimHiddenButton');
+            if (scrimBtn) { scrimBtn.click(); return; }
+            const scrim = document.querySelector('ytm-scrim, .ytm-scrim');
+            if (scrim) scrim.click();
+        };
+
+        const makeSheetItem = (key, iconPath, onClick, type) => {
+            const label = getLocalizedText(key);
+            const ns = 'http://www.w3.org/2000/svg';
+
+            const createIcon = () => {
+                const c3 = document.createElement('c3-icon');
+                c3.setAttribute('fill-icon', 'false');
+                c3.style.cssText = 'width:24px;height:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0;';
+                const span = document.createElement('span');
+                span.className = 'yt-icon-shape ytSpecIconShapeHost';
+                const innerDiv = document.createElement('div');
+                innerDiv.style.cssText = 'width:100%;height:100%;display:block;fill:currentcolor;';
+                const svg = document.createElementNS(ns, 'svg');
+                svg.setAttribute('xmlns', ns);
+                svg.setAttribute('viewBox', '0 0 24 24');
+                svg.setAttribute('focusable', 'false');
+                svg.setAttribute('aria-hidden', 'true');
+                svg.style.cssText = 'pointer-events:none;display:block;width:100%;height:100%;';
+                const path = document.createElementNS(ns, 'path');
+                path.setAttribute('d', iconPath);
+                svg.appendChild(path);
+                innerDiv.appendChild(svg);
+                span.appendChild(innerDiv);
+                c3.appendChild(span);
+                return c3;
+            };
+
+            const bindClick = (el) => {
+                bindListener(el, 'click', (e) => {
+                    e.preventDefault(); e.stopPropagation();
+                    onClick();
+                    closeBottomSheet();
+                }, true);
+            };
+
+            if (type === 'list') {
+                const wrapper = document.createElement('yt-list-item-view-model');
+                wrapper.className = 'ytListItemViewModelHost';
+                wrapper.setAttribute('role', 'menuitem');
+                wrapper.dataset.lpCustom = 'true';
+
+                const layoutWrapper = document.createElement('div');
+                layoutWrapper.className = 'ytListItemViewModelLayoutWrapper ytListItemViewModelContainer ytListItemViewModelTappable ytListItemViewModelInPopup ytListItemViewModelNoTrailingText';
+
+                const mainContainer = document.createElement('div');
+                mainContainer.className = 'ytListItemViewModelMainContainer';
+
+                const imgContainer = document.createElement('div');
+                imgContainer.className = 'ytListItemViewModelImageContainer ytListItemViewModelLeading';
+                imgContainer.setAttribute('aria-hidden', 'true');
+
+                const c3 = createIcon();
+                c3.className = 'ytListItemViewModelAccessory ytListItemViewModelImage';
+                c3.setAttribute('role', 'img');
+                c3.style.cssText = 'width:24px;height:24px;display:flex;align-items:center;justify-content:center;';
+                imgContainer.appendChild(c3);
+                mainContainer.appendChild(imgContainer);
+
+                const btn = document.createElement('button');
+                btn.className = 'ytButtonOrAnchorHost ytButtonOrAnchorButton ytListItemViewModelButtonOrAnchor';
+                btn.setAttribute('aria-label', label);
+
+                const textWrapper = document.createElement('div');
+                textWrapper.className = 'ytListItemViewModelTextWrapper';
+                const titleWrapper = document.createElement('div');
+                titleWrapper.className = 'ytListItemViewModelTitleWrapper';
+                const textSpan = document.createElement('span');
+                textSpan.className = 'ytAttributedStringHost ytListItemViewModelTitle ytAttributedStringWhiteSpacePreWrap';
+                textSpan.setAttribute('role', 'text');
+                textSpan.textContent = label;
+
+                titleWrapper.appendChild(textSpan);
+                textWrapper.appendChild(titleWrapper);
+                btn.appendChild(textWrapper);
+                mainContainer.appendChild(btn);
+                layoutWrapper.appendChild(mainContainer);
+                wrapper.appendChild(layoutWrapper);
+
+                bindClick(wrapper);
+                return wrapper;
             } else {
-                actionBar.querySelectorAll('ytm-segmented-like-dislike-button-renderer, segmented-like-dislike-button-view-model').forEach(el => {
-                    el.style.removeProperty('display');
-                });
+                const menuItem = document.createElement('ytm-menu-item');
+                menuItem.dataset.lpCustom = 'true';
+                const btn = document.createElement('button');
+                btn.className = 'menu-item-button';
+                btn.setAttribute('aria-label', label);
+
+                const c3 = createIcon();
+                btn.appendChild(c3);
+
+                const textSpan = document.createElement('span');
+                textSpan.className = 'ytAttributedStringHost';
+                textSpan.setAttribute('role', 'text');
+                textSpan.textContent = label;
+
+                btn.appendChild(textSpan);
+                menuItem.appendChild(btn);
+                bindClick(btn);
+                return menuItem;
             }
         };
 
-        let watchObserver = null;
-        const startWatchObserver = () => {
-            if (watchObserver) watchObserver.disconnect();
-            const container = document.querySelector('ytm-slim-video-action-bar-renderer');
-            if (container) {
-                watchObserver = new MutationObserver(() => {
-                    ensureWatchButtons();
-                });
-                watchObserver.observe(container, { childList: true, subtree: true });
-                ensureWatchButtons();
-            }
-        };
+        let sheetObserver = null;
+        const Sheet = {
+            _metadata: null,
+            _skip: false,
+            _playlistOnly: false,
+            _root: null,
 
-        const ensureWatchButtons = () => {
-            if (getCachedPageClass(location.href) !== 'watch') return;
-            const actionBar = document.querySelector('ytm-slim-video-action-bar-renderer');
-            if (!actionBar) return;
-            const prefs = getPrefs();
-            const container = actionBar.querySelector('.slim-video-action-bar-actions') || actionBar;
-            let anchor = container.querySelector('ytm-segmented-like-dislike-button-renderer') ||
-                         container.querySelector('ytm-toggle-button-renderer') ||
-                         container.querySelector('segmented-like-dislike-button-view-model') ||
-                         container.firstElementChild;
-            if (!anchor) return;
-            const moviePlayer = document.querySelector('#movie_player');
-            const isLive = moviePlayer?.getPlayerResponse?.()?.playabilityStatus?.liveStreamability && location.href.includes('/watch');
-            const targetOrder = [];
-            if (!isLive) {
-                targetOrder.push({
-                    id: 'downloadButton', key: 'download',
-                    icon: 'M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z',
-                    fn: () => window.android?.download(location.href),
-                });
-            }
-            if (isLive) {
-                targetOrder.push({
-                    id: 'chatButton', key: 'chat',
-                    icon: 'M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z',
-                    fn: () => {
-                        let chatContainer = document.getElementById('live_chat_container');
-                        if (chatContainer) {
-                            if (chatContainer.style.display === 'none') {
-                                chatContainer.style.display = 'flex';
-                                document.body.style.overflow = 'hidden';
-                                document.documentElement.style.overflow = 'hidden';
-                                history.pushState({ chatOpen: true }, '', location.href + '#chat');
-                            } else {
-                                chatContainer.style.display = 'none';
-                                document.body.style.overflow = '';
-                                document.documentElement.style.overflow = '';
-                                if (location.hash === '#chat') history.back();
-                            }
-                            return;
-                        }
-                        const panelContainer = document.querySelector('#panel-container') || document.querySelector('.watch-below-the-player');
-                        if (!panelContainer) return;
-                        chatContainer = document.createElement('div');
-                        chatContainer.id = 'live_chat_container';
-                        chatContainer.style.cssText = 'position:fixed;top:calc(56.25vw + 48px);bottom:0;left:0;right:0;z-index:4;display:flex;flex-direction:column;box-shadow:0 -2px 10px rgba(0,0,0,0.1);border-top-left-radius:12px;border-top-right-radius:12px;overflow:hidden;';
-                        document.body.style.overflow = 'hidden'; document.documentElement.style.overflow = 'hidden';
-                        history.pushState({ chatOpen: true }, '', location.href + '#chat');
-                        const header = document.createElement('div');
-                        header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--yt-spec-10-percent-layer);background-color:inherit;border-top-left-radius:12px;border-top-right-radius:12px;';
-                        const title = document.createElement('h2');
-                        title.className = 'engagement-panel-section-list-header-title';
-                        title.innerText = getLocalizedText('chat');
-                        title.style.cssText = 'font-family:"YouTube Sans","Roboto",sans-serif;font-size:1.8rem;font-weight:600;color:var(--yt-spec-text-primary);margin:0;';
-                        const closeBtn = document.createElement('div');
-                        const closeSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                        closeSvg.setAttribute('viewBox', '0 0 24 24'); closeSvg.setAttribute('width', '24'); closeSvg.setAttribute('height', '24');
-                        closeSvg.setAttribute('fill', 'currentColor'); closeSvg.style.display = 'block';
-                        const closePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                        closePath.setAttribute('d', 'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z');
-                        closeSvg.appendChild(closePath); closeBtn.appendChild(closeSvg);
-                        closeBtn.style.cssText = 'cursor:pointer;color:var(--yt-spec-text-primary);padding:4px;';
-                        closeBtn.onclick = (e) => { e.stopPropagation(); chatContainer.style.display = 'none'; document.body.style.overflow = ''; document.documentElement.style.overflow = ''; if (location.hash === '#chat') history.back(); };
-                        header.appendChild(title); header.appendChild(closeBtn); chatContainer.appendChild(header);
-                        const videoId = getVideoId(location.href);
-                        if (videoId) {
-                            const iframe = document.createElement('iframe');
-                            const isDark = document.documentElement.getAttribute('dark') === 'true' || window.matchMedia('(prefers-color-scheme: dark)').matches;
-                            chatContainer.style.backgroundColor = isDark ? '#0f0f0f' : '#ffffff';
-                            iframe.src = `https://www.youtube.com/live_chat?v=${videoId}&embed_domain=${location.hostname}${isDark ? '&dark_theme=1' : ''}`;
-                            iframe.style.cssText = 'width:100%;height:100%;border:none;flex:1;background-color:transparent;';
-                            chatContainer.appendChild(iframe);
-                            panelContainer.insertBefore(chatContainer, panelContainer.firstChild);
-                            bindListener(window, 'popstate', () => {
-                                if (chatContainer && chatContainer.style.display !== 'none' && !location.hash.includes('chat')) {
-                                    chatContainer.style.display = 'none'; document.body.style.overflow = ''; document.documentElement.style.overflow = '';
-                                }
-                            });
-                        }
-                    },
-                });
-            }
-            if (prefs.enable_pip) {
-                targetOrder.push({
-                    id: 'pipButton', key: 'pip',
-                    icon: 'M19 11h-8v6h8v-6zm4 8V4.98C23 3.88 22.1 3 21 3H3c-1.1 0-2 .88-2 1.98V19c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2zm-2 .02H3V4.97h18v14.05z',
-                    fn: () => window.android?.pip(),
-                });
-            }
+            resolveMetadata(root) {
+                if (!root) return null;
+                const link = root.querySelector('a[href*="/watch"], a[href*="/shorts/"]');
+                const href = link?.getAttribute('href') || link?.href;
+                if (!href) return null;
 
-            targetOrder.forEach(item => {
-                let btn = document.getElementById(item.id);
-                if (!btn) btn = createWatchButton(getLocalizedText(item.key), item.icon, item.id, item.fn);
-                if (btn) {
-                    if (anchor.nextElementSibling !== btn) anchor.after(btn);
-                    anchor = btn;
+                const url = href.startsWith('http') ? href : 'https://m.youtube.com' + href;
+                const videoId = getVideoId(url);
+                if (!videoId) return null;
+
+                const titleEl = root.querySelector('.media-item-headline, .ytLockupViewModelTitle, h3, .title, .compact-media-item-metadata-content');
+                const authorEl = root.querySelector('.media-item-byline, .ytLockupViewModelMetadata, .secondary-text, .compact-media-item-metadata-subtitle');
+
+                return {
+                    url,
+                    videoId,
+                    title: titleEl?.textContent?.trim() || videoId,
+                    author: authorEl?.textContent?.trim() || '',
+                    thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+                };
+            },
+
+            init() {
+                document.addEventListener('click', Sheet.onAnyClick, true);
+                if (sheetObserver) return;
+                sheetObserver = new MutationObserver(() => {
+                    const sheet = document.querySelector('.ytSpecBottomSheetLayoutHost, bottom-sheet-layout, .ytm-bottom-sheet-renderer');
+                    if (!sheet || sheet.querySelector('[data-lp-custom]')) return;
+
+                    const hasItems = sheet.querySelector('.bottom-sheet-media-menu-item, yt-list-item-view-model, ytm-menu-service-item-renderer, ytm-menu-navigation-item-renderer, toggleable-list-item-view-model, ytm-menu-item');
+                    if (hasItems) Sheet.inject(sheet);
+                });
+                sheetObserver.observe(document.body, { childList: true, subtree: true });
+            },
+
+            onAnyClick(event) {
+                Sheet._metadata = null;
+                Sheet._skip = false;
+                Sheet._playlistOnly = false;
+                Sheet._root = null;
+
+                const pc = getCachedPageClass(location.href);
+                if (pc === 'shorts') { Sheet._skip = true; return; }
+                if (event.target.closest('ytm-backstage-post-renderer, ytm-post-renderer, ytm-backstage-post-thread-renderer')) {
+                    Sheet._skip = true;
+                    return;
                 }
-            });
 
-            applyActionBarVisibility(actionBar, prefs);
-            actionBar.setAttribute('data-lp-processed', 'true');
-            window.watchInjected = true;
+                const root = event.target.closest('ytm-media-item, yt-lockup-view-model, ytm-rich-item-renderer, .ytLockupViewModelHost, ytm-compact-video-renderer, ytm-video-with-context-renderer, ytm-playlist-renderer, ytm-compact-playlist-renderer, ytm-history-item-renderer');
+                if (!root) return;
+
+                const tag = root.tagName.toLowerCase();
+                const hasShorts = !!root.querySelector('a[href*="/shorts/"]');
+                const hasWatch = !!root.querySelector('a[href*="/watch"]');
+                if (hasShorts && !hasWatch) { Sheet._skip = true; return; }
+
+                Sheet._playlistOnly = tag === 'ytm-playlist-renderer' || tag === 'ytm-compact-playlist-renderer';
+                Sheet._root = root;
+
+                const link = root.querySelector('a[href*="/watch"], a[href*="/shorts/"]');
+                const href = link?.getAttribute('href') || link?.href;
+                if (href) {
+                    const url = href.startsWith('http') ? href : 'https://m.youtube.com' + href;
+                    const videoId = getVideoId(url);
+                    if (videoId) {
+                        const title = root.querySelector('.media-item-headline, .ytLockupViewModelTitle, h3, .title')?.textContent?.trim() || videoId;
+                        const author = root.querySelector('.media-item-byline, .ytLockupViewModelMetadata, .secondary-text')?.textContent?.trim() || '';
+                        Sheet._metadata = { url, videoId, title, author, thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` };
+                    }
+                }
+            },
+
+            inject(sheet) {
+                if (Sheet._skip) return;
+
+                let metadata = Sheet.resolveMetadata(Sheet._root) || Sheet._metadata;
+
+                if (!metadata && getCachedPageClass(location.href) === 'watch') {
+                    const videoId = getVideoId(location.href);
+                    if (videoId) {
+                        metadata = {
+                            url: location.href,
+                            videoId,
+                            title: document.querySelector('.slim-video-information-title, .watch-title, ytm-slim-video-metadata-renderer .title')?.textContent?.trim() || videoId,
+                            author: document.querySelector('.slim-owner-name, .channel-name, ytm-slim-owner-renderer .ytm-slim-owner-renderer-text')?.textContent?.trim() || '',
+                            thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+                        };
+                    }
+                }
+
+                if (!metadata?.url) return;
+
+                const doInject = () => {
+                    if (sheet.querySelector('[data-lp-custom]')) return true;
+
+                    const firstItem = sheet.querySelector('.bottom-sheet-media-menu-item, yt-list-item-view-model, ytm-menu-service-item-renderer, ytm-menu-navigation-item-renderer, toggleable-list-item-view-model');
+                    if (!firstItem) return false;
+
+                    const container = firstItem.parentElement;
+                    if (!container) return true;
+
+                    let itemType = 'menu';
+                    let needsWrapper = null;
+
+                    if (firstItem.tagName.toLowerCase() === 'yt-list-item-view-model') {
+                        itemType = 'list';
+                    } else if (firstItem.tagName.toLowerCase() === 'ytm-menu-service-item-renderer') {
+                        itemType = 'menu';
+                        needsWrapper = 'ytm-menu-service-item-renderer';
+                    } else if (firstItem.tagName.toLowerCase() === 'ytm-menu-navigation-item-renderer') {
+                        itemType = 'menu';
+                        needsWrapper = 'ytm-menu-navigation-item-renderer';
+                    }
+
+                    const createItem = (key, icon, fn) => {
+                        const el = makeSheetItem(key, icon, fn, itemType);
+                        if (needsWrapper) {
+                            const wrapper = document.createElement(needsWrapper);
+                            wrapper.dataset.lpCustom = 'true';
+                            wrapper.appendChild(el);
+                            return wrapper;
+                        }
+                        return el;
+                    };
+
+                    const dlItem = createItem('download', 'M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z', () => {
+                        if (window.android?.download) android.download(metadata.url);
+                    });
+                    container.insertBefore(dlItem, container.firstElementChild);
+
+                    if (!Sheet._playlistOnly) {
+                        const qItem = createItem('add_to_queue', 'M4 10h12v2H4zm0-4h12v2H4zm0 8h8v2H4zm10 0v6l5-3z', () => {
+                            if (window.android?.addToQueue) android.addToQueue(JSON.stringify(metadata));
+                        });
+                        container.insertBefore(qItem, container.firstElementChild);
+                    }
+
+                    const cw = sheet.querySelector('.ytSpecBottomSheetLayoutContentWrapper');
+                    if (cw) cw.style.maxHeight = '80vh';
+                    return true;
+                };
+
+                if (!doInject()) {
+                    let retries = 0;
+                    const retry = () => { if (!doInject() && retries++ < 10) st(retry, 150); };
+                    st(retry, 100);
+                }
+            }
         };
 
+        Sheet.init();
         startLibraryObserver();
         startWatchObserver();
 
@@ -807,7 +1086,7 @@ try {
         window.addEventListener('onRefresh', () => location.reload());
         window.addEventListener('doUpdateVisitedHistory', () => {
             const pc = getCachedPageClass(location.href);
-            if (window.android?.setRefreshLayoutEnabled) android.setRefreshLayoutEnabled(['home', 'subscriptions', '@'].includes(pc));
+            if (window.android?.setRefreshLayoutEnabled) android.setRefreshLayoutEnabled(['home', 'subscriptions', '@', 'library'].includes(pc));
             if (window.android?.finishRefresh) android.finishRefresh();
         });
 
@@ -819,10 +1098,13 @@ try {
             if (pc === 'watch' && window.android?.play) android.play(url);
             if (pc === 'shorts') st(() => { if (!document.querySelector('ytm-shorts, shorts-video, #shorts-container, ytm-reel-watch-sequence')) location.href = url; }, 1200);
             if (pc === 'you' || pc === 'library') {
+                document.documentElement.classList.add('lp-library-loading');
+                document.documentElement.classList.remove('lp-library-loaded');
                 window.watchInjected = false;
                 ensureLibraryButton();
             }
             if (pc === 'watch') {
+                window.watchInjected = false;
                 startWatchObserver();
             }
         };
@@ -855,27 +1137,26 @@ try {
             } catch (e) { window.__liteSyncInFlight = false; return false; }
         };
 
-               document.addEventListener('animationstart', (e) => {
-                   if (e.animationName !== 'nodeInserted') return;
-                   const node = e.target, pc = getCachedPageClass(location.href);
-                   if (node.id === 'movie_player') {
-                       if (pc === 'watch') {
-                           node.mute?.();
-                           const resumePos = (window.android?.getResumePosition ? android.getResumePosition(getVideoId(location.href)) : 0) / 1000;
-                           node.seekTo?.(resumePos || (node.getDuration() / 2));
-                           node.addEventListener('onStateChange', s => { if (s === 1 && !window.__liteSyncInFlight) node.pauseVideo?.(); });
-
-                           document.body.style.setProperty('overflow', 'auto', 'important');
-                           document.documentElement.style.setProperty('overflow', 'auto', 'important');
-                           document.body.style.setProperty('position', 'relative', 'important');
-                       }
-                       resizeObserver.disconnect(); resizeObserver.observe(node);
-                   } else if (pc === 'watch' && node.classList.contains('watch-below-the-player')) {
-                       node.style.setProperty('overflow', 'visible', 'important');
-                       node.style.setProperty('height', 'auto', 'important');
-                       node.style.setProperty('touch-action', 'auto', 'important');
-                   }
-               }, false);
+        document.addEventListener('animationstart', (e) => {
+            if (e.animationName !== 'nodeInserted') return;
+            const node = e.target, pc = getCachedPageClass(location.href);
+            if (node.id === 'movie_player') {
+                if (pc === 'watch') {
+                    node.mute?.();
+                    const resumePos = (window.android?.getResumePosition ? android.getResumePosition(getVideoId(location.href)) : 0) / 1000;
+                    node.seekTo?.(resumePos || (node.getDuration() / 2));
+                    node.addEventListener('onStateChange', s => { if (s === 1 && !window.__liteSyncInFlight) node.pauseVideo?.(); });
+                    document.body.style.setProperty('overflow', 'auto', 'important');
+                    document.documentElement.style.setProperty('overflow', 'auto', 'important');
+                    document.body.style.setProperty('position', 'relative', 'important');
+                }
+                resizeObserver.disconnect(); resizeObserver.observe(node);
+            } else if (pc === 'watch' && node.classList.contains('watch-below-the-player')) {
+                node.style.setProperty('overflow', 'visible', 'important');
+                node.style.setProperty('height', 'auto', 'important');
+                node.style.setProperty('touch-action', 'auto', 'important');
+            }
+        }, false);
 
         bindShortsGesture();
 
@@ -957,7 +1238,8 @@ try {
                     const btns = [
                         { id: 'extensionButton', key: 'extension', icon: 'M497-120l-33-124q-15-7-30-16t-28-20l-116 50-70-121 98-88q-2-10-3-20t-1-20q0-10 1-20t3-20l-98-88 70-121 116 50q13-11 28-20t30-16l33-124h140l33 124q15 7 30 16t28 20l116-50 70 121-98 88q2 10 3 20t1 20q0 10-1 20t-3 20l98 88-70 121-116-50q-13 11-28 20t-30 16l-33 124H497Zm70-227q55 0 94-39t39-94q0-55-39-94t-94-39q-55 0-94 39t-39 94q0 55 39 94t94 39Z', fn: () => window.android?.extension() },
                         { id: 'downloadButton', key: 'downloads', icon: 'M480-336 288-528l51-51 105 105v-342h72v342l105-105 51 51-192 192ZM263.72-192Q234-192 213-213.15T192-264v-72h72v72h432v-72h72v72q0 29.7-21.16 50.85Q725.68-192 695.96-192H263.72Z', fn: () => window.android?.download() },
-                        { id: 'aboutButton', key: 'about', icon: 'M444-288h72v-240h-72v240Zm35.79-312q15.21 0 25.71-10.29t10.5-25.5q0-15.21-10.29-25.71t-25.5-10.5q-15.21 0-25.71 10.29t-10.5 25.5q0 15.21 10.29 25.71t25.5 10.5Zm.49 504Q401-96 331-126t-122.5-82.5Q156-261 126-330.96t-30-149.5Q96-560 126-629.5q30-69.5 82.5-122T330.96-834q69.96-30 149.5-30t149.04 30q69.5 30 122 82.5T834-629.28q30 69.73 30 149Q864-401 834-331t-82.5 122.5Q699-156 629.28-126q-69.73 30-149 30Zm0-72q130 0 221-91t91-221q0-130-91-221t-221-91q-130 0-221 91t-91 221q0 130 91 221t221 91Zm0-312Z', fn: () => window.android?.about() }, ];
+                        { id: 'aboutButton', key: 'about', icon: 'M444-288h72v-240h-72v240Zm35.79-312q15.21 0 25.71-10.29t10.5-25.5q0-15.21-10.29-25.71t-25.5-10.5q-15.21 0-25.71 10.29t-10.5 25.5q0 15.21 10.29 25.71t25.5 10.5Zm.49 504Q401-96 331-126t-122.5-82.5Q156-261 126-330.96t-30-149.5Q96-560 126-629.5q30-69.5 82.5-122T330.96-834q69.96-30 149.5-30t149.04 30q69.5 30 122 82.5T834-629.28q30 69.73 30 149Q864-401 834-331t-82.5 122.5Q699-156 629.28-126q-69.73 30-149 30Zm0-72q130 0 221-91t91-221q0-130-91-221t-221-91q-130 0-221 91t-91 221q0 130 91 221t221 91Zm0-312Z', fn: () => window.android?.about() },
+                    ];
                     btns.forEach(b => {
                         const el = createCustomSettingBtn(base, b.id, b.key, b.icon, b.fn);
                         if (el) b.id === 'aboutButton' ? settings.appendChild(el) : settings.insertBefore(el, settings.firstElementChild);
@@ -966,7 +1248,6 @@ try {
                 }
             }
         }, 800);
-
 
         document.addEventListener('click', e => {
             handleWatchTimestampClick(e);

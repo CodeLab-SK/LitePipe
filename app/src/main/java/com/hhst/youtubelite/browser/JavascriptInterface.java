@@ -173,7 +173,12 @@ public final class JavascriptInterface {
                 if (vid == null || vid.isBlank()
                         || item.getTitle() == null || item.getTitle().isBlank()
                         || item.getAuthor() == null || item.getAuthor().isBlank()) {
-                    ToastUtils.show(context, R.string.queue_item_unavailable);
+                    MainActivity mainActivity = findMainActivity(context);
+                    if (mainActivity != null) {
+                        mainActivity.toggleQueue(item.getUrl());
+                    } else {
+                        ToastUtils.show(context, R.string.queue_item_unavailable);
+                    }
                     return;
                 }
                 item.setVideoId(vid);
@@ -182,6 +187,17 @@ public final class JavascriptInterface {
                 player.refreshQueueNavigationAvailability();
                 ToastUtils.show(context, R.string.queue_item_added);
             } catch (final Exception ignored) {
+            }
+        });
+    }
+
+    @android.webkit.JavascriptInterface
+    public void toggleQueue(@Nullable final String url) {
+        if (url == null) return;
+        handler.post(() -> {
+            MainActivity mainActivity = findMainActivity(context);
+            if (mainActivity != null) {
+                mainActivity.toggleQueue(url);
             }
         });
     }

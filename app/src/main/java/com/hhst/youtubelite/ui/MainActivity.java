@@ -13,7 +13,6 @@ import android.content.pm.PackageManager;
 import android.content.pm.verify.domain.DomainVerificationManager;
 import android.content.pm.verify.domain.DomainVerificationUserState;
 import android.content.res.Configuration;
-import android.graphics.Color;
 import android.graphics.drawable.Icon;
 import android.net.Uri;
 import android.os.Build;
@@ -25,7 +24,6 @@ import android.support.v4.media.session.PlaybackStateCompat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -787,17 +785,9 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 			optionDownload.setVisibility(View.VISIBLE);
 		}
 
-		final boolean inQueue = initiallyInQueue;
 		optionEnqueue.setOnClickListener(v -> {
 			activeVideoOptionsDialog.dismiss();
-			if (inQueue) {
-				queueRepository.remove(videoId);
-				Toast.makeText(this, R.string.queue_item_removed, Toast.LENGTH_SHORT).show();
-			} else {
-				Toast.makeText(this, R.string.queue_item_added, Toast.LENGTH_SHORT).show();
-				fetchAndEnqueue(url);
-			}
-			updateQueueUI();
+			toggleQueue(url);
 		});
 
 		optionDownload.setOnClickListener(v -> {
@@ -820,6 +810,39 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 		activeVideoOptionsDialog.show();
 	}
 
+	public void toggleQueue(String url) {
+		toggleQueue(url, null);
+	}
+
+	public void toggleQueue(String url, @Nullable QueueItem metadata) {
+		final String videoId = YoutubeExtractor.getVideoId(url);
+		if (videoId == null) return;
+
+		boolean inQueue = false;
+		for (QueueItem item : queueRepository.getItems()) {
+			if (videoId.equals(item.getVideoId())) {
+				inQueue = true;
+				break;
+			}
+		}
+
+		if (inQueue) {
+			queueRepository.remove(videoId);
+			Toast.makeText(this, R.string.queue_item_removed, Toast.LENGTH_SHORT).show();
+		} else {
+			if (metadata != null && metadata.getVideoId() != null && metadata.getTitle() != null) {
+				queueRepository.add(metadata);
+				queueWarmer.warmItem(metadata);
+				player.refreshQueueNavigationAvailability();
+				Toast.makeText(this, R.string.queue_item_added, Toast.LENGTH_SHORT).show();
+			} else {
+				Toast.makeText(this, R.string.queue_item_adding, Toast.LENGTH_SHORT).show();
+				fetchAndEnqueue(url);
+			}
+		}
+		updateQueueUI();
+	}
+
 	private void fetchAndEnqueue(String url) {
 		executor.execute(() -> {
 			try {
@@ -832,10 +855,13 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 				item.setVideoUrl(url);
 				queueRepository.add(item);
 				runOnUiThread(() -> {
+					Toast.makeText(this, R.string.queue_item_added, Toast.LENGTH_SHORT).show();
 					player.refreshQueueNavigationAvailability();
 					updateQueueUI();
 				});
-			} catch (Exception ignored) {}
+			} catch (Exception ignored) {
+				runOnUiThread(() -> Toast.makeText(this, R.string.queue_item_unavailable, Toast.LENGTH_SHORT).show());
+			}
 		});
 	}
 

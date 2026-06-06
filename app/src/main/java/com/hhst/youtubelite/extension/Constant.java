@@ -17,6 +17,7 @@ public final class Constant {
 
     public static final String ACTION_BAR_SHOW_LIKE_DISLIKE = "action_bar_show_like_dislike";
     public static final String ACTION_BAR_SHOW_DOWNLOAD = "action_bar_show_download";
+    public static final String ACTION_BAR_SHOW_QUEUE = "action_bar_show_queue";
     public static final String ACTION_BAR_SHOW_CHAT = "action_bar_show_chat";
     public static final String ACTION_BAR_SHOW_SHARE = "action_bar_show_share";
     public static final String ACTION_BAR_SHOW_REMIX = "action_bar_show_remix";
@@ -27,7 +28,7 @@ public final class Constant {
     public static final String ACTION_BAR_SHOW_ASK_AI = "action_bar_show_ask_ai";
 
     public static final String ACTION_BAR_ORDER = "action_bar_order";
-    public static final String DEFAULT_ACTION_BAR_ORDER = "download,pip,share,save";
+    public static final String DEFAULT_ACTION_BAR_ORDER = "download,queue,pip,share,save";
 
     public static final String HIDE_NAV_BAR_LABELS = "hide_nav_bar_labels";
     public static final String ENABLE_DISPLAY_DISLIKES = "enable_display_dislikes";
@@ -85,6 +86,7 @@ public final class Constant {
             Map.entry(NAV_BAR_SHOW_SETTINGS, true),
             Map.entry(ACTION_BAR_SHOW_LIKE_DISLIKE, true),
             Map.entry(ACTION_BAR_SHOW_DOWNLOAD, true),
+            Map.entry(ACTION_BAR_SHOW_QUEUE, true),
             Map.entry(ACTION_BAR_SHOW_CHAT, true),
             Map.entry(ACTION_BAR_SHOW_SHARE, true),
             Map.entry(ACTION_BAR_SHOW_REMIX, true),
