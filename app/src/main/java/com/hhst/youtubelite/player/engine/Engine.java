@@ -1,6 +1,7 @@
 package com.hhst.youtubelite.player.engine;
 
 import android.content.Context;
+import android.media.audiofx.LoudnessEnhancer;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
@@ -171,6 +172,10 @@ public class Engine {
 	@NonNull
 	private final Set<String> failedAdaptiveCandidates = new HashSet<>();
 
+	private float currentVolume = 1.0f;
+	@Nullable
+	private LoudnessEnhancer loudnessEnhancer;
+
 	@Inject
 	public Engine(@NonNull @ApplicationContext Context context,
 	              @NonNull LitePlayerView playerView,
@@ -262,6 +267,21 @@ public class Engine {
 				long duration = player.getDuration();
 				if (duration > 0) {
 					playerView.updateRemainingTime(player.getCurrentPosition(), duration, playbackParameters.speed);
+				}
+			}
+
+			@Override
+			public void onAudioSessionIdChanged(int audioSessionId) {
+				if (loudnessEnhancer != null) {
+					loudnessEnhancer.release();
+					loudnessEnhancer = null;
+				}
+				try {
+					loudnessEnhancer = new LoudnessEnhancer(audioSessionId);
+					loudnessEnhancer.setEnabled(true);
+					updateLoudnessEnhancer(currentVolume);
+				} catch (Exception e) {
+					Log.e(TAG, "Failed to create LoudnessEnhancer", e);
 				}
 			}
 		});
@@ -615,11 +635,30 @@ public class Engine {
 	}
 
 	public void setVolume(float volume) {
-		this.player.setVolume(volume);
+		this.currentVolume = volume;
+		if (volume > 1.0f) {
+			this.player.setVolume(1.0f);
+		} else {
+			this.player.setVolume(volume);
+		}
+		updateLoudnessEnhancer(volume);
 	}
 
 	public float getVolume() {
-		return this.player.getVolume();
+		return currentVolume;
+	}
+
+	private void updateLoudnessEnhancer(float volume) {
+		if (loudnessEnhancer == null) return;
+		try {
+			int gainmB = 0;
+			if (volume > 1.0f) {
+				gainmB = (int) ((volume - 1.0f) * 2000);
+			}
+			loudnessEnhancer.setTargetGain(gainmB);
+		} catch (Exception e) {
+			Log.e(TAG, "Failed to set LoudnessEnhancer gain", e);
+		}
 	}
 
 	public void addListener(@NonNull Player.Listener listener) {
@@ -1130,6 +1169,10 @@ public class Engine {
 
 	public void release() {
 		handler.removeCallbacks(onTimeUpdate);
+		if (loudnessEnhancer != null) {
+			loudnessEnhancer.release();
+			loudnessEnhancer = null;
+		}
 		this.player.release();
 	}
 
