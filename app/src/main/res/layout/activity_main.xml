@@ -175,6 +175,13 @@
 
     </com.google.android.material.card.MaterialCardView>
 
+    <com.hhst.youtubelite.player.BottomRecommendationsSheet
+        android:id="@+id/recommendations_sheet"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:elevation="15dp"
+        android:visibility="gone" />
+
     <LinearLayout
         android:id="@+id/bottom_navigation_container"
         android:layout_width="match_parent"

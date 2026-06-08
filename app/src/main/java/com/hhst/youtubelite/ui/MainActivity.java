@@ -65,9 +65,11 @@ import com.hhst.youtubelite.downloader.ui.PlaylistDownloadItem;
 import com.hhst.youtubelite.extension.ExtensionManager;
 import com.hhst.youtubelite.extractor.VideoDetails;
 import com.hhst.youtubelite.extractor.YoutubeExtractor;
+import com.hhst.youtubelite.player.BottomRecommendationsSheet;
 import com.hhst.youtubelite.player.LitePlayer;
 import com.hhst.youtubelite.player.common.PlayerLoopMode;
 import com.hhst.youtubelite.player.engine.Engine;
+import com.hhst.youtubelite.player.model.RecommendationVideo;
 import com.hhst.youtubelite.player.queue.QueueItem;
 import com.hhst.youtubelite.player.queue.QueueNav;
 import com.hhst.youtubelite.player.queue.QueueRepository;
@@ -131,6 +133,8 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 
 	private AlertDialog activeVideoOptionsDialog;
 
+	private BottomRecommendationsSheet recommendationsSheet;
+
 	private final IncognitoManager.Listener incognitoListener = (isIncognito) -> applyIncognitoUi(isIncognito, true);
 
 	private final ServiceConnection playbackConnection = new ServiceConnection() {
@@ -185,6 +189,7 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 		});
 
 		setupQueueUI();
+		setupRecommendationsSheet();
 		requestPermissions();
 
 		bindService(new Intent(this, PlaybackService.class), playbackConnection, BIND_AUTO_CREATE);
@@ -204,6 +209,40 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 				if (web != null) web.reload();
 			});
 		});
+	}
+
+	private void setupRecommendationsSheet() {
+		recommendationsSheet = findViewById(R.id.recommendations_sheet);
+		
+		recommendationsSheet.setOnVideoClickListener(video -> {
+			recommendationsSheet.hide();
+			tabManager.playInWatch("https://www.youtube.com/watch?v=" + video.getVideoId());
+		});
+
+		recommendationsSheet.setOnShowListener(this::triggerRecommendationsExtraction);
+
+		player.getController().setOnRecommendationsRequestedListener(() -> {
+			triggerRecommendationsExtraction();
+			recommendationsSheet.show();
+		});
+
+		player.setOnFullscreenChangeListener(isFullscreen -> recommendationsSheet.setFullscreen(isFullscreen));
+
+		tabManager.setOnPageFinishedListener(url -> {
+			if (!url.contains("/watch")) {
+				recommendationsSheet.hide();
+			}
+		});
+	}
+
+	private void triggerRecommendationsExtraction() {
+		tabManager.evaluateJavascript("if(window.extractRecommendations) window.extractRecommendations();", null);
+	}
+
+	public void setRecommendations(List<RecommendationVideo> videos) {
+		if (recommendationsSheet != null) {
+			recommendationsSheet.loadRecommendations(videos);
+		}
 	}
 
 	private void applyIncognitoUi(boolean isIncognito, boolean showToast) {
@@ -291,6 +330,11 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 		super.onConfigurationChanged(newConfig);
 		if (player != null) {
 			player.syncRotation(DeviceUtils.isRotateOn(this), newConfig.orientation);
+		}
+
+		boolean isFullscreen = player != null && player.isFullscreen();
+		if (recommendationsSheet != null) {
+			recommendationsSheet.setFullscreen(isFullscreen);
 		}
 
 		if (extensionManager.isEnabled(Constant.ENABLE_ORIENTATION_FULLSCREEN) && player != null) {
@@ -717,7 +761,7 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 			JsonObject payload = new JsonObject();
 			try {
 				payload = new Gson().fromJson(payloadJson, JsonObject.class);
-			} catch (Exception e) {
+			} catch (Exception ignored) {
 			}
 			if (payload == null || !payload.has("url")) return;
 			showVideoOptionsDialog(payload.get("url").getAsString());
@@ -726,7 +770,7 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 
 	private String extractUrlFromText(String text) {
 		if (text == null) return null;
-		Matcher m = Pattern.compile("https?://(?:www\\.|m\\.)?(?:youtube\\.com|youtu\\.be)/(?:watch\\?v=|v/|embed/|shorts/|playlist\\?list=)?[a-zA-Z0-9_-]+(?:[?&]\\S*)?", Pattern.CASE_INSENSITIVE).matcher(text);
+		Matcher m = Pattern.compile("https?://(?:www\\\\.|m\\\\.)?(?:youtube\\\\.com|youtu\\\\.be)/(?:watch\\\\?v=|v/|embed/|shorts/|playlist\\\\?list=)?[a-zA-Z0-9_-]+(?:[?&]\\\\S*)?", Pattern.CASE_INSENSITIVE).matcher(text);
 		if (m.find()) {
 			return m.group();
 		}
@@ -928,6 +972,12 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 			if (appBackCallback != null) appBackCallback.setEnabled(true);
 			return;
 		}
+
+		if (recommendationsSheet != null && recommendationsSheet.getVisibility() == View.VISIBLE) {
+			recommendationsSheet.hide();
+			return;
+		}
+
 		if (player != null && player.isFullscreen()) { player.exitFullscreen(); return; }
 		if (expandedQueueContainer != null && expandedQueueContainer.getVisibility() == View.VISIBLE) {
 			hideExpandedQueue();
@@ -937,7 +987,7 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 		if (tabManager != null && getWebview() != null) {
 			tabManager.evaluateJavascript(
 					"(function() { " +
-							"  const closeBtn = document.querySelector('ytm-engagement-panel-renderer .engagement-panel-header-action-button, ytm-item-section-renderer[section-identifier=\"comment-item-section\"] .engagement-panel-header-action-button, .engagement-panel-container .engagement-panel-header-action-button, ytm-bottom-sheet-renderer .bottom-sheet-close-button, ytm-menu-renderer #close-button, .yt-spec-button-shape-next--size-m.yt-spec-button-shape-next--icon-only-btn[aria-label*=\"lose\"], .ytp-ad-overlay-close-button');" +
+							"  const closeBtn = document.querySelector(\"ytm-engagement-panel-renderer .engagement-panel-header-action-button, ytm-item-section-renderer[section-identifier=\\\"comment-item-section\\\"] .engagement-panel-header-action-button, .engagement-panel-container .engagement-panel-header-action-button, ytm-bottom-sheet-renderer .bottom-sheet-close-button, ytm-menu-renderer #close-button, .yt-spec-button-shape-next--size-m.yt-spec-button-shape-next--icon-only-btn[aria-label*=\\\"lose\\\"], .ytp-ad-overlay-close-button\");" +
 							"  if (closeBtn && closeBtn.offsetParent !== null) { closeBtn.click(); return true; }" +
 							"  return false;" +
 							"})()",
@@ -959,7 +1009,7 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 		}
 
 		if (tabManager != null) {
-			tabManager.evaluateJavascript("window.dispatchEvent(new Event('onGoBack'));", null);
+			tabManager.evaluateJavascript("window.dispatchEvent(new Event(\"onGoBack\"));", null);
 			YoutubeWebview web = getWebview();
 			if (web != null && web.fullscreen != null && web.fullscreen.getVisibility() == View.VISIBLE) {
 				tabManager.evaluateJavascript("document.exitFullscreen()", null);

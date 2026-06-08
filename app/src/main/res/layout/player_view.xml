@@ -167,89 +167,118 @@
                         android:layout_gravity="center" />
                 </FrameLayout>
 
-                <LinearLayout
+                <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
                     android:layout_height="36dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
                     android:paddingHorizontal="8dp">
 
-                    <TextView
-                        android:id="@id/exo_position"
+                    <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textColor="@android:color/white"
-                        android:textSize="11sp" />
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text=" / "
-                        android:textColor="@android:color/white"
-                        android:textSize="11sp"
-                        tools:ignore="HardcodedText" />
+                        <TextView
+                            android:id="@id/exo_position"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@android:color/white"
+                            android:textSize="11sp" />
 
-                    <TextView
-                        android:id="@id/exo_duration"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textColor="@android:color/white"
-                        android:textSize="11sp" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text=" / "
+                            android:textColor="@android:color/white"
+                            android:textSize="11sp"
+                            tools:ignore="HardcodedText" />
 
-                    <TextView
-                        android:id="@+id/tv_remaining"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="4dp"
-                        android:textColor="@android:color/white"
-                        android:textSize="11sp" />
+                        <TextView
+                            android:id="@id/exo_duration"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@android:color/white"
+                            android:textSize="11sp" />
 
-                    <View
-                        android:layout_width="0dp"
-                        android:layout_height="0dp"
-                        android:layout_weight="1" />
-
-                    <TextView
-                        android:id="@+id/btn_speed"
-                        android:layout_width="wrap_content"
-                        android:layout_height="28dp"
-                        android:minWidth="46dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:gravity="center"
-                        android:paddingStart="7dp"
-                        android:paddingEnd="7dp"
-                        android:text="1.0x"
-                        android:textColor="@android:color/white"
-                        android:textSize="12sp"
-                        android:alpha="0.92"
-                        tools:ignore="HardcodedText" />
-
-                    <TextView
-                        android:id="@+id/btn_quality"
-                        android:layout_width="wrap_content"
-                        android:layout_height="28dp"
-                        android:minWidth="46dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:gravity="center"
-                        android:paddingStart="7dp"
-                        android:paddingEnd="7dp"
-                        android:text="@string/player_quality_auto"
-                        android:textColor="@android:color/white"
-                        android:textSize="12sp"
-                        android:alpha="0.92" />
+                        <TextView
+                            android:id="@+id/tv_remaining"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:textColor="@android:color/white"
+                            android:textSize="11sp" />
+                    </LinearLayout>
 
                     <ImageButton
-                        android:id="@+id/btn_fullscreen"
+                        android:id="@+id/btn_chevron_up"
                         android:layout_width="32dp"
                         android:layout_height="32dp"
                         android:background="?attr/selectableItemBackgroundBorderless"
-                        android:contentDescription="@string/action_fullscreen"
-                        android:padding="4dp"
+                        android:src="@drawable/ic_expand_less"
+                        app:tint="@android:color/white"
+                        android:visibility="gone"
+                        android:padding="6dp"
                         android:scaleType="fitCenter"
                         android:alpha="0.92"
-                        android:src="@drawable/ic_fullscreen"
-                        app:tint="@android:color/white" />
-                </LinearLayout>
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="parent">
+
+                        <TextView
+                            android:id="@+id/btn_speed"
+                            android:layout_width="wrap_content"
+                            android:layout_height="28dp"
+                            android:minWidth="46dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:gravity="center"
+                            android:paddingStart="7dp"
+                            android:paddingEnd="7dp"
+                            android:text="1.0x"
+                            android:textColor="@android:color/white"
+                            android:textSize="12sp"
+                            android:alpha="0.92"
+                            tools:ignore="HardcodedText" />
+
+                        <TextView
+                            android:id="@+id/btn_quality"
+                            android:layout_width="wrap_content"
+                            android:layout_height="28dp"
+                            android:minWidth="46dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:gravity="center"
+                            android:paddingStart="7dp"
+                            android:paddingEnd="7dp"
+                            android:text="@string/player_quality_auto"
+                            android:textColor="@android:color/white"
+                            android:textSize="12sp"
+                            android:alpha="0.92" />
+
+                        <ImageButton
+                            android:id="@+id/btn_fullscreen"
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:contentDescription="@string/action_fullscreen"
+                            android:padding="4dp"
+                            android:scaleType="fitCenter"
+                            android:alpha="0.92"
+                            android:src="@drawable/ic_fullscreen"
+                            app:tint="@android:color/white" />
+                    </LinearLayout>
+                </androidx.constraintlayout.widget.ConstraintLayout>
             </LinearLayout>
         </LinearLayout>
     </FrameLayout>

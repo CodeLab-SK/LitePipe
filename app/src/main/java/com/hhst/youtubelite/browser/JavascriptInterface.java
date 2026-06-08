@@ -21,6 +21,7 @@ import com.hhst.youtubelite.extension.ExtensionManager;
 import com.hhst.youtubelite.extractor.YoutubeExtractor;
 import com.hhst.youtubelite.gallery.GalleryActivity;
 import com.hhst.youtubelite.player.LitePlayer;
+import com.hhst.youtubelite.player.model.RecommendationVideo;
 import com.hhst.youtubelite.player.queue.QueueItem;
 import com.hhst.youtubelite.player.queue.QueueRepository;
 import com.hhst.youtubelite.player.queue.QueueWarmer;
@@ -332,5 +333,18 @@ public final class JavascriptInterface {
     @android.webkit.JavascriptInterface
     public boolean isIncognito() {
         return IncognitoManager.getInstance().isIncognito();
+    }
+
+    @android.webkit.JavascriptInterface
+    public void onRecommendationsExtracted(String json) {
+        handler.post(() -> {
+            try {
+                List<RecommendationVideo> videos = gson.fromJson(json, new TypeToken<List<RecommendationVideo>>(){}.getType());
+                MainActivity activity = findMainActivity(context);
+                if (activity != null && videos != null) {
+                    activity.setRecommendations(videos);
+                }
+            } catch (Exception ignored) {}
+        });
     }
 }

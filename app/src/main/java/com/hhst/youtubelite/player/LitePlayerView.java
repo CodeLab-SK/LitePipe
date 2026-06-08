@@ -119,6 +119,13 @@ public class LitePlayerView extends PlayerView {
 	private int miniAnimToken;
 	private int bottomOffsetPx = 0;
 
+	public interface TouchInterceptListener {
+		boolean onInterceptTouch(MotionEvent event);
+	}
+
+	@Nullable
+	private TouchInterceptListener touchInterceptListener;
+
 	public LitePlayerView(Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
 		super(context, attrs, defStyleAttr);
 	}
@@ -129,6 +136,10 @@ public class LitePlayerView extends PlayerView {
 
 	public LitePlayerView(Context context) {
 		super(context);
+	}
+
+	public void setTouchInterceptListener(@Nullable TouchInterceptListener listener) {
+		this.touchInterceptListener = listener;
 	}
 
 	public void setup() {
@@ -400,6 +411,9 @@ public class LitePlayerView extends PlayerView {
 			return true;
 		}
 		if (inAppMiniPlayer && handleMiniPlayerTouch(event)) {
+			return true;
+		}
+		if (touchInterceptListener != null && touchInterceptListener.onInterceptTouch(event)) {
 			return true;
 		}
 		return super.dispatchTouchEvent(event);
@@ -931,11 +945,13 @@ public class LitePlayerView extends PlayerView {
 	}
 
 	public void setHeight(int height) {
-		if (activity.isInPictureInPictureMode() || isFs || inAppMiniPlayer || height <= 0) return;
-		if (getLayoutParams().height == height) return;
-		getLayoutParams().height = height;
-		if (!isFs) normalHeight = height;
-		requestLayout();
+		if (activity.isInPictureInPictureMode() || isFs || inAppMiniPlayer) return;
+		updateNormalHeight();
+		ViewGroup.LayoutParams params = getLayoutParams();
+		if (params != null && params.height != normalHeight) {
+			params.height = normalHeight;
+			requestLayout();
+		}
 	}
 
 	public void setBottomOffset(int offset) {

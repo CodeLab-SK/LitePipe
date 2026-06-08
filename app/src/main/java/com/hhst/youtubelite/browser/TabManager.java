@@ -12,6 +12,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
+import androidx.media3.common.util.Consumer;
 import androidx.media3.common.util.UnstableApi;
 
 import com.hhst.youtubelite.Constant;
@@ -64,6 +65,8 @@ public class TabManager {
 	private static final List<String> cachedStyles = new ArrayList<>();
 	private static boolean assetsLoaded = false;
 
+	@Nullable private Consumer<String> onPageFinishedListener;
+
 	@Inject
 	public TabManager(@NonNull final Activity activity,
 	                  @NonNull final Lazy<LitePlayer> player,
@@ -98,6 +101,16 @@ public class TabManager {
 
 		if (suspendedWatchFragment != null || litePlayer.isInAppMiniPlayer()) return;
 		litePlayer.hide();
+	}
+
+	public void onPageFinished(@NonNull final YoutubeFragment fragment, @NonNull final String url) {
+		if (fragment == tab && onPageFinishedListener != null) {
+			onPageFinishedListener.accept(url);
+		}
+	}
+
+	public void setOnPageFinishedListener(@Nullable Consumer<String> listener) {
+		this.onPageFinishedListener = listener;
 	}
 
 	private void onTabChanged() {

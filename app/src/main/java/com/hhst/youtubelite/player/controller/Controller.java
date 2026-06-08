@@ -128,6 +128,19 @@ public class Controller {
 	@NonNull
 	private final Runnable hideUndo = () -> updateVisibility(R.id.btn_undo_skip, false);
 
+	public interface OnRecommendationsRequestedListener {
+		void onRecommendationsRequested();
+	}
+
+	public interface OnFullscreenChangeListener {
+		void onFullscreenChanged(boolean isFullscreen);
+	}
+
+	@Nullable
+	private OnRecommendationsRequestedListener recommendationsRequestedListener;
+	@Nullable
+	private OnFullscreenChangeListener fullscreenChangeListener;
+
 	@Inject
 	public Controller(@NonNull final Activity activity,
 					  @NonNull final LitePlayerView playerView,
@@ -159,6 +172,20 @@ public class Controller {
 			refreshInternalButtonVisibility();
 			playerView.showController();
 		});
+	}
+
+	public void setOnRecommendationsRequestedListener(OnRecommendationsRequestedListener listener) {
+		this.recommendationsRequestedListener = listener;
+	}
+
+	public void setOnFullscreenChangeListener(OnFullscreenChangeListener listener) {
+		this.fullscreenChangeListener = listener;
+	}
+
+	public void requestRecommendations() {
+		if (recommendationsRequestedListener != null) {
+			recommendationsRequestedListener.onRecommendationsRequested();
+		}
 	}
 
 	public void refreshInternalButtonVisibility() {
@@ -357,6 +384,9 @@ public class Controller {
 				setControlsVisible(true);
 			});
 		}
+
+		setClick(R.id.btn_chevron_up, v -> requestRecommendations());
+
 		setupOverlayAndMoreButtons();
 	}
 
@@ -1145,6 +1175,8 @@ public class Controller {
 		boolean showRemaining = renderState.showRemainingDuration() && extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_SHOW_REMAINING_DURATION);
 		updateVisibility(R.id.tv_remaining, showRemaining);
 
+		updateVisibility(R.id.btn_chevron_up, renderState.fullscreen() && renderState.controlsVisible());
+
 		updateMiniControls(renderState.showMiniControls(), renderState.showMiniScrim(), renderState.showMiniCloseRestore());
 		refreshPlaybackButtons();
 	}
@@ -1208,9 +1240,10 @@ public class Controller {
 
 	private void applyControllerState(@NonNull final ControllerMachine.State previousState,
 									  final boolean controlsVisible) {
+		final ControllerMachine.State newState = stateMachine.getState();
 		playerView.applyControllerState(
 				previousState,
-				stateMachine.getState(),
+				newState,
 				PlayerUtils.isPortrait(engine),
 				fsOrientation(autoFs, PlayerUtils.isPortrait(engine)),
 				prefs.getResizeMode());
@@ -1218,6 +1251,10 @@ public class Controller {
 			hideHint();
 		}
 		setControlsVisible(controlsVisible);
+
+		if (previousState.isFullscreen() != newState.isFullscreen() && fullscreenChangeListener != null) {
+			fullscreenChangeListener.onFullscreenChanged(newState.isFullscreen());
+		}
 	}
 
 	private void enterAutoFs() {

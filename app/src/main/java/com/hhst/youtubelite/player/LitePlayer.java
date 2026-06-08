@@ -19,7 +19,6 @@ import androidx.media3.ui.SubtitleView;
 
 import com.hhst.youtubelite.PlaybackService;
 import com.hhst.youtubelite.R;
-import com.hhst.youtubelite.browser.TabManager;
 import com.hhst.youtubelite.downloader.core.history.DownloadRecord;
 import com.hhst.youtubelite.extractor.ExtractionSession;
 import com.hhst.youtubelite.extractor.PlaybackDetails;
@@ -50,7 +49,6 @@ import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 
-import dagger.Lazy;
 import dagger.hilt.android.scopes.ActivityScoped;
 import lombok.Getter;
 
@@ -72,6 +70,7 @@ public class LitePlayer {
 	private final YoutubeExtractor extractor;
 	@NonNull
 	private final LitePlayerView playerView;
+	@Getter
 	@NonNull
 	private final Controller controller;
 	@NonNull
@@ -82,8 +81,6 @@ public class LitePlayer {
 	private final QueueRepository queueRepository;
 	@NonNull
 	private final PlayerPreferences prefs;
-	@NonNull
-	private final Lazy<TabManager> tabManager;
 
 	private final MMKV kv = MMKV.defaultMMKV();
 
@@ -107,6 +104,11 @@ public class LitePlayer {
 	private boolean wasInPictureInPicture;
 	private final Set<long[]> ignoredSponsorSegments = new HashSet<>();
 
+	public interface OnFullscreenChangeListener {
+		void onFullscreenChanged(boolean isFullscreen);
+	}
+	@Nullable private OnFullscreenChangeListener fullscreenChangeListener;
+
 	@Inject
 	public LitePlayer(@NonNull final Activity activity,
 	                  @NonNull final YoutubeExtractor extractor,
@@ -115,8 +117,7 @@ public class LitePlayer {
 	                  @NonNull final Engine engine,
 	                  @NonNull final SponsorBlockManager sponsor,
 	                  @NonNull final QueueRepository queueRepository,
-	                  @NonNull final PlayerPreferences prefs,
-	                  @NonNull final Lazy<TabManager> tabManager) {
+	                  @NonNull final PlayerPreferences prefs) {
 		this.activity = activity;
 		this.extractor = extractor;
 		this.playerView = playerView;
@@ -125,10 +126,19 @@ public class LitePlayer {
 		this.sponsor = sponsor;
 		this.queueRepository = queueRepository;
 		this.prefs = prefs;
-		this.tabManager = tabManager;
 
 		playerView.setup();
 		setupEngineListeners();
+		
+		this.controller.setOnFullscreenChangeListener(isFullscreen -> {
+			if (fullscreenChangeListener != null) {
+				fullscreenChangeListener.onFullscreenChanged(isFullscreen);
+			}
+		});
+	}
+
+	public void setOnFullscreenChangeListener(@Nullable OnFullscreenChangeListener listener) {
+		this.fullscreenChangeListener = listener;
 	}
 
 	private void setupEngineListeners() {
@@ -145,11 +155,11 @@ public class LitePlayer {
 			}
 
 			@Override
-			public void onPlaybackStateChanged(int state) {
-				if (state == Player.STATE_READY) {
+			public void onPlaybackStateChanged(int playbackState) {
+				if (playbackState == Player.STATE_READY) {
 					updateServiceProgress(engine.isPlaying());
 					applySubtitleStyle();
-				} else if (state == Player.STATE_ENDED) {
+				} else if (playbackState == Player.STATE_ENDED) {
 					skipToNext();
 				}
 			}
@@ -332,6 +342,7 @@ public class LitePlayer {
 		if (currentUrl != null) {
 			final String url = currentUrl;
 			this.vid = null;
+			this.loadedVideoId = null;
 			play(url);
 		}
 	}

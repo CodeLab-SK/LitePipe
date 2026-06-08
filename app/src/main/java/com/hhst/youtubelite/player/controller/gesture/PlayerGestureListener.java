@@ -255,6 +255,9 @@ public class PlayerGestureListener extends GestureDetector.SimpleOnGestureListen
 		if (deltaY > 0) {
 			fullscreenSwipeTriggered = true;
 			controller.exitFullscreen();
+		} else {
+			fullscreenSwipeTriggered = true;
+			controller.requestRecommendations();
 		}
 	}
 
