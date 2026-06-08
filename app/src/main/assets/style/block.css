@@ -28,22 +28,10 @@ ytm-settings .setting-generic-category:nth-last-child(2)
 {
     display: none !important;
 }
-
-html[page-class="watch"] ytm-header-bar-renderer {
-    display: none !important;
-}
-
 html[page-class="watch"] #player,
 html[page-class="watch"] #player-container-id {
-    position: absolute !important;
-    top: -9999px !important;
-    left: -9999px !important;
-    width: 1px !important;
-    height: 1px !important;
-    overflow: hidden !important;
     visibility: hidden !important;
     opacity: 0 !important;
-    pointer-events: none !important;
 }
 
 html[page-class="watch"].lp-hide-comments ytm-item-section-renderer[section-identifier="comments-entry-point"],

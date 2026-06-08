@@ -133,6 +133,7 @@ public final class YoutubeFragment extends Fragment {
 			takeHistorySnapshot();
 			handler.removeCallbacks(refreshTimeoutRunnable);
 			if (swipeRefreshLayout != null) swipeRefreshLayout.setRefreshing(false);
+			tabManager.onPageFinished(this, u);
 		});
 		webview.init();
 		

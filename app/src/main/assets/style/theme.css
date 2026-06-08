@@ -1,17 +1,15 @@
 html {
     -webkit-tap-highlight-color:transparent;
 }
-
-html[page-class="watch"] ytm-watch {
-    margin-top: -48px !important;
-    padding-top: -56.25vw !important;
+html[page-class="watch"] body {
+    transform: translateY(-48px) !important;
+    margin-bottom: -48px !important;
 }
-
-html[page-class="watch"] ytm-feed-filter-chip-bar-renderer,
-html[page-class="watch"] ytm-chip-cloud-renderer {
-    margin-top: -48px !important;
+html[page-class="watch"] ytm-related-chip-cloud-renderer.chips-fixed-positioning {
+    position: sticky !important;
+    top: 0 !important;
+    transform: none !important;
 }
-
 .cairo-settings-topbar-title {
     padding: 0 !important;
     margin-top: -8 !important;
@@ -60,4 +58,3 @@ yt-flexible-actions-view-model::-webkit-scrollbar {
 .ytFlexibleActionsViewModelAction {
     flex: 0 0 auto !important;
 }
-

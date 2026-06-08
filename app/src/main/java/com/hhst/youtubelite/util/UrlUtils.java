@@ -184,7 +184,7 @@ public final class UrlUtils {
 			case "results" -> PAGE_SEARCHING;
 			case "feed" -> (segments.size() > 1) ? switch (segments.get(1).toLowerCase(NORMALIZATION_LOCALE)) {
 				case "subscriptions" -> Constant.PAGE_SUBSCRIPTIONS;
-				case "library" -> Constant.PAGE_LIBRARY;
+				case "library" , "you" -> Constant.PAGE_LIBRARY;
 				case "history" -> PAGE_HISTORY;
 				case "channels" -> PAGE_CHANNELS;
 				case "playlists" -> PAGE_PLAYLISTS;

@@ -1,6 +1,8 @@
 package com.hhst.youtubelite.ui;
 
 import android.Manifest;
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.PendingIntent;
@@ -24,6 +26,8 @@ import android.support.v4.media.session.PlaybackStateCompat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.view.animation.OvershootInterpolator;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -127,6 +131,7 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 	private QueueAdapter queueAdapter;
 	private NavigationBar navBar;
 	private View navBarDivider;
+	private View watchLoadingOverlay;
 	private int navigationBarHeight = 0;
 	private long lastBackTime = 0;
 	private boolean suppressNextUserLeaveHintPictureInPicture;
@@ -178,6 +183,7 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 		navBar = findViewById(R.id.custom_nav_bar);
 		navBar.setup(extensionManager, tabManager);
 		navBarDivider = findViewById(R.id.nav_bar_divider);
+		watchLoadingOverlay = findViewById(R.id.watch_loading_overlay);
 
 		navBar.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
 			if (navBar.getVisibility() == View.VISIBLE) {
@@ -209,6 +215,51 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 				if (web != null) web.reload();
 			});
 		});
+	}
+
+	public void showWatchLoadingOverlay() {
+		if (watchLoadingOverlay != null) {
+			watchLoadingOverlay.animate().cancel();
+			if (watchLoadingOverlay.getVisibility() == View.VISIBLE) return;
+			
+			watchLoadingOverlay.setScaleX(0f);
+			watchLoadingOverlay.setScaleY(0f);
+			watchLoadingOverlay.setAlpha(0f);
+			watchLoadingOverlay.setVisibility(View.VISIBLE);
+			
+			watchLoadingOverlay.animate()
+					.scaleX(1.0f)
+					.scaleY(1.0f)
+					.alpha(1.0f)
+					.setDuration(450)
+					.setInterpolator(new OvershootInterpolator(1.0f))
+					.setListener(null)
+					.start();
+		}
+	}
+
+	public void hideWatchLoadingOverlay() {
+		if (watchLoadingOverlay != null && watchLoadingOverlay.getVisibility() == View.VISIBLE) {
+			mainHandler.postDelayed(() -> {
+				if (watchLoadingOverlay == null) return;
+				watchLoadingOverlay.animate().cancel();
+				watchLoadingOverlay.animate()
+						.alpha(0f)
+						.scaleX(1.1f)
+						.scaleY(1.1f)
+						.setDuration(450)
+						.setInterpolator(new AccelerateDecelerateInterpolator())
+						.setListener(new AnimatorListenerAdapter() {
+							@Override
+							public void onAnimationEnd(Animator animation) {
+								if (watchLoadingOverlay != null) {
+									watchLoadingOverlay.setVisibility(View.GONE);
+								}
+							}
+						})
+						.start();
+			}, 1200);
+		}
 	}
 
 	private void setupRecommendationsSheet() {

@@ -124,6 +124,7 @@ public class YoutubeWebview extends WebView {
 	private OkHttpWebViewInterceptor okHttpWebViewInterceptor;
 	@Nullable
 	private Consumer<String> updateVisitedHistory;
+	@Nullable private Consumer<String> onPageStartedListener;
 	@Nullable private Consumer<String> onPageFinishedListener;
 	private YoutubeExtractor youtubeExtractor;
 	private LitePlayer player;
@@ -152,6 +153,10 @@ public class YoutubeWebview extends WebView {
 
 	public void setUpdateVisitedHistory(@Nullable final Consumer<String> updateVisitedHistory) {
 		this.updateVisitedHistory = updateVisitedHistory;
+	}
+
+	public void setOnPageStartedListener(@Nullable final Consumer<String> onPageStartedListener) {
+		this.onPageStartedListener = onPageStartedListener;
 	}
 
 	public void setOnPageFinishedListener(@Nullable final Consumer<String> onPageFinishedListener) {
@@ -422,6 +427,7 @@ public class YoutubeWebview extends WebView {
 
 				injectJavaScript(url);
 				YoutubeWebview.this.postEvaluateJavascript("window.dispatchEvent(new Event('onPageStarted'));");
+				if (onPageStartedListener != null) onPageStartedListener.accept(url);
 			}
 
 			@Override
