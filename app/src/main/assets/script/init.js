@@ -530,56 +530,63 @@ try {
             if (window.android?.setRefreshLayoutEnabled) android.setRefreshLayoutEnabled(true);
         };
 
-        const ensureLibraryButton = () => {
-            const pc = getCachedPageClass(location.href);
-            if (pc !== 'you' && pc !== 'library') {
-                removeIncognitoFallbackBanner();
-                document.documentElement.classList.remove('lp-library-loading', 'lp-library-loaded');
-                return;
-            }
-            const row = document.querySelector('yt-flexible-actions-view-model .ytFlexibleActionsViewModelActionRow') || document.querySelector('.ytFlexibleActionsViewModelActionRow');
-            if (!row) {
-                document.documentElement.classList.add('lp-library-loading');
-                document.documentElement.classList.remove('lp-library-loaded');
-                const isOn = window.android?.isIncognito?.() === true;
-                if (isOn) injectIncognitoFallbackBanner();
-                return;
-            }
-            document.documentElement.classList.add('lp-library-loaded');
-            document.documentElement.classList.remove('lp-library-loading');
-            removeIncognitoFallbackBanner();
-            const isOn = window.android?.isIncognito?.() === true;
-            let chip = document.getElementById('_lp_incognito_chip');
-            if (!chip) {
-                chip = createLibraryIncognitoButton(
-                    isOn ? getLocalizedText('incognito_off') : getLocalizedText('incognito'),
-                    INCOGNITO_ICON,
-                    isOn,
-                    () => {
-                        if (window.android?.toggleIncognito) android.toggleIncognito();
-                        st(ensureLibraryButton, 100);
-                    }
-                );
-                if (chip) {
-                    chip.id = '_lp_incognito_chip';
-                    row.prepend(chip);
-                }
-            } else {
-                const btn = chip.querySelector('button');
-                const currentLabel = isOn ? getLocalizedText('incognito_off') : getLocalizedText('incognito');
-                replaceTextInNode(chip, currentLabel);
+              const ensureLibraryButton = () => {
+                  const pc = getCachedPageClass(location.href);
+                  if (pc !== 'you' && pc !== 'library') {
+                      removeIncognitoFallbackBanner();
+                      document.documentElement.classList.remove('lp-library-loading', 'lp-library-loaded');
+                      return;
+                  }
+                  const row = document.querySelector('yt-flexible-actions-view-model .ytFlexibleActionsViewModelActionRow') || document.querySelector('.ytFlexibleActionsViewModelActionRow');
+                  const isIncognito = window.android?.isIncognito?.() === true;
 
-                if (btn) {
-                    if (isOn) {
-                        btn.style.outline = '2px solid currentColor';
-                        btn.style.outlineOffset = '-2px';
-                    } else {
-                        btn.style.outline = '';
-                        btn.style.outlineOffset = '';
-                    }
-                }
-            }
-        };
+                  if (!row) {
+                      if (isIncognito) {
+                          document.documentElement.classList.add('lp-library-loading');
+                          document.documentElement.classList.remove('lp-library-loaded');
+                          injectIncognitoFallbackBanner();
+                      } else {
+                          document.documentElement.classList.remove('lp-library-loading');
+                          document.documentElement.classList.add('lp-library-loaded');
+                      }
+                      return;
+                  }
+
+                  document.documentElement.classList.add('lp-library-loaded');
+                  document.documentElement.classList.remove('lp-library-loading');
+                  removeIncognitoFallbackBanner();
+
+                  let chip = document.getElementById('_lp_incognito_chip');
+                  if (!chip) {
+                      chip = createLibraryIncognitoButton(
+                          isIncognito ? getLocalizedText('incognito_off') : getLocalizedText('incognito'),
+                          INCOGNITO_ICON,
+                          isIncognito,
+                          () => {
+                              if (window.android?.toggleIncognito) android.toggleIncognito();
+                              st(ensureLibraryButton, 100);
+                          }
+                      );
+                      if (chip) {
+                          chip.id = '_lp_incognito_chip';
+                          row.prepend(chip);
+                      }
+                  } else {
+                      const btn = chip.querySelector('button');
+                      const currentLabel = isIncognito ? getLocalizedText('incognito_off') : getLocalizedText('incognito');
+                      replaceTextInNode(chip, currentLabel);
+
+                      if (btn) {
+                          if (isIncognito) {
+                              btn.style.outline = '2px solid currentColor';
+                              btn.style.outlineOffset = '-2px';
+                          } else {
+                              btn.style.outline = '';
+                              btn.style.outlineOffset = '';
+                          }
+                      }
+                  }
+              };
 
         let libraryObserver = null;
         const startLibraryObserver = () => {

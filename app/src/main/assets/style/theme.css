@@ -1,18 +1,10 @@
 html {
     -webkit-tap-highlight-color:transparent;
 }
-html[page-class="watch"] body {
-    transform: translateY(-48px) !important;
-    margin-bottom: -48px !important;
-}
-html[page-class="watch"] ytm-related-chip-cloud-renderer.chips-fixed-positioning {
-    position: sticky !important;
-    top: 0 !important;
-    transform: none !important;
-}
+
 .cairo-settings-topbar-title {
     padding: 0 !important;
-    margin-top: -8 !important;
+    margin-top: -8px !important;
     white-space: nowrap !important;
     line-height: 1 !important;
     overflow-x: hidden !important;
@@ -34,6 +26,121 @@ header.mobile-topbar-header.cairo-settings-topbar,
     overflow: visible !important;
 }
 
+.ytLockupMetadataViewModelTitle,
+.media-item-headline,
+.video-card-title,
+.playlist-card-title,
+.ytm-slim-video-metadata-renderer-title,
+.ytm-media-item-metadata > .title,
+.ytm-shorts-lockup-view-model-headline,
+.shortsLockupViewModelHostMetadataTitle {
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: hidden !important;
+    line-height: 1.4 !important;
+    white-space: normal !important;
+}
+
+.ytm-shorts-lockup-view-model-headline,
+.shortsLockupViewModelHostMetadataTitle {
+    transform: translateY(-10px) !important;
+}
+
+.ytPageHeaderViewModelTitle,
+.ytPageHeaderViewModelTitle span {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    white-space: normal !important;
+    line-height: 1.4 !important;
+}
+
+.ytm-header-bar-renderer .title,
+.header-bar-title,
+.ytm-identity-section-renderer-name,
+.ytm-identity-section-renderer-header {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    line-height: 1.4 !important;
+    display: block !important;
+    white-space: nowrap !important;
+    text-overflow: ellipsis !important;
+}
+
+.ytAttributedStringHost,
+.yt-core-attributed-string,
+.yt-spec-button-shape-next__button-text-content {
+    height: auto !important;
+    overflow: visible !important;
+}
+
+.ytContentMetadataViewModelMetadataRow,
+.YtmBadgeAndBylineRendererHost {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    height: auto !important;
+    overflow: visible !important;
+}
+
+.video-card-metadata {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: flex-start !important;
+    height: auto !important;
+    overflow: visible !important;
+}
+
+.video-card-title-container {
+    flex: 1 !important;
+    min-width: 0 !important;
+}
+
+.video-card-subhead {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    height: auto !important;
+    overflow: visible !important;
+}
+
+.ytContentMetadataViewModelMetadataText,
+.YtmBadgeAndBylineRendererItemByline,
+.video-card-subhead-item,
+.YtmBadgeAndBylineRendererSeparator {
+    display: inline !important;
+    height: auto !important;
+    overflow: visible !important;
+    white-space: normal !important;
+}
+
+.video-card-subhead-item {
+    -webkit-line-clamp: unset !important;
+}
+
+html[page-class="channel"] .media-item-headline,
+html[page-class="@"] .media-item-headline,
+html[page-class="channel"] .media-item-metadata,
+html[page-class="@"] .media-item-metadata {
+    -webkit-line-clamp: 2 !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: hidden !important;
+}
+
+html[page-class="watch"] body {
+    transform: translateY(-48px) !important;
+    margin-bottom: -48px !important;
+}
+
+html[page-class="watch"] ytm-related-chip-cloud-renderer.chips-fixed-positioning {
+    position: sticky !important;
+    top: 0 !important;
+    transform: none !important;
+}
+
 yt-flexible-actions-view-model {
     display: block !important;
     overflow-x: auto !important;
@@ -49,10 +156,11 @@ yt-flexible-actions-view-model::-webkit-scrollbar {
 .ytFlexibleActionsViewModelActionRow {
     display: flex !important;
     flex-wrap: nowrap !important;
-    gap: 6px !important;
+    gap: 8px !important;
     width: max-content !important;
     min-width: 100% !important;
     align-items: center !important;
+    padding: 4px 0 !important;
 }
 
 .ytFlexibleActionsViewModelAction {
