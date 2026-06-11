@@ -48,15 +48,13 @@
             android:text="@string/change"
             android:visibility="gone" />
 
-        <com.google.android.material.materialswitch.MaterialSwitch
+        <com.google.android.material.switchmaterial.SwitchMaterial
             android:id="@+id/checkbox"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:clickable="false"
             android:focusable="false"
             app:thumbTint="@color/switch_thumb"
-            app:trackTint="@color/switch_track"
-            app:trackDecorationTint="@null" />
-
+            app:trackTint="@color/switch_track" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

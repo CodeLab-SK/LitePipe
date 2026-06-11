@@ -28,7 +28,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import com.google.android.material.materialswitch.MaterialSwitch;
+import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.hhst.youtubelite.R;
 import com.hhst.youtubelite.extension.Constant;
 import com.hhst.youtubelite.extension.Extension;
@@ -395,7 +395,7 @@ public class SubSettingsActivity extends AppCompatActivity {
                     .show();
         }
 
-        private void toggle(String key, MaterialSwitch checkbox) {
+        private void toggle(String key, SwitchMaterial checkbox) {
             boolean newState = !extensionManager.isEnabled(key);
             extensionManager.setEnabled(key, newState);
             checkbox.setChecked(newState);
@@ -429,7 +429,7 @@ public class SubSettingsActivity extends AppCompatActivity {
         static class ToggleViewHolder extends RecyclerView.ViewHolder {
             TextView title;
             TextView description;
-            MaterialSwitch checkbox;
+            SwitchMaterial checkbox;
             MaterialButton actionButton;
             ToggleViewHolder(View itemView) {
                 super(itemView);
@@ -442,7 +442,7 @@ public class SubSettingsActivity extends AppCompatActivity {
 
         static class DraggableViewHolder extends RecyclerView.ViewHolder {
             TextView title;
-            MaterialSwitch checkbox;
+            SwitchMaterial checkbox;
             ImageView dragHandle;
             DraggableViewHolder(View itemView) {
                 super(itemView);
