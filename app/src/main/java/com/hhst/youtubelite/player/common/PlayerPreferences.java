@@ -4,12 +4,11 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.gson.Gson;
-import com.hhst.youtubelite.Constant;
+import com.hhst.youtubelite.extension.Constant;
 import com.hhst.youtubelite.extension.ExtensionManager;
 import com.tencent.mmkv.MMKV;
 
 import java.util.HashSet;
-import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -56,7 +55,7 @@ public final class PlayerPreferences {
 	}
 
 	public float getSpeed() {
-		String speedStr = mmkv.decodeString("preferences:" + com.hhst.youtubelite.extension.Constant.DEFAULT_PLAYBACK_SPEED, "1.0x");
+		String speedStr = extensionManager.getString(Constant.DEFAULT_PLAYBACK_SPEED);
 		try {
 			return Float.parseFloat(speedStr.replace("x", ""));
 		} catch (Exception e) {
@@ -65,16 +64,16 @@ public final class PlayerPreferences {
 	}
 
 	public void setSpeed(final float speed) {
-		mmkv.encode("preferences:" + com.hhst.youtubelite.extension.Constant.DEFAULT_PLAYBACK_SPEED, String.format(Locale.US, "%.2fx", speed));
+		extensionManager.setString(Constant.DEFAULT_PLAYBACK_SPEED, String.format(java.util.Locale.US, "%.2fx", speed));
 	}
 
 	@Nullable
     public String getQuality() {
-		return mmkv.decodeString("preferences:" + com.hhst.youtubelite.extension.Constant.DEFAULT_QUALITY, "Auto");
+		return extensionManager.getString(Constant.DEFAULT_QUALITY);
 	}
 
 	public void setQuality(@NonNull final String quality) {
-		mmkv.encode("preferences:" + com.hhst.youtubelite.extension.Constant.DEFAULT_QUALITY, quality);
+		extensionManager.setString(Constant.DEFAULT_QUALITY, quality);
 	}
 
 	@NonNull

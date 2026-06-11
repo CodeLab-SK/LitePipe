@@ -27,7 +27,7 @@ public class App extends Application {
 
 		Executors.newSingleThreadExecutor().execute(() -> {
 			try {
-				Constant.USER_AGENT = WebSettings.getDefaultUserAgent(this);
+				Constants.USER_AGENT = WebSettings.getDefaultUserAgent(this);
 			} catch (Exception ignored) {
 			}
 		});

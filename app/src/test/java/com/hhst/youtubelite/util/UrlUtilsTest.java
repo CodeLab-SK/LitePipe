@@ -4,7 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import com.hhst.youtubelite.Constant;
+import com.hhst.youtubelite.Constants;
 
 import org.junit.Test;
 
@@ -74,6 +74,6 @@ public class UrlUtilsTest {
 
 	@Test
 	public void getPageClass_treatsYoutuBeShortLinksAsWatch() {
-		assertEquals(Constant.PAGE_WATCH, UrlUtils.getPageClass("https://youtu.be/mAdodMaERp0"));
+		assertEquals(Constants.PAGE_WATCH, UrlUtils.getPageClass("https://youtu.be/mAdodMaERp0"));
 	}
 }

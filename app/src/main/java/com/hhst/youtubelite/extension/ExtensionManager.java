@@ -35,31 +35,53 @@ public class ExtensionManager {
 
 	public void setEnabled(String key, boolean enable) {
 		String pref = prefKey(key);
-		boolean changed = !mmkv.contains(pref) || mmkv.decodeBool(pref, isDefaultTrue(key)) != enable;
-		mmkv.encode(pref, enable);
-		if (changed) {
+		boolean current = isEnabled(key);
+		if (current != enable) {
+			mmkv.encode(pref, enable);
 			bumpVersion();
 		}
 	}
 
 	public boolean isEnabled(String key) {
-		return mmkv.decodeBool(prefKey(key), isDefaultTrue(key));
+		Object defaultValue = Constant.DEFAULT_PREFERENCES.getOrDefault(key, false);
+		return mmkv.decodeBool(prefKey(key), defaultValue instanceof Boolean ? (Boolean) defaultValue : false);
 	}
 
-	private boolean isDefaultTrue(String key) {
-		Object def = Constant.DEFAULT_PREFERENCES.get(key);
-		return def instanceof Boolean && (Boolean) def;
+	public int getInt(String key) {
+		Object defaultValue = Constant.DEFAULT_PREFERENCES.getOrDefault(key, 0);
+		return mmkv.decodeInt(prefKey(key), defaultValue instanceof Integer ? (Integer) defaultValue : 0);
+	}
+
+	public void setInt(String key, int value) {
+		String pref = prefKey(key);
+		if (getInt(key) != value) {
+			mmkv.encode(pref, value);
+			bumpVersion();
+		}
+	}
+
+	public String getString(String key) {
+		Object defaultValue = Constant.DEFAULT_PREFERENCES.getOrDefault(key, "");
+		return mmkv.decodeString(prefKey(key), defaultValue instanceof String ? (String) defaultValue : "");
+	}
+
+	public void setString(String key, String value) {
+		String pref = prefKey(key);
+		if (!getString(key).equals(value)) {
+			mmkv.encode(pref, value);
+			bumpVersion();
+		}
 	}
 
 	public void resetToDefault() {
 		boolean changed = false;
 		for (Map.Entry<String, Object> entry : Constant.DEFAULT_PREFERENCES.entrySet()) {
-			String key = prefKey(entry.getKey());
+			String key = entry.getKey();
 			Object value = entry.getValue();
-			if (!mmkv.contains(key) || !value.equals(decodeInternal(key, value))) {
+			if (!value.equals(decodeInternal(prefKey(key), value))) {
 				changed = true;
+				encodeInternal(prefKey(key), value);
 			}
-			encodeInternal(key, value);
 		}
 		if (changed) {
 			bumpVersion();
@@ -69,8 +91,7 @@ public class ExtensionManager {
 	public Map<String, Object> getAllPreferences() {
 		Map<String, Object> allPreferences = new HashMap<>();
 		for (String key : Constant.DEFAULT_PREFERENCES.keySet()) {
-			Object value = decodeInternal(prefKey(key), Constant.DEFAULT_PREFERENCES.get(key));
-			allPreferences.put(key, value);
+			allPreferences.put(key, decodeInternal(prefKey(key), Constant.DEFAULT_PREFERENCES.get(key)));
 		}
 		return allPreferences;
 	}

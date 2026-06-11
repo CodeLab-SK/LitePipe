@@ -37,7 +37,6 @@ import androidx.media3.ui.PlayerView;
 import androidx.media3.ui.SubtitleView;
 
 import com.hhst.youtubelite.R;
-import com.hhst.youtubelite.player.common.Constant;
 import com.hhst.youtubelite.player.common.PlayerPreferences;
 import com.hhst.youtubelite.player.controller.ControllerMachine;
 import com.hhst.youtubelite.player.sponsor.SponsorBlockManager;
@@ -226,7 +225,7 @@ public class LitePlayerView extends PlayerView {
 				params.width = ConstraintLayout.LayoutParams.MATCH_CONSTRAINT;
 				updateNormalHeight();
 				params.height = normalHeight;
-				params.topMargin = ViewUtils.dpToPx(activity, Constant.TOP_MARGIN_DP);
+				params.topMargin = 0;
 				params.rightMargin = 0;
 				params.bottomMargin = 0;
 				params.topToTop = ConstraintLayout.LayoutParams.PARENT_ID;

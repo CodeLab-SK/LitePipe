@@ -6,7 +6,7 @@ import android.webkit.CookieManager;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.hhst.youtubelite.Constant;
+import com.hhst.youtubelite.Constants;
 
 import org.schabi.newpipe.extractor.downloader.Downloader;
 import org.schabi.newpipe.extractor.exceptions.ReCaptchaException;
@@ -57,7 +57,7 @@ public final class DownloaderImpl extends Downloader {
 		final Request.Builder builder = new Request.Builder()
 				.url(url)
 				.method(httpMethod, requestBody)
-				.header("User-Agent", Constant.USER_AGENT);
+				.header("User-Agent", Constants.USER_AGENT);
 
 		ExtractionSession session = scope.get();
 		AuthContext auth = session != null ? session.getAuth() : null;

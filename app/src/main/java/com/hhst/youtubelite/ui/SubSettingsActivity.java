@@ -35,7 +35,6 @@ import com.hhst.youtubelite.extension.Extension;
 import com.hhst.youtubelite.extension.ExtensionManager;
 import com.hhst.youtubelite.util.DownloadStorageUtils;
 import com.hhst.youtubelite.util.ViewUtils;
-import com.tencent.mmkv.MMKV;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -64,7 +63,7 @@ public class SubSettingsActivity extends AppCompatActivity {
                 if (uri != null) {
                     getContentResolver().takePersistableUriPermission(uri,
                             Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                    MMKV.defaultMMKV().encode(Constant.DOWNLOAD_LOCATION, uri.toString());
+                    extensionManager.setString(Constant.DOWNLOAD_LOCATION, uri.toString());
                     if (adapter != null) adapter.notifyItemChangedByKey(Constant.DOWNLOAD_LOCATION);
                 }
             }
@@ -109,10 +108,10 @@ public class SubSettingsActivity extends AppCompatActivity {
         RecyclerView recyclerView = findViewById(R.id.recycler_view);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         
-        adapter = new SettingsAdapter(extensions, navBarMode, navBarMode);
+        adapter = new SettingsAdapter(extensions, navBarMode || actionBarMode, navBarMode);
         recyclerView.setAdapter(adapter);
 
-        if (navBarMode) {
+        if (navBarMode || actionBarMode) {
             ItemTouchHelper touchHelper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0) {
                 @Override
                 public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
@@ -162,16 +161,16 @@ public class SubSettingsActivity extends AppCompatActivity {
         private void sortItems() {
             String key = isNavBar ? Constant.NAV_BAR_ORDER : Constant.ACTION_BAR_ORDER;
             String def = isNavBar ? Constant.DEFAULT_NAV_BAR_ORDER : Constant.DEFAULT_ACTION_BAR_ORDER;
-            String orderStr = MMKV.defaultMMKV().decodeString(key, def);
-            if (orderStr == null) orderStr = def;
+            String orderStr = extensionManager.getString(key);
+            if (orderStr == null || orderStr.isEmpty()) orderStr = def;
             List<String> order = Arrays.asList(orderStr.split(","));
 
             items.sort((a, b) -> {
                 String keyA = a.key() != null ? a.key().replace("nav_bar_show_", "").replace("action_bar_show_", "") : "";
-                if (keyA.equals(com.hhst.youtubelite.Constant.ENABLE_PIP)) keyA = "pip";
+                if (keyA.equals(Constant.ENABLE_PIP)) keyA = "pip";
 
                 String keyB = b.key() != null ? b.key().replace("nav_bar_show_", "").replace("action_bar_show_", "") : "";
-                if (keyB.equals(com.hhst.youtubelite.Constant.ENABLE_PIP)) keyB = "pip";
+                if (keyB.equals(Constant.ENABLE_PIP)) keyB = "pip";
 
                 int idxA = order.indexOf(keyA);
                 int idxB = order.indexOf(keyB);
@@ -241,28 +240,28 @@ public class SubSettingsActivity extends AppCompatActivity {
                     toggleHolder.actionButton.setVisibility(View.VISIBLE);
                     toggleHolder.actionButton.setOnClickListener(v -> directoryPickerLauncher.launch(null));
                 } else if (isDownloadMaxConcurrent) {
-                    int max = MMKV.defaultMMKV().decodeInt(Constant.DOWNLOAD_MAX_CONCURRENT, 2);
+                    int max = extensionManager.getInt(Constant.DOWNLOAD_MAX_CONCURRENT);
                     toggleHolder.description.setText(String.valueOf(max));
                     toggleHolder.description.setVisibility(View.VISIBLE);
                     toggleHolder.checkbox.setVisibility(View.GONE);
                     toggleHolder.actionButton.setVisibility(View.VISIBLE);
                     toggleHolder.actionButton.setOnClickListener(v -> showMaxConcurrentSelector());
                 } else if (isDefaultQuality) {
-                    String quality = MMKV.defaultMMKV().decodeString("preferences:" + Constant.DEFAULT_QUALITY, "Auto");
+                    String quality = extensionManager.getString(Constant.DEFAULT_QUALITY);
                     toggleHolder.description.setText(quality);
                     toggleHolder.description.setVisibility(View.VISIBLE);
                     toggleHolder.checkbox.setVisibility(View.GONE);
                     toggleHolder.actionButton.setVisibility(View.VISIBLE);
                     toggleHolder.actionButton.setOnClickListener(v -> showQualitySelector());
                 } else if (isDefaultSpeed) {
-                    String speed = MMKV.defaultMMKV().decodeString("preferences:" + Constant.DEFAULT_PLAYBACK_SPEED, "1.0x");
+                    String speed = extensionManager.getString(Constant.DEFAULT_PLAYBACK_SPEED);
                     toggleHolder.description.setText(speed);
                     toggleHolder.description.setVisibility(View.VISIBLE);
                     toggleHolder.checkbox.setVisibility(View.GONE);
                     toggleHolder.actionButton.setVisibility(View.VISIBLE);
                     toggleHolder.actionButton.setOnClickListener(v -> showSpeedSelector());
                 } else if (isSeekAmount) {
-                    String amount = MMKV.defaultMMKV().decodeString("preferences:" + Constant.DOUBLE_TAP_SEEK_AMOUNT, "10s");
+                    String amount = extensionManager.getString(Constant.DOUBLE_TAP_SEEK_AMOUNT);
                     toggleHolder.description.setText(amount);
                     toggleHolder.description.setVisibility(View.VISIBLE);
                     toggleHolder.checkbox.setVisibility(View.GONE);
@@ -321,13 +320,13 @@ public class SubSettingsActivity extends AppCompatActivity {
 
         private void showQualitySelector() {
             String[] options = {"Auto", "144p", "240p", "360p", "480p", "720p", "1080p", "1440p", "2160p"};
-            String current = MMKV.defaultMMKV().decodeString("preferences:" + Constant.DEFAULT_QUALITY, "Auto");
+            String current = extensionManager.getString(Constant.DEFAULT_QUALITY);
             int selected = Arrays.asList(options).indexOf(current);
 
             new MaterialAlertDialogBuilder(SubSettingsActivity.this)
                     .setTitle(R.string.default_quality)
                     .setSingleChoiceItems(options, selected, (d, w) -> {
-                        MMKV.defaultMMKV().encode("preferences:" + Constant.DEFAULT_QUALITY, options[w]);
+                        extensionManager.setString(Constant.DEFAULT_QUALITY, options[w]);
                         d.dismiss();
                         notifyItemChangedByKey(Constant.DEFAULT_QUALITY);
                     })
@@ -336,13 +335,13 @@ public class SubSettingsActivity extends AppCompatActivity {
 
         private void showMaxConcurrentSelector() {
             String[] options = {"1", "2", "3", "4", "5"};
-            int current = MMKV.defaultMMKV().decodeInt(Constant.DOWNLOAD_MAX_CONCURRENT, 2);
+            int current = extensionManager.getInt(Constant.DOWNLOAD_MAX_CONCURRENT);
             int selected = Arrays.asList(options).indexOf(String.valueOf(current));
 
             new MaterialAlertDialogBuilder(SubSettingsActivity.this)
                     .setTitle(R.string.max_concurrent_downloads)
                     .setSingleChoiceItems(options, selected, (d, w) -> {
-                        MMKV.defaultMMKV().encode(Constant.DOWNLOAD_MAX_CONCURRENT, Integer.parseInt(options[w]));
+                        extensionManager.setInt(Constant.DOWNLOAD_MAX_CONCURRENT, Integer.parseInt(options[w]));
                         d.dismiss();
                         notifyItemChangedByKey(Constant.DOWNLOAD_MAX_CONCURRENT);
                     })
@@ -351,13 +350,13 @@ public class SubSettingsActivity extends AppCompatActivity {
 
         private void showSeekAmountSelector() {
             String[] options = {"5s", "10s", "15s", "20s", "30s", "60s"};
-            String current = MMKV.defaultMMKV().decodeString("preferences:" + Constant.DOUBLE_TAP_SEEK_AMOUNT, "10s");
+            String current = extensionManager.getString(Constant.DOUBLE_TAP_SEEK_AMOUNT);
             int selected = Arrays.asList(options).indexOf(current);
 
             new MaterialAlertDialogBuilder(SubSettingsActivity.this)
                     .setTitle(R.string.double_tap_seek_amount)
                     .setSingleChoiceItems(options, selected, (d, w) -> {
-                        MMKV.defaultMMKV().encode("preferences:" + Constant.DOUBLE_TAP_SEEK_AMOUNT, options[w]);
+                        extensionManager.setString(Constant.DOUBLE_TAP_SEEK_AMOUNT, options[w]);
                         d.dismiss();
                         notifyItemChangedByKey(Constant.DOUBLE_TAP_SEEK_AMOUNT);
                     })
@@ -365,8 +364,7 @@ public class SubSettingsActivity extends AppCompatActivity {
         }
 
         private void showSpeedSelector() {
-            String currentSpeed = MMKV.defaultMMKV().decodeString("preferences:" + Constant.DEFAULT_PLAYBACK_SPEED, "1.0x");
-            if (currentSpeed == null) currentSpeed = "1.0x";
+            String currentSpeed = extensionManager.getString(Constant.DEFAULT_PLAYBACK_SPEED);
             
             final EditText input = new EditText(SubSettingsActivity.this);
             input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
@@ -388,7 +386,7 @@ public class SubSettingsActivity extends AppCompatActivity {
                                 float speed = Float.parseFloat(value);
                                 if (speed > 4.0f) speed = 4.0f;
                                 if (speed < 0.25f) speed = 0.25f;
-                                MMKV.defaultMMKV().encode("preferences:" + Constant.DEFAULT_PLAYBACK_SPEED, String.format(Locale.US, "%.2fx", speed));
+                                extensionManager.setString(Constant.DEFAULT_PLAYBACK_SPEED, String.format(Locale.US, "%.2fx", speed));
                                 notifyItemChangedByKey(Constant.DEFAULT_PLAYBACK_SPEED);
                             } catch (NumberFormatException ignored) {}
                         }
@@ -415,12 +413,12 @@ public class SubSettingsActivity extends AppCompatActivity {
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < items.size(); i++) {
                 String k = items.get(i).key().replace("nav_bar_show_", "").replace("action_bar_show_", "");
-                if (k.equals(com.hhst.youtubelite.Constant.ENABLE_PIP)) k = "pip";
+                if (k.equals(Constant.ENABLE_PIP)) k = "pip";
                 sb.append(k);
                 if (i < items.size() - 1) sb.append(",");
             }
             String prefKey = isNavBar ? Constant.NAV_BAR_ORDER : Constant.ACTION_BAR_ORDER;
-            MMKV.defaultMMKV().encode(prefKey, sb.toString());
+            extensionManager.setString(prefKey, sb.toString());
         }
 
         @Override

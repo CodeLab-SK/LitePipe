@@ -53,7 +53,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.hhst.youtubelite.Constant;
+import com.hhst.youtubelite.Constants;
 import com.hhst.youtubelite.IncognitoManager;
 import com.hhst.youtubelite.LinkDetection;
 import com.hhst.youtubelite.PlaybackService;
@@ -66,6 +66,7 @@ import com.hhst.youtubelite.downloader.ui.DownloadActivity;
 import com.hhst.youtubelite.downloader.ui.DownloadDialog;
 import com.hhst.youtubelite.downloader.ui.PlaylistDownloadDialog;
 import com.hhst.youtubelite.downloader.ui.PlaylistDownloadItem;
+import com.hhst.youtubelite.extension.Constant;
 import com.hhst.youtubelite.extension.ExtensionManager;
 import com.hhst.youtubelite.extractor.VideoDetails;
 import com.hhst.youtubelite.extractor.YoutubeExtractor;
@@ -780,19 +781,19 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 				return;
 			}
 			String url = data.toString();
-			final String clean = url.replace(YOUTUBE_WWW_HOST, Constant.YOUTUBE_MOBILE_HOST);
+			final String clean = url.replace(YOUTUBE_WWW_HOST, Constants.YOUTUBE_MOBILE_HOST);
 			if (tabManager != null) tabManager.playInWatch(clean);
 		} else if (Intent.ACTION_SEND.equals(action)) {
 			String text = intent.getStringExtra(Intent.EXTRA_TEXT);
 			if (text != null) {
 				String url = extractUrlFromText(text);
 				if (url != null) {
-					final String clean = url.replace(YOUTUBE_WWW_HOST, Constant.YOUTUBE_MOBILE_HOST);
+					final String clean = url.replace(YOUTUBE_WWW_HOST, Constants.YOUTUBE_MOBILE_HOST);
 					if (tabManager != null) tabManager.playInWatch(clean);
 				}
 			}
 		} else if (tabManager != null && tabManager.getWebview() == null) {
-			tabManager.openTab(Constant.HOME_URL, UrlUtils.getPageClass(Constant.HOME_URL));
+			tabManager.openTab(Constants.HOME_URL, UrlUtils.getPageClass(Constants.HOME_URL));
 		}
 	}
 
@@ -961,13 +962,13 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 	}
 
 	public void triggerDownload(String url) {
-		String clean = url.replace(Constant.YOUTUBE_MOBILE_HOST, YOUTUBE_WWW_HOST);
+		String clean = url.replace(Constants.YOUTUBE_MOBILE_HOST, YOUTUBE_WWW_HOST);
 		Toast.makeText(this, R.string.fetching_details, Toast.LENGTH_SHORT).show();
 		mainHandler.postDelayed(() -> new DownloadDialog(clean, this, youtubeExtractor).show(), 600);
 	}
 
 	private void triggerPlaylistDownload(String url) {
-		String clean = url.replace(Constant.YOUTUBE_MOBILE_HOST, YOUTUBE_WWW_HOST);
+		String clean = url.replace(Constants.YOUTUBE_MOBILE_HOST, YOUTUBE_WWW_HOST);
 		Toast.makeText(this, R.string.playlist_download_loading, Toast.LENGTH_SHORT).show();
 		executor.execute(() -> {
 			try {

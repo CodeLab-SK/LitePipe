@@ -12,11 +12,12 @@ import androidx.media3.common.util.UnstableApi;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import com.hhst.youtubelite.Constant;
+import com.hhst.youtubelite.Constants;
 import com.hhst.youtubelite.IncognitoManager;
 import com.hhst.youtubelite.R;
 import com.hhst.youtubelite.downloader.ui.DownloadActivity;
 import com.hhst.youtubelite.downloader.ui.DownloadDialog;
+import com.hhst.youtubelite.extension.Constant;
 import com.hhst.youtubelite.extension.ExtensionManager;
 import com.hhst.youtubelite.extractor.YoutubeExtractor;
 import com.hhst.youtubelite.gallery.GalleryActivity;
@@ -216,7 +217,7 @@ public final class JavascriptInterface {
     @android.webkit.JavascriptInterface
     public void hidePlayer() {
         handler.post(() -> {
-            if (extensionManager.isEnabled(com.hhst.youtubelite.Constant.ENABLE_IN_APP_MINI_PLAYER) && player.getLoadedVideoId() != null) {
+            if (extensionManager.isEnabled(Constant.ENABLE_IN_APP_MINI_PLAYER) && player.getLoadedVideoId() != null) {
                 player.enterInAppMiniPlayer();
             } else {
                 player.hide();
@@ -322,7 +323,7 @@ public final class JavascriptInterface {
             webview.clearCache(true);
             webview.clearHistory();
             webview.clearFormData();
-            tabManager.openTab(Constant.HOME_URL, Constant.PAGE_HOME);
+            tabManager.openTab(Constants.HOME_URL, Constants.PAGE_HOME);
             YoutubeWebview web = tabManager.getWebview();
             if (web != null) {
                 web.reload();

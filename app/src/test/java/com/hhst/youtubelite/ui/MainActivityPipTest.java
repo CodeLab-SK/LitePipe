@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.hhst.youtubelite.extension.Constant;
 import com.hhst.youtubelite.extension.ExtensionManager;
 import com.hhst.youtubelite.player.LitePlayer;
 
@@ -17,7 +18,7 @@ public class MainActivityPipTest {
 	public void shouldEnterPictureInPictureOnUserLeaveHint_returnsTrueWhenEnabledAndPlayerAllowsIt() {
 		final LitePlayer player = mock(LitePlayer.class);
 		final ExtensionManager extensionManager = mock(ExtensionManager.class);
-		when(extensionManager.isEnabled(com.hhst.youtubelite.Constant.ENABLE_PIP)).thenReturn(true);
+		when(extensionManager.isEnabled(Constant.ENABLE_PIP)).thenReturn(true);
 		when(player.shouldAutoEnterPictureInPicture()).thenReturn(true);
 
 		assertTrue(MainActivity.shouldEnterPictureInPictureOnUserLeaveHint(player, extensionManager, false, false));
@@ -27,7 +28,7 @@ public class MainActivityPipTest {
 	public void shouldEnterPictureInPictureOnUserLeaveHint_returnsFalseWhenFeatureDisabled() {
 		final LitePlayer player = mock(LitePlayer.class);
 		final ExtensionManager extensionManager = mock(ExtensionManager.class);
-		when(extensionManager.isEnabled(com.hhst.youtubelite.Constant.ENABLE_PIP)).thenReturn(false);
+		when(extensionManager.isEnabled(Constant.ENABLE_PIP)).thenReturn(false);
 
 		assertFalse(MainActivity.shouldEnterPictureInPictureOnUserLeaveHint(player, extensionManager, false, false));
 	}
@@ -36,7 +37,7 @@ public class MainActivityPipTest {
 	public void shouldEnterPictureInPictureOnUserLeaveHint_returnsFalseWhenPlayerDisallowsIt() {
 		final LitePlayer player = mock(LitePlayer.class);
 		final ExtensionManager extensionManager = mock(ExtensionManager.class);
-		when(extensionManager.isEnabled(com.hhst.youtubelite.Constant.ENABLE_PIP)).thenReturn(true);
+		when(extensionManager.isEnabled(Constant.ENABLE_PIP)).thenReturn(true);
 		when(player.shouldAutoEnterPictureInPicture()).thenReturn(false);
 
 		assertFalse(MainActivity.shouldEnterPictureInPictureOnUserLeaveHint(player, extensionManager, false, false));
@@ -46,7 +47,7 @@ public class MainActivityPipTest {
 	public void shouldEnterPictureInPictureOnUserLeaveHint_returnsFalseWhenSuppressedForInAppNavigation() {
 		final LitePlayer player = mock(LitePlayer.class);
 		final ExtensionManager extensionManager = mock(ExtensionManager.class);
-		when(extensionManager.isEnabled(com.hhst.youtubelite.Constant.ENABLE_PIP)).thenReturn(true);
+		when(extensionManager.isEnabled(Constant.ENABLE_PIP)).thenReturn(true);
 		when(player.shouldAutoEnterPictureInPicture()).thenReturn(true);
 
 		assertFalse(MainActivity.shouldEnterPictureInPictureOnUserLeaveHint(player, extensionManager, false, true));

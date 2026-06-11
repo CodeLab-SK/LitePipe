@@ -10,7 +10,7 @@ import android.webkit.CookieManager;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.hhst.youtubelite.Constant;
+import com.hhst.youtubelite.Constants;
 
 import java.net.URI;
 import java.util.Locale;
@@ -32,7 +32,7 @@ public final class UrlUtils {
 	private static final Locale NORMALIZATION_LOCALE = Locale.ROOT;
 
 	private static final Set<String> ALLOWED_DOMAINS = Set.of(
-					Constant.YOUTUBE_DOMAIN,
+					Constants.YOUTUBE_DOMAIN,
 					"youtu.be",
 					"youtube.googleapis.com",
 					"googlevideo.com",
@@ -117,8 +117,8 @@ public final class UrlUtils {
 	}
 
 	private static boolean isYoutubeHost(@NonNull String lowerHost) {
-		return lowerHost.equals(Constant.YOUTUBE_DOMAIN)
-						|| lowerHost.endsWith("." + Constant.YOUTUBE_DOMAIN);
+		return lowerHost.equals(Constants.YOUTUBE_DOMAIN)
+						|| lowerHost.endsWith("." + Constants.YOUTUBE_DOMAIN);
 	}
 
 	private static boolean isGoogleAccountsHost(@NonNull final String lowerHost) {
@@ -165,26 +165,26 @@ public final class UrlUtils {
 	static String resolvePageClass(@NonNull final String host, @NonNull final List<String> segments) {
 		final String lowerHost = host.toLowerCase(NORMALIZATION_LOCALE);
 		if (lowerHost.equals("youtu.be")) {
-			return segments.isEmpty() ? PAGE_UNKNOWN : Constant.PAGE_WATCH;
+			return segments.isEmpty() ? PAGE_UNKNOWN : Constants.PAGE_WATCH;
 		}
-		if (!lowerHost.endsWith(Constant.YOUTUBE_DOMAIN))
+		if (!lowerHost.endsWith(Constants.YOUTUBE_DOMAIN))
 			return PAGE_UNKNOWN;
 
-		if (segments.isEmpty()) return Constant.PAGE_HOME;
+		if (segments.isEmpty()) return Constants.PAGE_HOME;
 
 		final String s0 = segments.get(0).toLowerCase(NORMALIZATION_LOCALE);
 		if (s0.startsWith("@")) return PAGE_USER_MENTION;
 
 		return switch (s0) {
-			case "shorts" -> Constant.PAGE_SHORTS;
-			case "watch" -> Constant.PAGE_WATCH;
+			case "shorts" -> Constants.PAGE_SHORTS;
+			case "watch" -> Constants.PAGE_WATCH;
 			case "channel" -> PAGE_CHANNEL;
 			case "gaming" -> PAGE_GAMING;
 			case "select_site" -> PAGE_SELECT_SITE;
 			case "results" -> PAGE_SEARCHING;
 			case "feed" -> (segments.size() > 1) ? switch (segments.get(1).toLowerCase(NORMALIZATION_LOCALE)) {
-				case "subscriptions" -> Constant.PAGE_SUBSCRIPTIONS;
-				case "library" , "you" -> Constant.PAGE_LIBRARY;
+				case "subscriptions" -> Constants.PAGE_SUBSCRIPTIONS;
+				case "library" , "you" -> Constants.PAGE_LIBRARY;
 				case "history" -> PAGE_HISTORY;
 				case "channels" -> PAGE_CHANNELS;
 				case "playlists" -> PAGE_PLAYLISTS;

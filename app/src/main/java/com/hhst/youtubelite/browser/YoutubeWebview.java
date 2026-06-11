@@ -31,6 +31,7 @@ import androidx.media3.common.util.Consumer;
 import androidx.media3.common.util.UnstableApi;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import com.hhst.youtubelite.Constants;
 import com.hhst.youtubelite.IncognitoManager;
 import com.hhst.youtubelite.R;
 import com.hhst.youtubelite.extension.ExtensionManager;
@@ -265,7 +266,7 @@ public class YoutubeWebview extends WebView {
 
 	@NonNull
 	static String sanitizeLoadUrl(@NonNull final String url, final boolean queueEnabled) {
-		if (!queueEnabled || !com.hhst.youtubelite.Constant.PAGE_WATCH.equals(UrlUtils.getPageClass(url))) {
+		if (!queueEnabled || !Constants.PAGE_WATCH.equals(UrlUtils.getPageClass(url))) {
 			return url;
 		}
 		try {
@@ -318,7 +319,7 @@ public class YoutubeWebview extends WebView {
 		settings.setBuiltInZoomControls(false);
 		settings.setMediaPlaybackRequiresUserGesture(false);
 		settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-		settings.setUserAgentString(com.hhst.youtubelite.Constant.USER_AGENT);
+		settings.setUserAgentString(Constants.USER_AGENT);
 
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
 			boolean isDark = (getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES;

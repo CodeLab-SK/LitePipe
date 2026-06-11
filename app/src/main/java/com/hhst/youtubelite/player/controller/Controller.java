@@ -42,7 +42,7 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.slider.Slider;
-import com.hhst.youtubelite.Constant;
+import com.hhst.youtubelite.Constants;
 import com.hhst.youtubelite.R;
 import com.hhst.youtubelite.browser.TabManager;
 import com.hhst.youtubelite.browser.YoutubeFragment;
@@ -1272,9 +1272,9 @@ public class Controller {
 	private boolean isWatch() {
 		final YoutubeFragment tab = tabManager.getTab();
 		if (tab == null) return false;
-		if (Constant.PAGE_WATCH.equals(tab.getMTag())) return true;
+		if (Constants.PAGE_WATCH.equals(tab.getMTag())) return true;
 		final String url = tab.getUrl();
-		return url != null && Constant.PAGE_WATCH.equals(UrlUtils.getPageClass(url));
+		return url != null && Constants.PAGE_WATCH.equals(UrlUtils.getPageClass(url));
 	}
 
 	private void updateLockButton(@Nullable final ImageButton lockBtn) {

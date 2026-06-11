@@ -11,12 +11,12 @@ public class ExtensionTreeTest {
 						.stream()
 						.filter(group -> group.children() != null)
 						.flatMap(group -> group.children().stream())
-						.anyMatch(item -> com.hhst.youtubelite.Constant.ENABLE_IN_APP_MINI_PLAYER.equals(item.key())));
+						.anyMatch(item -> Constant.ENABLE_IN_APP_MINI_PLAYER.equals(item.key())));
 	}
 
 	@Test
 	public void defaultPreferences_enableInAppMiniPlayerByDefault() {
-		assertTrue(com.hhst.youtubelite.extension.Constant.DEFAULT_PREFERENCES
-						.get(com.hhst.youtubelite.Constant.ENABLE_IN_APP_MINI_PLAYER));
+		Object value = Constant.DEFAULT_PREFERENCES.get(Constant.ENABLE_IN_APP_MINI_PLAYER);
+		assertTrue(value instanceof Boolean && (Boolean) value);
 	}
 }

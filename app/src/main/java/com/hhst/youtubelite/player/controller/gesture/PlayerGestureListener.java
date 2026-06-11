@@ -13,10 +13,10 @@ import android.view.WindowManager;
 import androidx.annotation.NonNull;
 import androidx.media3.common.util.UnstableApi;
 
-import com.hhst.youtubelite.Constant;
 import com.hhst.youtubelite.player.LitePlayerView;
 import com.hhst.youtubelite.player.controller.Controller;
 import com.hhst.youtubelite.player.engine.Engine;
+import com.hhst.youtubelite.extension.Constant;
 import com.tencent.mmkv.MMKV;
 
 import java.util.Locale;
@@ -69,7 +69,7 @@ public class PlayerGestureListener extends GestureDetector.SimpleOnGestureListen
 	}
 
 	private boolean isEnabled() {
-		return controller.getExtensionManager().isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_GESTURES);
+		return controller.getExtensionManager().isEnabled(Constant.PLAYER_GESTURES);
 	}
 
 	public void onTouchRelease() {
@@ -109,7 +109,7 @@ public class PlayerGestureListener extends GestureDetector.SimpleOnGestureListen
 	@Override
 	public boolean onSingleTapUp(@NonNull MotionEvent e) {
 		if (!isEnabled()) return false;
-		if (!controller.getExtensionManager().isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_GESTURE_SEEK)) return super.onSingleTapUp(e);
+		if (!controller.getExtensionManager().isEnabled(Constant.PLAYER_GESTURE_SEEK)) return super.onSingleTapUp(e);
 		
 		long currentTime = System.currentTimeMillis();
 		float x = e.getX();
@@ -142,7 +142,7 @@ public class PlayerGestureListener extends GestureDetector.SimpleOnGestureListen
 			return true;
 		}
 		
-		if (!controller.getExtensionManager().isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_GESTURE_SEEK)) return false;
+		if (!controller.getExtensionManager().isEnabled(Constant.PLAYER_GESTURE_SEEK)) return false;
 
 		switch (action) {
 			case SEEK_BACKWARD:
@@ -173,9 +173,9 @@ public class PlayerGestureListener extends GestureDetector.SimpleOnGestureListen
 
 	private void processSeek(boolean isLeft) {
 		handler.removeCallbacks(resetSeekRunnable);
-		String seekAmountStr = kv.decodeString("preferences:" + com.hhst.youtubelite.extension.Constant.DOUBLE_TAP_SEEK_AMOUNT, "10s");
+		String seekAmountStr = controller.getExtensionManager().getString(Constant.DOUBLE_TAP_SEEK_AMOUNT);
 		int seekSeconds = 10;
-		if (seekAmountStr != null) {
+		if (seekAmountStr != null && !seekAmountStr.isEmpty()) {
 			try {
 				seekSeconds = Integer.parseInt(seekAmountStr.replace("s", ""));
 			} catch (Exception ignored) {}
@@ -216,11 +216,11 @@ public class PlayerGestureListener extends GestureDetector.SimpleOnGestureListen
 			isGesturing = true;
 			handler.removeCallbacks(hideHintRunnable);
 			if (x < width * 0.35f) {
-				if (controller.getExtensionManager().isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_GESTURE_BRIGHTNESS)) {
+				if (controller.getExtensionManager().isEnabled(Constant.PLAYER_GESTURE_BRIGHTNESS)) {
 					adjustBrightness(dy);
 				}
 			} else if (x > width * 0.65f) {
-				if (controller.getExtensionManager().isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_GESTURE_VOLUME)) {
+				if (controller.getExtensionManager().isEnabled(Constant.PLAYER_GESTURE_VOLUME)) {
 					adjustVolume(dy);
 				}
 			} else {
@@ -228,7 +228,7 @@ public class PlayerGestureListener extends GestureDetector.SimpleOnGestureListen
 			}
 			handler.postDelayed(hideHintRunnable, AUTO_HIDE_DELAY_MS);
 		} else if (gestureMode == 2) {
-			if (controller.getExtensionManager().isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_GESTURE_SEEK)) {
+			if (controller.getExtensionManager().isEnabled(Constant.PLAYER_GESTURE_SEEK)) {
 				isGesturing = true;
 				handler.removeCallbacks(hideHintRunnable);
 				adjustSeek(e1, e2);
@@ -248,7 +248,7 @@ public class PlayerGestureListener extends GestureDetector.SimpleOnGestureListen
 	}
 
 	private void handleFullscreenVerticalGesture(float deltaY) {
-		if (fullscreenSwipeTriggered || !controller.getExtensionManager().isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_GESTURE_FULLSCREEN_SWIPE)) return;
+		if (fullscreenSwipeTriggered || !controller.getExtensionManager().isEnabled(Constant.PLAYER_GESTURE_FULLSCREEN_SWIPE)) return;
 		final float threshold = playerView.getHeight() * FULLSCREEN_SWIPE_THRESHOLD_RATIO;
 		if (Math.abs(deltaY) < threshold) return;
 
@@ -267,13 +267,13 @@ public class PlayerGestureListener extends GestureDetector.SimpleOnGestureListen
 		if (Math.abs(deltaY) < threshold) return;
 
 		if (deltaY > 0) {
-			if (miniPlayerSwipeTriggered || !controller.getExtensionManager().isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_GESTURE_MINIPLAYER_SWIPE)) return;
+			if (miniPlayerSwipeTriggered || !controller.getExtensionManager().isEnabled(Constant.PLAYER_GESTURE_MINIPLAYER_SWIPE)) return;
 			miniPlayerSwipeTriggered = true;
 			if (controller.getExtensionManager().isEnabled(Constant.ENABLE_IN_APP_MINI_PLAYER)) {
 				activity.onBackPressed();
 			}
 		} else {
-			if (fullscreenSwipeTriggered || !controller.getExtensionManager().isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_GESTURE_FULLSCREEN_SWIPE)) return;
+			if (fullscreenSwipeTriggered || !controller.getExtensionManager().isEnabled(Constant.PLAYER_GESTURE_FULLSCREEN_SWIPE)) return;
 			fullscreenSwipeTriggered = true;
 			controller.enterFullscreen();
 		}
@@ -323,7 +323,7 @@ public class PlayerGestureListener extends GestureDetector.SimpleOnGestureListen
 		final AudioManager am = (AudioManager) activity.getSystemService(Context.AUDIO_SERVICE);
 		if (am == null) return;
 		final int max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
-		boolean boosterEnabled = controller.getExtensionManager().isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_VOLUME_BOOSTER);
+		boolean boosterEnabled = controller.getExtensionManager().isEnabled(Constant.PLAYER_VOLUME_BOOSTER);
 		
 		if (vol == -1) {
 			float systemVol = (float) am.getStreamVolume(AudioManager.STREAM_MUSIC);
@@ -374,7 +374,7 @@ public class PlayerGestureListener extends GestureDetector.SimpleOnGestureListen
 	@Override
 	public void onLongPress(@NonNull MotionEvent e) {
 		if (!isEnabled() || !engine.isPlaying()) return;
-		if (!controller.getExtensionManager().isEnabled(com.hhst.youtubelite.extension.Constant.PLAYER_GESTURE_2X)) return;
+		if (!controller.getExtensionManager().isEnabled(Constant.PLAYER_GESTURE_2X)) return;
 
 		preLongPressSpeed = engine.getPlaybackRate();
 		isLongPressing = true;

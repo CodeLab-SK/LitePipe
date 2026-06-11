@@ -16,7 +16,7 @@ import androidx.media3.exoplayer.dash.DefaultDashChunkSource;
 import androidx.media3.exoplayer.hls.HlsMediaSource;
 import androidx.media3.exoplayer.source.ProgressiveMediaSource;
 
-import com.hhst.youtubelite.Constant;
+import com.hhst.youtubelite.Constants;
 import com.hhst.youtubelite.player.engine.datasource.YoutubeHttpDataSource;
 
 import org.schabi.newpipe.extractor.services.youtube.dashmanifestcreators.YoutubeOtfDashManifestCreator;
@@ -46,7 +46,7 @@ final class PlayerDataSource {
 	PlayerDataSource(@Nullable SimpleCache cache) {
 		this.cache = cache;
 		liveHttp = new DefaultHttpDataSource.Factory()
-						.setUserAgent(Constant.USER_AGENT)
+						.setUserAgent(Constants.USER_AGENT)
 						.setConnectTimeoutMs(30_000)
 						.setReadTimeoutMs(45_000);
 		ytHlsHttp = youtubeFactory(false, false);
@@ -113,7 +113,7 @@ final class PlayerDataSource {
 	@NonNull
 	private YoutubeHttpDataSource.Factory youtubeFactory(boolean rangeEnabled,
 	                                                     boolean rnEnabled) {
-		return new YoutubeHttpDataSource.Factory(Constant.USER_AGENT)
+		return new YoutubeHttpDataSource.Factory(Constants.USER_AGENT)
 						.setConnectTimeoutMs(30_000)
 						.setReadTimeoutMs(30_000)
 						.setRangeParameterEnabled(rangeEnabled)

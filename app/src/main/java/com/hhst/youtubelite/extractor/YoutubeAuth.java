@@ -3,7 +3,7 @@ package com.hhst.youtubelite.extractor;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.hhst.youtubelite.Constant;
+import com.hhst.youtubelite.Constants;
 
 import java.net.URI;
 import java.security.MessageDigest;
@@ -88,8 +88,8 @@ public final class YoutubeAuth {
 				return false;
 			}
 			String lowerHost = host.toLowerCase(Locale.US);
-			if (!lowerHost.equals(Constant.YOUTUBE_DOMAIN)
-							&& !lowerHost.endsWith("." + Constant.YOUTUBE_DOMAIN)) {
+			if (!lowerHost.equals(Constants.YOUTUBE_DOMAIN)
+							&& !lowerHost.endsWith("." + Constants.YOUTUBE_DOMAIN)) {
 				return false;
 			}
 			String path = uri.getPath();

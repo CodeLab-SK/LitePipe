@@ -33,10 +33,10 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
 import androidx.media3.exoplayer.trackselection.AdaptiveTrackSelection;
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector;
 
-import com.hhst.youtubelite.Constant;
 import com.hhst.youtubelite.IncognitoManager;
 import com.hhst.youtubelite.browser.TabManager;
 import com.hhst.youtubelite.downloader.core.history.DownloadRecord;
+import com.hhst.youtubelite.extension.Constant;
 import com.hhst.youtubelite.extractor.Delivery;
 import com.hhst.youtubelite.extractor.DeliveryCatalog;
 import com.hhst.youtubelite.extractor.PlaybackDetails;

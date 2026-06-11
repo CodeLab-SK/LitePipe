@@ -27,7 +27,7 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.hhst.youtubelite.Constant;
+import com.hhst.youtubelite.Constants;
 import com.hhst.youtubelite.R;
 
 import java.io.File;
@@ -236,7 +236,7 @@ public class AboutActivity extends AppCompatActivity {
 
 				String time = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
 				File destFile = new File(getExternalCacheDir(), "litube_error_log_" + time + ".txt");
-				File srcFile = new File(getFilesDir(), Constant.LOGGING_FILENAME);
+				File srcFile = new File(getFilesDir(), Constants.LOGGING_FILENAME);
 
 				String header = String.format(Locale.US, "--------- Device Info ---------\nDevice: %s\nModel: %s\nAndroid: %s\nApp Version: %s\n-------------------------------\n\n", Build.DEVICE, Build.MODEL, Build.VERSION.RELEASE, version);
 

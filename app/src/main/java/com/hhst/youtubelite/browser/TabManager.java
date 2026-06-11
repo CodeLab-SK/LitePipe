@@ -15,7 +15,7 @@ import androidx.fragment.app.FragmentTransaction;
 import androidx.media3.common.util.Consumer;
 import androidx.media3.common.util.UnstableApi;
 
-import com.hhst.youtubelite.Constant;
+import com.hhst.youtubelite.Constants;
 import com.hhst.youtubelite.R;
 import com.hhst.youtubelite.extension.ExtensionManager;
 import com.hhst.youtubelite.player.LitePlayer;
@@ -47,7 +47,7 @@ public class TabManager {
 	private static final String TAG = "TabManager";
 	private static final String SCRIPT_INIT = "init.js";
 	private static final String SCRIPT_INIT_MIN = "init.min.js";
-	private static final Set<String> NAV_TAGS = Set.of(Constant.PAGE_HOME, Constant.PAGE_SUBSCRIPTIONS, Constant.PAGE_LIBRARY);
+	private static final Set<String> NAV_TAGS = Set.of(Constants.PAGE_HOME, Constants.PAGE_SUBSCRIPTIONS, Constants.PAGE_LIBRARY);
 	
 	private final Activity activity;
 	private final Lazy<LitePlayer> player;
@@ -87,7 +87,7 @@ public class TabManager {
 		if (fragment != tab) return;
 		final LitePlayer litePlayer = litePlayer();
 		final String pageClass = UrlUtils.getPageClass(url);
-		final boolean isWatch = Constant.PAGE_WATCH.equals(pageClass);
+		final boolean isWatch = Constants.PAGE_WATCH.equals(pageClass);
 
 		if (activity instanceof MainActivity mainActivity) {
 			mainActivity.setUiVisibility(!isWatch);
@@ -104,7 +104,7 @@ public class TabManager {
 	}
 
 	public void onPageFinished(@NonNull final YoutubeFragment fragment, @NonNull final String url) {
-		if (Constant.PAGE_WATCH.equals(UrlUtils.getPageClass(url))) {
+		if (Constants.PAGE_WATCH.equals(UrlUtils.getPageClass(url))) {
 			if (activity instanceof MainActivity mainActivity) {
 				mainActivity.hideWatchLoadingOverlay();
 			}
@@ -140,35 +140,35 @@ public class TabManager {
 		if (tag == null) tag = UrlUtils.getPageClass(url);
 		final String targetTag = tag;
 		
-		if (Constant.PAGE_WATCH.equals(targetTag)) {
+		if (Constants.PAGE_WATCH.equals(targetTag)) {
 			if (activity instanceof MainActivity mainActivity) {
 				mainActivity.showWatchLoadingOverlay();
 			}
 		}
 
 		final YoutubeFragment tab = this.tab;
-		if (Constant.PAGE_WATCH.equals(targetTag) && openWatchTab(url)) return;
-		if (tab != null && ((targetTag.equals(tab.getMTag()) && NAV_TAGS.contains(targetTag)) || targetTag.equals(Constant.PAGE_SHORTS))) {
+		if (Constants.PAGE_WATCH.equals(targetTag) && openWatchTab(url)) return;
+		if (tab != null && ((targetTag.equals(tab.getMTag()) && NAV_TAGS.contains(targetTag)) || targetTag.equals(Constants.PAGE_SHORTS))) {
 			if (!url.equals(tab.getUrl())) tab.loadUrl(url);
 			return;
 		}
-		final String homeTag = Constant.PAGE_HOME;
+		final String homeTag = Constants.PAGE_HOME;
 		final FragmentTransaction ft = getFm().beginTransaction();
 		final boolean suspendCurrentWatch = shouldSuspendCurrentWatch(
 						tab != null ? tab.getMTag() : null,
 						getFragmentPageClass(tab),
 						targetTag,
-						extensionManager.isEnabled(Constant.ENABLE_IN_APP_MINI_PLAYER),
+						extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.ENABLE_IN_APP_MINI_PLAYER),
 						litePlayer().canSuspendWatch());
 		if (suspendCurrentWatch) suspendCurrentWatch(ft);
 		else if (tab != null) ft.hide(tab);
 		
 		if (!NAV_TAGS.contains(targetTag)) {
 			final var first = tabs.peekFirst();
-			if (first == null || !Constant.PAGE_HOME.equals(first.getMTag())) {
-				final YoutubeFragment home = createFragment(Constant.HOME_URL, Constant.PAGE_HOME);
+			if (first == null || !Constants.PAGE_HOME.equals(first.getMTag())) {
+				final YoutubeFragment home = createFragment(Constants.HOME_URL, Constants.PAGE_HOME);
 				tabs.offerFirst(home);
-				ft.add(R.id.fragment_container, home, Constant.PAGE_HOME);
+				ft.add(R.id.fragment_container, home, Constants.PAGE_HOME);
 				ft.hide(home);
 			}
 
@@ -187,7 +187,7 @@ public class TabManager {
 			}
 			tabs.clear();
 			if (home == null) {
-				home = createFragment(Constant.HOME_URL, homeTag);
+				home = createFragment(Constants.HOME_URL, homeTag);
 				ft.add(R.id.fragment_container, home, homeTag);
 			}
 			tabs.offer(home);
@@ -284,7 +284,7 @@ public class TabManager {
 		}
 		queueWarmer.prioritizeUrl(url);
 		litePlayer().play(url);
-		openTab(url, Constant.PAGE_WATCH);
+		openTab(url, Constants.PAGE_WATCH);
 	}
 
 	public boolean canGoBackInWatch() {
@@ -317,7 +317,7 @@ public class TabManager {
 	public void loadUrl(@NonNull final String url) {
 		final YoutubeWebview webview = getWebview();
 		if (webview != null) {
-			if (Constant.PAGE_WATCH.equals(UrlUtils.getPageClass(url))) {
+			if (Constants.PAGE_WATCH.equals(UrlUtils.getPageClass(url))) {
 				if (activity instanceof MainActivity mainActivity) {
 					mainActivity.showWatchLoadingOverlay();
 				}
@@ -344,10 +344,10 @@ public class TabManager {
 
 	private boolean isWatchTab(@Nullable final YoutubeFragment fragment) {
 		if (fragment == null) return false;
-		if (Constant.PAGE_WATCH.equals(fragment.getMTag())) {
+		if (Constants.PAGE_WATCH.equals(fragment.getMTag())) {
 			return true;
 		}
-		return Constant.PAGE_WATCH.equals(getFragmentPageClass(fragment));
+		return Constants.PAGE_WATCH.equals(getFragmentPageClass(fragment));
 	}
 
 	@Nullable
@@ -402,7 +402,7 @@ public class TabManager {
 		final YoutubeWebview webview = tab.getWebview();
 		final Page prev = prev(tab);
 		final boolean hasBackStack = tabs.size() > 1;
-		final boolean isMiniPlayerEnabled = extensionManager.isEnabled(Constant.ENABLE_IN_APP_MINI_PLAYER);
+		final boolean isMiniPlayerEnabled = extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.ENABLE_IN_APP_MINI_PLAYER);
 
 		if (shouldSuspendCurrentWatchOnBack(
 						tab.getMTag(),
@@ -411,7 +411,7 @@ public class TabManager {
 						litePlayer().canSuspendWatch())) {
 
 			if (prev != null
-							&& !Constant.PAGE_WATCH.equals(prev.tag())
+							&& !Constants.PAGE_WATCH.equals(prev.tag())
 							&& webview != null && webview.canGoBack()) {
 				webview.goBack();
 				return true;
@@ -523,13 +523,13 @@ public class TabManager {
 	@NonNull
 	private YoutubeFragment home(@NonNull final FragmentTransaction ft) {
 		for (final YoutubeFragment frag : tabs) {
-			if (Constant.PAGE_HOME.equals(frag.getMTag())) {
+			if (Constants.PAGE_HOME.equals(frag.getMTag())) {
 				return frag;
 			}
 		}
-		final YoutubeFragment home = createFragment(Constant.HOME_URL, Constant.PAGE_HOME);
+		final YoutubeFragment home = createFragment(Constants.HOME_URL, Constants.PAGE_HOME);
 		tabs.offerFirst(home);
-		ft.add(R.id.fragment_container, home, Constant.PAGE_HOME);
+		ft.add(R.id.fragment_container, home, Constants.PAGE_HOME);
 		return home;
 	}
 
@@ -561,8 +561,8 @@ public class TabManager {
 	                                         @Nullable final String targetTag,
 	                                         final boolean inAppMiniPlayerEnabled,
 	                                         final boolean canSuspendWatch) {
-		return (Constant.PAGE_WATCH.equals(currentMTag) || Constant.PAGE_WATCH.equals(currentPageClass))
-						&& !Constant.PAGE_WATCH.equals(targetTag)
+		return (Constants.PAGE_WATCH.equals(currentMTag) || Constants.PAGE_WATCH.equals(currentPageClass))
+						&& !Constants.PAGE_WATCH.equals(targetTag)
 						&& inAppMiniPlayerEnabled
 						&& canSuspendWatch;
 	}
@@ -571,7 +571,7 @@ public class TabManager {
 	                                               @Nullable final String currentPageClass,
 	                                               final boolean inAppMiniPlayerEnabled,
 	                                               final boolean canSuspendWatch) {
-		return (Constant.PAGE_WATCH.equals(currentMTag) || Constant.PAGE_WATCH.equals(currentPageClass))
+		return (Constants.PAGE_WATCH.equals(currentMTag) || Constants.PAGE_WATCH.equals(currentPageClass))
 						&& inAppMiniPlayerEnabled
 						&& canSuspendWatch;
 	}

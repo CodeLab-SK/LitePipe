@@ -21,10 +21,11 @@ import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
+import com.hhst.youtubelite.extension.Constant;
 import com.hhst.youtubelite.extension.ExtensionManager;
 import com.hhst.youtubelite.player.LitePlayer;
 import com.hhst.youtubelite.player.queue.QueueWarmer;
-import com.hhst.youtubelite.Constant;
+import com.hhst.youtubelite.Constants;
 import com.hhst.youtubelite.util.UrlUtils;
 
 import org.junit.Test;
@@ -44,8 +45,8 @@ public class TabManagerTest {
 	@Test
 	public void shouldSuspendCurrentWatch_returnsTrueWhenLeavingPlayingWatchForNonWatch() {
 		assertTrue(TabManager.shouldSuspendCurrentWatch(
-						Constant.PAGE_WATCH,
-						Constant.PAGE_WATCH,
+						Constants.PAGE_WATCH,
+						Constants.PAGE_WATCH,
 						UrlUtils.PAGE_CHANNEL,
 						true,
 						true));
@@ -54,8 +55,8 @@ public class TabManagerTest {
 	@Test
 	public void shouldSuspendCurrentWatch_returnsFalseWhenFeatureDisabled() {
 		assertFalse(TabManager.shouldSuspendCurrentWatch(
-						Constant.PAGE_WATCH,
-						Constant.PAGE_WATCH,
+						Constants.PAGE_WATCH,
+						Constants.PAGE_WATCH,
 						UrlUtils.PAGE_CHANNEL,
 						false,
 						true));
@@ -64,9 +65,9 @@ public class TabManagerTest {
 	@Test
 	public void shouldSuspendCurrentWatch_returnsFalseWhenTargetIsWatch() {
 		assertFalse(TabManager.shouldSuspendCurrentWatch(
-						Constant.PAGE_WATCH,
-						Constant.PAGE_WATCH,
-						Constant.PAGE_WATCH,
+						Constants.PAGE_WATCH,
+						Constants.PAGE_WATCH,
+						Constants.PAGE_WATCH,
 						true,
 						true));
 	}
@@ -74,8 +75,8 @@ public class TabManagerTest {
 	@Test
 	public void shouldSuspendCurrentWatchOnBack_returnsTrueForWatchSession() {
 		assertTrue(TabManager.shouldSuspendCurrentWatchOnBack(
-						Constant.PAGE_WATCH,
-						Constant.PAGE_WATCH,
+						Constants.PAGE_WATCH,
+						Constants.PAGE_WATCH,
 						true,
 						true));
 	}
@@ -83,8 +84,8 @@ public class TabManagerTest {
 	@Test
 	public void shouldSuspendCurrentWatchOnBack_returnsFalseWhenSessionIsNotSuspendable() {
 		assertFalse(TabManager.shouldSuspendCurrentWatchOnBack(
-						Constant.PAGE_WATCH,
-						Constant.PAGE_WATCH,
+						Constants.PAGE_WATCH,
+						Constants.PAGE_WATCH,
 						true,
 						false));
 	}
@@ -94,8 +95,8 @@ public class TabManagerTest {
 		final LitePlayer player = mock(LitePlayer.class);
 		final ExtensionManager extensionManager = mock(ExtensionManager.class);
 		final TabManager tabManager = createTabManager(player, extensionManager);
-		final YoutubeFragment home = createFragment(Constant.HOME_URL, Constant.PAGE_HOME);
-		final YoutubeFragment watch = createFragment("https://m.youtube.com/watch?v=old", Constant.PAGE_WATCH);
+		final YoutubeFragment home = createFragment(Constants.HOME_URL, Constants.PAGE_HOME);
+		final YoutubeFragment watch = createFragment("https://m.youtube.com/watch?v=old", Constants.PAGE_WATCH);
 
 		when(extensionManager.isEnabled(Constant.ENABLE_IN_APP_MINI_PLAYER)).thenReturn(true);
 		when(player.canSuspendWatch()).thenReturn(true);
@@ -114,8 +115,8 @@ public class TabManagerTest {
 		final LitePlayer player = mock(LitePlayer.class);
 		final ExtensionManager extensionManager = mock(ExtensionManager.class);
 		final TabManager tabManager = createTabManager(player, extensionManager);
-		final YoutubeFragment home = createFragment(Constant.HOME_URL, Constant.PAGE_HOME);
-		final YoutubeFragment watch = createFragment("https://m.youtube.com/watch?v=old", Constant.PAGE_WATCH);
+		final YoutubeFragment home = createFragment(Constants.HOME_URL, Constants.PAGE_HOME);
+		final YoutubeFragment watch = createFragment("https://m.youtube.com/watch?v=old", Constants.PAGE_WATCH);
 
 		when(extensionManager.isEnabled(Constant.ENABLE_IN_APP_MINI_PLAYER)).thenReturn(true);
 		when(player.canSuspendWatch()).thenReturn(true);
@@ -136,8 +137,8 @@ public class TabManagerTest {
 		final LitePlayer player = mock(LitePlayer.class);
 		final ExtensionManager extensionManager = mock(ExtensionManager.class);
 		final TabManager tabManager = createTabManager(player, extensionManager);
-		final YoutubeFragment home = createFragment(Constant.HOME_URL, Constant.PAGE_HOME);
-		final YoutubeFragment watch = createFragment("https://m.youtube.com/watch?v=old", Constant.PAGE_WATCH);
+		final YoutubeFragment home = createFragment(Constants.HOME_URL, Constants.PAGE_HOME);
+		final YoutubeFragment watch = createFragment("https://m.youtube.com/watch?v=old", Constants.PAGE_WATCH);
 
 		when(extensionManager.isEnabled(Constant.ENABLE_IN_APP_MINI_PLAYER)).thenReturn(false);
 		when(player.canSuspendWatch()).thenReturn(true);
@@ -155,8 +156,8 @@ public class TabManagerTest {
 		final LitePlayer player = mock(LitePlayer.class);
 		final ExtensionManager extensionManager = mock(ExtensionManager.class);
 		final TabManager tabManager = createTabManager(player, extensionManager);
-		final YoutubeFragment home = createFragment(Constant.HOME_URL, Constant.PAGE_HOME);
-		final YoutubeFragment watch = createFragment("https://m.youtube.com/watch?v=old", Constant.PAGE_WATCH);
+		final YoutubeFragment home = createFragment(Constants.HOME_URL, Constants.PAGE_HOME);
+		final YoutubeFragment watch = createFragment("https://m.youtube.com/watch?v=old", Constants.PAGE_WATCH);
 
 		when(extensionManager.isEnabled(Constant.ENABLE_IN_APP_MINI_PLAYER)).thenReturn(true);
 		when(player.canSuspendWatch()).thenReturn(true);
@@ -179,8 +180,8 @@ public class TabManagerTest {
 		final LitePlayer player = mock(LitePlayer.class);
 		final ExtensionManager extensionManager = mock(ExtensionManager.class);
 		final TabManager tabManager = createTabManager(player, extensionManager);
-		final YoutubeFragment home = createFragment(Constant.HOME_URL, Constant.PAGE_HOME);
-		final YoutubeFragment watch = createFragment("https://m.youtube.com/watch?v=old", Constant.PAGE_WATCH);
+		final YoutubeFragment home = createFragment(Constants.HOME_URL, Constants.PAGE_HOME);
+		final YoutubeFragment watch = createFragment("https://m.youtube.com/watch?v=old", Constants.PAGE_WATCH);
 
 		when(extensionManager.isEnabled(Constant.ENABLE_IN_APP_MINI_PLAYER)).thenReturn(true);
 		when(player.canSuspendWatch()).thenReturn(true);
@@ -201,15 +202,15 @@ public class TabManagerTest {
 		final LitePlayer player = mock(LitePlayer.class);
 		final ExtensionManager extensionManager = mock(ExtensionManager.class);
 		final TabManager tabManager = createTabManager(player, extensionManager);
-		final YoutubeFragment home = createFragment(Constant.HOME_URL, Constant.PAGE_HOME);
-		final YoutubeFragment watch = createFragment("https://m.youtube.com/watch?v=old", Constant.PAGE_WATCH);
+		final YoutubeFragment home = createFragment(Constants.HOME_URL, Constants.PAGE_HOME);
+		final YoutubeFragment watch = createFragment("https://m.youtube.com/watch?v=old", Constants.PAGE_WATCH);
 
 		when(extensionManager.isEnabled(Constant.ENABLE_IN_APP_MINI_PLAYER)).thenReturn(true);
 		when(player.canSuspendWatch()).thenReturn(true);
 		seedTabs(tabManager, home, watch);
 		tabManager.openTab("https://m.youtube.com/channel/test", UrlUtils.PAGE_CHANNEL);
 
-		tabManager.openTab("https://m.youtube.com/watch?v=new", Constant.PAGE_WATCH);
+		tabManager.openTab("https://m.youtube.com/watch?v=new", Constants.PAGE_WATCH);
 
 		verify(player).hide();
 		assertNull(getSuspendedWatch(tabManager));
@@ -221,7 +222,7 @@ public class TabManagerTest {
 		final ExtensionManager extensionManager = mock(ExtensionManager.class);
 		final TabManager tabManager = createTabManager(player, extensionManager);
 		final YoutubeFragment channel = createFragment("https://m.youtube.com/channel/test", UrlUtils.PAGE_CHANNEL);
-		final YoutubeFragment watch = createFragment("https://m.youtube.com/watch?v=old", Constant.PAGE_WATCH);
+		final YoutubeFragment watch = createFragment("https://m.youtube.com/watch?v=old", Constants.PAGE_WATCH);
 
 		seedTabs(tabManager, channel);
 		setField(tabManager, "tab", channel);
@@ -239,7 +240,7 @@ public class TabManagerTest {
 		final ExtensionManager extensionManager = mock(ExtensionManager.class);
 		final TabManager tabManager = createTabManager(player, extensionManager);
 		final YoutubeFragment current = createFragment("https://m.youtube.com/channel/test", UrlUtils.PAGE_CHANNEL);
-		final YoutubeFragment suspendedWatch = createFragment("https://m.youtube.com/watch?v=old", Constant.PAGE_WATCH);
+		final YoutubeFragment suspendedWatch = createFragment("https://m.youtube.com/watch?v=old", Constants.PAGE_WATCH);
 		final YoutubeWebview currentWebView = mock(YoutubeWebview.class);
 		final YoutubeWebview suspendedWatchWebView = mock(YoutubeWebview.class);
 		setField(current, "webview", currentWebView);
@@ -258,7 +259,7 @@ public class TabManagerTest {
 		final LitePlayer player = mock(LitePlayer.class);
 		final ExtensionManager extensionManager = mock(ExtensionManager.class);
 		final TabManager tabManager = createTabManager(player, extensionManager);
-		final YoutubeFragment current = createFragment("https://m.youtube.com/watch?v=current", Constant.PAGE_WATCH);
+		final YoutubeFragment current = createFragment("https://m.youtube.com/watch?v=current", Constants.PAGE_WATCH);
 		final YoutubeWebview currentWebView = mock(YoutubeWebview.class);
 		setField(current, "webview", currentWebView);
 		seedTabs(tabManager, current);
@@ -275,7 +276,7 @@ public class TabManagerTest {
 		final QueueWarmer warmer = mock(QueueWarmer.class);
 		final TabManager tabManager = createTabManager(player, extensionManager, warmer);
 		final YoutubeFragment current = createFragment("https://m.youtube.com/channel/test", UrlUtils.PAGE_CHANNEL);
-		final YoutubeFragment suspendedWatch = createFragment("https://m.youtube.com/watch?v=old", Constant.PAGE_WATCH);
+		final YoutubeFragment suspendedWatch = createFragment("https://m.youtube.com/watch?v=old", Constants.PAGE_WATCH);
 		final YoutubeWebview suspendedWatchWebView = mock(YoutubeWebview.class);
 		setField(suspendedWatch, "webview", suspendedWatchWebView);
 		seedTabs(tabManager, current);
@@ -308,8 +309,8 @@ public class TabManagerTest {
 		final LitePlayer player = mock(LitePlayer.class);
 		final ExtensionManager extensionManager = mock(ExtensionManager.class);
 		final TabManager tabManager = createTabManager(player, extensionManager);
-		final YoutubeFragment home = createFragment(Constant.HOME_URL, Constant.PAGE_HOME);
-		final YoutubeFragment watch = createFragment("https://m.youtube.com/watch?v=old", Constant.PAGE_WATCH);
+		final YoutubeFragment home = createFragment(Constants.HOME_URL, Constants.PAGE_HOME);
+		final YoutubeFragment watch = createFragment("https://m.youtube.com/watch?v=old", Constants.PAGE_WATCH);
 
 		when(extensionManager.isEnabled(Constant.ENABLE_IN_APP_MINI_PLAYER)).thenReturn(true);
 		when(player.canSuspendWatch()).thenReturn(true);
@@ -328,8 +329,8 @@ public class TabManagerTest {
 		final LitePlayer player = mock(LitePlayer.class);
 		final ExtensionManager extensionManager = mock(ExtensionManager.class);
 		final TabManager tabManager = createTabManager(player, extensionManager);
-		final YoutubeFragment home = createFragment(Constant.HOME_URL, Constant.PAGE_HOME);
-		final YoutubeFragment watch = createFragment("https://m.youtube.com/watch?v=old", Constant.PAGE_WATCH);
+		final YoutubeFragment home = createFragment(Constants.HOME_URL, Constants.PAGE_HOME);
+		final YoutubeFragment watch = createFragment("https://m.youtube.com/watch?v=old", Constants.PAGE_WATCH);
 
 		when(extensionManager.isEnabled(Constant.ENABLE_IN_APP_MINI_PLAYER)).thenReturn(true);
 		when(player.canSuspendWatch()).thenReturn(true);
@@ -350,7 +351,7 @@ public class TabManagerTest {
 		final LitePlayer player = mock(LitePlayer.class);
 		final ExtensionManager extensionManager = mock(ExtensionManager.class);
 		final TabManager tabManager = createTabManager(player, extensionManager);
-		final YoutubeFragment watch = createFragment("https://m.youtube.com/watch?v=old", Constant.PAGE_WATCH);
+		final YoutubeFragment watch = createFragment("https://m.youtube.com/watch?v=old", Constants.PAGE_WATCH);
 		final WebBackForwardList history = mock(WebBackForwardList.class);
 		final WebHistoryItem previousItem = mock(WebHistoryItem.class);
 
@@ -374,7 +375,7 @@ public class TabManagerTest {
 		final LitePlayer player = mock(LitePlayer.class);
 		final ExtensionManager extensionManager = mock(ExtensionManager.class);
 		final TabManager tabManager = createTabManager(player, extensionManager);
-		final YoutubeFragment watch = createFragment("https://m.youtube.com/watch?v=old", Constant.PAGE_WATCH);
+		final YoutubeFragment watch = createFragment("https://m.youtube.com/watch?v=old", Constants.PAGE_WATCH);
 		final WebBackForwardList staleSnapshot = mock(WebBackForwardList.class);
 		final WebHistoryItem stalePreviousItem = mock(WebHistoryItem.class);
 		final WebBackForwardList liveHistory = mock(WebBackForwardList.class);
@@ -399,7 +400,7 @@ public class TabManagerTest {
 
 		verify(player).enterInAppMiniPlayer();
 		verify(webview, never()).goBack();
-		assertEquals(Constant.HOME_URL, getCurrentTab(tabManager).getUrl());
+		assertEquals(Constants.HOME_URL, getCurrentTab(tabManager).getUrl());
 		assertSame(watch, getSuspendedWatch(tabManager));
 	}
 
@@ -408,8 +409,8 @@ public class TabManagerTest {
 		final LitePlayer player = mock(LitePlayer.class);
 		final ExtensionManager extensionManager = mock(ExtensionManager.class);
 		final TabManager tabManager = createTabManager(player, extensionManager);
-		final YoutubeFragment home = createFragment(Constant.HOME_URL, Constant.PAGE_HOME);
-		final YoutubeFragment watch = createFragment("https://m.youtube.com/watch?v=old", Constant.PAGE_WATCH);
+		final YoutubeFragment home = createFragment(Constants.HOME_URL, Constants.PAGE_HOME);
+		final YoutubeFragment watch = createFragment("https://m.youtube.com/watch?v=old", Constants.PAGE_WATCH);
 		final WebBackForwardList liveHistory = mock(WebBackForwardList.class);
 		final WebHistoryItem livePreviousItem = mock(WebHistoryItem.class);
 		final YoutubeWebview webview = mock(YoutubeWebview.class);
@@ -418,7 +419,7 @@ public class TabManagerTest {
 		when(player.canSuspendWatch()).thenReturn(true);
 		when(liveHistory.getCurrentIndex()).thenReturn(1);
 		when(liveHistory.getItemAtIndex(0)).thenReturn(livePreviousItem);
-		when(livePreviousItem.getUrl()).thenReturn(Constant.HOME_URL);
+		when(livePreviousItem.getUrl()).thenReturn(Constants.HOME_URL);
 		when(webview.canGoBack()).thenReturn(true);
 		when(webview.copyBackForwardList()).thenReturn(liveHistory);
 		setField(watch, "webview", webview);
