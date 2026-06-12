@@ -12,7 +12,6 @@ public final class MiniPlayerLayout {
 	private static final int LARGE_MIN_WIDTH_DP = 280;
 	private static final int LARGE_MAX_WIDTH_DP = 480;
 	private static final int OUTER_MARGIN_DP = 12;
-	private static final int MIN_BOTTOM_DOCK_DP = 56;
 
 	private MiniPlayerLayout() {
 	}
@@ -59,10 +58,6 @@ public final class MiniPlayerLayout {
 		return Math.max(Math.round(computedGapDp), 0);
 	}
 
-	static int computeBottomMarginDp(int outerMarginDp, int bottomInsetDp) {
-		return outerMarginDp + Math.max(bottomInsetDp, MIN_BOTTOM_DOCK_DP);
-	}
-
 	static Spec computeSpec(int screenWidthDp, int bottomInsetDp) {
 		return computeSpec(screenWidthDp, bottomInsetDp, NO_WIDTH_OVER_DP);
 	}
@@ -74,7 +69,7 @@ public final class MiniPlayerLayout {
 						? computeWidthDp(screenWidthDp)
 						: clampWidthDp(screenWidthDp, widthOverrideDp);
 		final int heightDp = computeHeightDp(widthDp);
-		return new Spec(widthDp, heightDp, OUTER_MARGIN_DP, computeBottomMarginDp(OUTER_MARGIN_DP, bottomInsetDp));
+		return new Spec(widthDp, heightDp, OUTER_MARGIN_DP, bottomInsetDp);
 	}
 
 	static float clampTranslation(final float translationPx,

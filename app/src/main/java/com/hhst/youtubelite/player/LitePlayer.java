@@ -599,8 +599,11 @@ public class LitePlayer {
 	private void dispatchMiniPlayerClose() {
 		final Runnable onClose = onMiniPlayerClose;
 		if (onClose == null) return;
-		stopAndCloseFromMiniPlayer();
-		onClose.run();
+
+		playerView.closeInAppMiniPlayerWithFade(() -> {
+			stopAndCloseFromMiniPlayer();
+			onClose.run();
+		});
 	}
 
 	private void cancelCurrentExtraction() {
