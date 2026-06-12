@@ -16,6 +16,9 @@
     <color name="splash_text">#FFFFFF</color>
     <color name="splash_secondary_text">#AAAAAA</color>
 
+    <color name="queue_gradient_start">#F50057</color>
+    <color name="queue_gradient_end">#3D5AFE</color>
+
     <!-- Download Chips Colors -->
     <color name="chip_active_bg">#D3E4FF</color>
     <color name="chip_active_text">#001C38</color>
@@ -27,5 +30,4 @@
     <color name="chip_paused_text">#2D3748</color>
     <color name="chip_type_bg">#F1F1F1</color>
     <color name="chip_type_text">#606060</color>
-
 </resources>

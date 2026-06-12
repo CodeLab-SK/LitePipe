@@ -9,6 +9,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.hhst.youtubelite.R;
@@ -32,12 +33,48 @@ public final class QueueAdapter extends RecyclerView.Adapter<QueueAdapter.ViewHo
 	}
 
 	public void replaceItems(@NonNull final List<QueueItem> newItems, @Nullable final String playingId) {
-		items.clear();
-		for (final QueueItem item : newItems) {
-			items.add(item.copy());
-		}
+		final String oldPlayingId = this.playingId;
 		this.playingId = playingId;
-		notifySafe(this::notifyDataSetChanged);
+
+		final List<QueueItem> copies = new ArrayList<>(newItems.size());
+		for (final QueueItem item : newItems) {
+			copies.add(item.copy());
+		}
+
+		final DiffUtil.DiffResult result = DiffUtil.calculateDiff(new DiffUtil.Callback() {
+			@Override
+			public int getOldListSize() {
+				return items.size();
+			}
+
+			@Override
+			public int getNewListSize() {
+				return copies.size();
+			}
+
+			@Override
+			public boolean areItemsTheSame(int oldItemPosition, int newItemPosition) {
+				return Objects.equals(items.get(oldItemPosition).getVideoId(), copies.get(newItemPosition).getVideoId());
+			}
+
+			@Override
+			public boolean areContentsTheSame(int oldItemPosition, int newItemPosition) {
+				QueueItem oldItem = items.get(oldItemPosition);
+				QueueItem newItem = copies.get(newItemPosition);
+				
+				boolean isOldPlaying = Objects.equals(oldItem.getVideoId(), oldPlayingId);
+				boolean isNewPlaying = Objects.equals(newItem.getVideoId(), playingId);
+
+				return isOldPlaying == isNewPlaying &&
+						Objects.equals(oldItem.getTitle(), newItem.getTitle()) &&
+						Objects.equals(oldItem.getAuthor(), newItem.getAuthor()) &&
+						Objects.equals(oldItem.getThumbnailUrl(), newItem.getThumbnailUrl());
+			}
+		});
+
+		items.clear();
+		items.addAll(copies);
+		result.dispatchUpdatesTo(this);
 	}
 
 	public int playingPos() {

@@ -17,6 +17,9 @@
     <color name="splash_text">#FFFFFF</color>
     <color name="splash_secondary_text">#AAAAAA</color>
 
+    <color name="queue_gradient_start">#880E4F</color>
+    <color name="queue_gradient_end">#1A237E</color>
+
     <!-- Download Chips Colors (Night) -->
     <color name="chip_active_bg">#004A77</color>
     <color name="chip_active_text">#D3E4FF</color>

@@ -60,7 +60,6 @@ import com.hhst.youtubelite.PlaybackService;
 import com.hhst.youtubelite.R;
 import com.hhst.youtubelite.browser.TabManager;
 import com.hhst.youtubelite.browser.YoutubeWebview;
-import com.hhst.youtubelite.downloader.core.history.DownloadHistoryRepository;
 import com.hhst.youtubelite.downloader.service.DownloadService;
 import com.hhst.youtubelite.downloader.ui.DownloadActivity;
 import com.hhst.youtubelite.downloader.ui.DownloadDialog;
@@ -121,7 +120,6 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 	@Inject YoutubeExtractor youtubeExtractor;
 	@Inject QueueRepository queueRepository;
 	@Inject QueueWarmer queueWarmer;
-	@Inject DownloadHistoryRepository historyRepository;
 	@Inject LinkDetection linkDetection;
 
 	@Nullable private PlaybackService playbackService;
@@ -159,6 +157,8 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 		@Override public void onServiceDisconnected(ComponentName n) {
 		}
 	};
+
+	private final Runnable updateQueueTask = this::updateQueueUI;
 
 	@Override
 	protected void onCreate(@Nullable final Bundle savedInstanceState) {
@@ -478,7 +478,10 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 		queueAdapter = new QueueAdapter(new QueueAdapter.Actions() {
 			@Override
 			public void onPlayRequested(@NonNull final QueueItem item) {
-				if (item.getVideoUrl() != null) tabManager.playInWatch(item.getVideoUrl());
+				if (item.getVideoUrl() != null) {
+					hideExpandedQueue();
+					tabManager.playInWatch(item.getVideoUrl());
+				}
 			}
 
 			@Override
@@ -570,7 +573,7 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 					if (DeviceUtils.isInPictureInPictureMode(MainActivity.this)) {
 						updatePictureInPictureActions();
 					}
-					updateQueueUI();
+					triggerQueueUpdate();
 				});
 			}
 
@@ -580,13 +583,18 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 					if (DeviceUtils.isInPictureInPictureMode(MainActivity.this)) {
 						updatePictureInPictureActions();
 					}
-					updateQueueUI();
+					triggerQueueUpdate();
 				});
 			}
 		});
 
-		queueRepository.addListener(this::updateQueueUI);
-		updateQueueUI();
+		queueRepository.addListener(this::triggerQueueUpdate);
+		triggerQueueUpdate();
+	}
+
+	private void triggerQueueUpdate() {
+		mainHandler.removeCallbacks(updateQueueTask);
+		mainHandler.postDelayed(updateQueueTask, 50);
 	}
 
 	private void showExpandedQueue() {
@@ -600,7 +608,7 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 	private void hideExpandedQueue() {
 		if (expandedQueueContainer != null) {
 			expandedQueueContainer.setVisibility(View.GONE);
-			updateQueueUI();
+			triggerQueueUpdate();
 		}
 	}
 
@@ -621,7 +629,7 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 
 	private void syncQueueUiVisibility(final boolean isInPictureInPictureMode) {
 		if (shouldShowQueueUi(isInPictureInPictureMode)) {
-			updateQueueUI();
+			triggerQueueUpdate();
 		} else {
 			if (queueContainer != null) queueContainer.setVisibility(View.GONE);
 			if (expandedQueueContainer != null) expandedQueueContainer.setVisibility(View.GONE);
@@ -676,42 +684,77 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 		ViewGroup.LayoutParams params = queueContainer.getLayoutParams();
 		if (params instanceof ViewGroup.MarginLayoutParams marginParams) {
 			boolean isWatch = isWatchPage();
-			if (isWatch) {
-				marginParams.bottomMargin = navigationBarHeight;
-				marginParams.leftMargin = 0;
-				marginParams.rightMargin = 0;
-			} else {
-				marginParams.bottomMargin = navigationBarHeight + ViewUtils.dpToPx(this, 16);
-				marginParams.leftMargin = ViewUtils.dpToPx(this, 8);
-				marginParams.rightMargin = ViewUtils.dpToPx(this, 8);
-			}
-		}
-		queueContainer.setLayoutParams(params);
-	}
+			int targetBottom = navigationBarHeight + (isWatch ? 0 : ViewUtils.dpToPx(this, 16));
+			int targetSide = isWatch ? 0 : ViewUtils.dpToPx(this, 8);
 
-	private void updateQueueUI() {
-		runOnUiThread(() -> {
-			if (queueContainer == null) return;
-
-			List<QueueItem> queue = queueRepository.getItems();
-			if (queue.isEmpty() || !isWatchPage()) {
-				queueContainer.setVisibility(View.GONE);
-				if (expandedQueueContainer != null) expandedQueueContainer.setVisibility(View.GONE);
+			if (marginParams.bottomMargin == targetBottom && marginParams.leftMargin == targetSide && marginParams.rightMargin == targetSide) {
 				return;
 			}
 
-			if (expandedQueueContainer != null && expandedQueueContainer.getVisibility() == View.VISIBLE) {
-				syncQueueExpandedUI(findViewById(R.id.queue_items_recycler), findViewById(R.id.queue_empty));
-			} else {
-				queueContainer.setVisibility(View.VISIBLE);
-				updateQueueBarPosition();
-			}
+			marginParams.bottomMargin = targetBottom;
+			marginParams.leftMargin = targetSide;
+			marginParams.rightMargin = targetSide;
+			queueContainer.setLayoutParams(params);
+		}
+	}
 
-			TextView titleText = findViewById(R.id.queue_title);
-			if (titleText != null && !queue.isEmpty()) {
-				titleText.setText(getString(R.string.queue_title_with_count, queue.size()));
+	private void updateQueueUI() {
+		if (queueContainer == null) return;
+
+		List<QueueItem> queue = queueRepository.getItems();
+		if (queue.isEmpty() || !isWatchPage()) {
+			if (queueContainer.getVisibility() != View.GONE) queueContainer.setVisibility(View.GONE);
+			if (expandedQueueContainer != null && expandedQueueContainer.getVisibility() != View.GONE) expandedQueueContainer.setVisibility(View.GONE);
+			return;
+		}
+
+		if (expandedQueueContainer != null && expandedQueueContainer.getVisibility() == View.VISIBLE) {
+			syncQueueExpandedUI(findViewById(R.id.queue_items_recycler), findViewById(R.id.queue_empty));
+		} else {
+			if (queueContainer.getVisibility() != View.VISIBLE) {
+				queueContainer.setVisibility(View.VISIBLE);
 			}
-		});
+			updateQueueBarPosition();
+		}
+
+		final String loadedVideoId = player.getLoadedVideoId();
+		QueueItem nextItem = null;
+		boolean inQueue = false;
+		if (loadedVideoId != null) {
+			for (int i = 0; i < queue.size(); i++) {
+				if (loadedVideoId.equals(queue.get(i).getVideoId())) {
+					inQueue = true;
+					if (i + 1 < queue.size()) {
+						nextItem = queue.get(i + 1);
+					} else if (player.getLoopMode() == PlayerLoopMode.PLAYLIST_NEXT && !queue.isEmpty()) {
+						nextItem = queue.get(0);
+					}
+					break;
+				}
+			}
+		}
+
+		if (!inQueue && !queue.isEmpty()) {
+			nextItem = queue.get(0);
+		}
+
+		TextView titleText = findViewById(R.id.queue_title);
+		if (titleText != null) {
+			titleText.setText(getString(R.string.queue_title_with_count, queue.size()));
+		}
+
+		TextView subtitleText = findViewById(R.id.queue_subtitle);
+		if (subtitleText != null) {
+			if (nextItem != null) {
+				String title = nextItem.getTitle();
+				if (title == null || title.isEmpty() || title.equals("Loading...")) {
+					title = nextItem.getVideoId();
+				}
+				subtitleText.setText(getString(R.string.next) + title);
+			} else {
+				subtitleText.setText(R.string.end_of_queue);
+			}
+		}
 	}
 
 	private boolean isWatchPage() {
@@ -733,7 +776,7 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 		super.onResume();
 		linkDetection.setAppVisible(true, this);
 		updateNavBarVisibility();
-		updateQueueUI();
+		triggerQueueUpdate();
 		if (player != null) player.refreshInternalButtonVisibility();
 		suppressNextUserLeaveHintPictureInPicture = false;
 		if (player != null && shouldRestoreMiniPlayerOnResume(player.isInAppMiniPlayer(), DeviceUtils.isInPictureInPictureMode(this))) {
@@ -936,7 +979,7 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 				fetchAndEnqueue(url);
 			}
 		}
-		updateQueueUI();
+		triggerQueueUpdate();
 	}
 
 	private void fetchAndEnqueue(String url) {
@@ -953,7 +996,7 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 				runOnUiThread(() -> {
 					Toast.makeText(this, R.string.queue_item_added, Toast.LENGTH_SHORT).show();
 					player.refreshQueueNavigationAvailability();
-					updateQueueUI();
+					triggerQueueUpdate();
 				});
 			} catch (Exception ignored) {
 				runOnUiThread(() -> Toast.makeText(this, R.string.queue_item_unavailable, Toast.LENGTH_SHORT).show());
@@ -1069,7 +1112,7 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 			}
 			if (tabManager.goBack()) {
 				updateNavBarVisibility();
-				updateQueueUI();
+				triggerQueueUpdate();
 				return;
 			}
 		}

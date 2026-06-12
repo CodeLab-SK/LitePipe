@@ -63,7 +63,10 @@ public class NavigationBar extends HorizontalScrollView {
         container.setOrientation(LinearLayout.HORIZONTAL);
         container.setGravity(Gravity.CENTER_VERTICAL);
         addView(container, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(56)));
-        kv = MMKV.defaultMMKV();
+        
+        if (!isInEditMode()) {
+            kv = MMKV.defaultMMKV();
+        }
     }
 
     public void setup(ExtensionManager extensionManager, TabManager tabManager) {
@@ -72,7 +75,7 @@ public class NavigationBar extends HorizontalScrollView {
     }
 
     public void update() {
-        if (extensionManager == null || tabManager == null) return;
+        if (extensionManager == null || tabManager == null || (kv == null && !isInEditMode())) return;
 
         String currentUrl = tabManager.getWebview() != null ? tabManager.getWebview().getUrl() : null;
         String pageClass = UrlUtils.getPageClass(currentUrl);
@@ -93,7 +96,10 @@ public class NavigationBar extends HorizontalScrollView {
 
         container.removeAllViews();
 
-        String orderStr = kv.decodeString(com.hhst.youtubelite.extension.Constant.NAV_BAR_ORDER, com.hhst.youtubelite.extension.Constant.DEFAULT_NAV_BAR_ORDER);
+        String orderStr = com.hhst.youtubelite.extension.Constant.DEFAULT_NAV_BAR_ORDER;
+        if (kv != null) {
+            orderStr = kv.decodeString(com.hhst.youtubelite.extension.Constant.NAV_BAR_ORDER, com.hhst.youtubelite.extension.Constant.DEFAULT_NAV_BAR_ORDER);
+        }
         if (orderStr == null) orderStr = com.hhst.youtubelite.extension.Constant.DEFAULT_NAV_BAR_ORDER;
         String[] order = orderStr.split(",");
 

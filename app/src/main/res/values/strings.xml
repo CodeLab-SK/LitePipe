@@ -135,13 +135,14 @@
     <string name="queue_item_added">Added to queue</string>
     <string name="queue_item_removed">Removed from queue</string>
     <string name="queue_item_unavailable">Couldn\'t get video Info</string>
-    <string name="queue_now_playing">Now playing</string>
     <string name="queue_unknown_author">Unknown author</string>
     <string name="remove_queue_item">Remove queue item</string>
     <string name="remove_queue_item_confirmation">Remove this queue item?</string>
     <string name="clear_queue_confirmation">Clear playback queue?</string>
     <string name="remove_from_queue">Remove from Queue</string>
     <string name="add_to_queue">Add to Queue</string>
+    <string name="end_of_queue">End of queue</string>
+    <string name="next">"Next:"</string>
 
     <string name="download">Download</string>
     <string name="downloads_default_title">Downloads</string>

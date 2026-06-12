@@ -30,6 +30,9 @@ public final class QueueRepository {
 	private final Gson gson;
 	@NonNull
 	private final List<QueueInvalidationListener> listeners = new ArrayList<>();
+	
+	@Nullable
+	private List<QueueItem> cachedItems;
 
 	@Inject
 	public QueueRepository(@NonNull final MMKV mmkv, @NonNull final Gson gson) {
@@ -38,7 +41,7 @@ public final class QueueRepository {
 	}
 
 	public synchronized boolean isEnabled() {
-		return mmkv.decodeBool(KEY_QUEUE_ENABLED, false);
+		return mmkv.decodeBool(KEY_QUEUE_ENABLED, true);
 	}
 
 	public void setEnabled(final boolean enabled) {
@@ -56,7 +59,7 @@ public final class QueueRepository {
 
 	@NonNull
 	public synchronized List<QueueItem> getItems() {
-		final List<QueueItem> items = readItems();
+		final List<QueueItem> items = getOrReadItems();
 		final List<QueueItem> copies = new ArrayList<>(items.size());
 		for (final QueueItem item : items) {
 			copies.add(item.copy());
@@ -66,7 +69,7 @@ public final class QueueRepository {
 
 	public void add(@NonNull final QueueItem item) {
 		synchronized (this) {
-			final List<QueueItem> items = readItems();
+			final List<QueueItem> items = getOrReadItems();
 			int existingIndex = -1;
 			for (int i = 0; i < items.size(); i++) {
 				if (sameVideo(items.get(i), item)) {
@@ -80,6 +83,7 @@ public final class QueueRepository {
 				items.add(item.copy());
 			}
 			writeItems(items);
+			mmkv.encode(KEY_QUEUE_ENABLED, true);
 		}
 		notifyListeners();
 	}
@@ -87,7 +91,7 @@ public final class QueueRepository {
 	public boolean remove(@NonNull final String videoId) {
 		boolean removed = false;
 		synchronized (this) {
-			final List<QueueItem> items = readItems();
+			final List<QueueItem> items = getOrReadItems();
 			final Iterator<QueueItem> iterator = items.iterator();
 			while (iterator.hasNext()) {
 				if (Objects.equals(iterator.next().getVideoId(), videoId)) {
@@ -109,7 +113,7 @@ public final class QueueRepository {
 	public boolean move(final int fromIndex, final int toIndex) {
 		boolean moved = false;
 		synchronized (this) {
-			final List<QueueItem> items = readItems();
+			final List<QueueItem> items = getOrReadItems();
 			if (isValidIndex(fromIndex, items.size()) && isValidIndex(toIndex, items.size()) && fromIndex != toIndex) {
 				final QueueItem item = items.remove(fromIndex);
 				items.add(toIndex, item);
@@ -125,18 +129,19 @@ public final class QueueRepository {
 
 	public synchronized boolean containsVideo(@Nullable final String videoId) {
 		if (videoId == null) return false;
-		for (final QueueItem item : readItems()) {
+		for (final QueueItem item : getOrReadItems()) {
 			if (Objects.equals(item.getVideoId(), videoId)) return true;
 		}
 		return false;
 	}
 
 	public synchronized boolean hasItems() {
-		return !readItems().isEmpty();
+		return !getOrReadItems().isEmpty();
 	}
 
 	public void clear() {
 		synchronized (this) {
+			cachedItems = null;
 			mmkv.removeValueForKey(KEY_QUEUE_ITEMS);
 		}
 		notifyListeners();
@@ -144,7 +149,7 @@ public final class QueueRepository {
 
 	@Nullable
 	public synchronized QueueItem findRelative(@Nullable final String videoId, final int offset) {
-		final List<QueueItem> items = readItems();
+		final List<QueueItem> items = getOrReadItems();
 		if (items.isEmpty() || offset == 0) return null;
 		final int index = indexOf(items, videoId);
 		if (index < 0) {
@@ -153,7 +158,7 @@ public final class QueueRepository {
 		final int target = index + offset;
 		if (target < 0) return null;
 		if (target >= items.size()) {
-			if (offset > 0 && items.size() > 1) {
+			if (offset > 0) {
 				return items.get(target % items.size()).copy();
 			}
 			return null;
@@ -163,7 +168,7 @@ public final class QueueRepository {
 
 	@Nullable
 	public synchronized QueueItem findRandom(@Nullable final String videoId) {
-		final List<QueueItem> items = readItems();
+		final List<QueueItem> items = getOrReadItems();
 		if (items.isEmpty()) return null;
 		if (items.size() == 1) return items.get(0).copy();
 		final int index = indexOf(items, videoId);
@@ -191,6 +196,13 @@ public final class QueueRepository {
 	}
 
 	@NonNull
+	private synchronized List<QueueItem> getOrReadItems() {
+		if (cachedItems != null) return cachedItems;
+		cachedItems = readItems();
+		return cachedItems;
+	}
+
+	@NonNull
 	private List<QueueItem> readItems() {
 		final String json = mmkv.decodeString(KEY_QUEUE_ITEMS, null);
 		if (json == null || json.isBlank()) return new ArrayList<>();
@@ -214,6 +226,7 @@ public final class QueueRepository {
 	}
 
 	private void writeItems(@NonNull final List<QueueItem> items) {
+		cachedItems = items;
 		mmkv.encode(KEY_QUEUE_ITEMS, gson.toJson(items, LIST_TYPE));
 	}
 }
