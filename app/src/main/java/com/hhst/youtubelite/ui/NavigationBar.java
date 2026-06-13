@@ -84,6 +84,7 @@ public class NavigationBar extends HorizontalScrollView {
         boolean showInShorts = extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.SHOW_NAV_BAR_IN_SHORTS);
 
         boolean shouldShow = pageClass.equals(Constants.PAGE_HOME) ||
+                pageClass.equals(Constants.PAGE_MUSIC) ||
                 (isShorts && showInShorts) ||
                 pageClass.equals(Constants.PAGE_SUBSCRIPTIONS) ||
                 pageClass.equals(Constants.PAGE_LIBRARY) ||
@@ -116,6 +117,16 @@ public class NavigationBar extends HorizontalScrollView {
                                 tabManager.getWebview().reload();
                             } else {
                                 tabManager.openTab(Constants.HOME_URL, Constants.PAGE_HOME);
+                            }
+                        }));
+                    break;
+                case "music":
+                    if (extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.NAV_BAR_SHOW_MUSIC))
+                        visibleItems.add(new NavItemInfo(R.drawable.ic_music, R.string.nav_music, pageClass.equals(Constants.PAGE_MUSIC), () -> {
+                            if (tabManager.getWebview() != null && Constants.MUSIC_URL.equals(tabManager.getWebview().getUrl())) {
+                                tabManager.getWebview().reload();
+                            } else {
+                                tabManager.openTab(Constants.MUSIC_URL, Constants.PAGE_MUSIC);
                             }
                         }));
                     break;

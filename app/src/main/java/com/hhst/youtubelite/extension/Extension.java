@@ -16,6 +16,7 @@ public record Extension(String key, int description, int helpText, List<Extensio
             new Extension(null, R.string.general, List.of(
                 new Extension(NAV_BAR_ORDER, R.string.custom_navigation, List.of(
                     new Extension(NAV_BAR_SHOW_HOME, R.string.nav_home, null),
+                    new Extension(NAV_BAR_SHOW_MUSIC, R.string.nav_music, null),
                     new Extension(NAV_BAR_SHOW_SHORTS, R.string.nav_shorts, null),
                     new Extension(NAV_BAR_SHOW_SUBSCRIPTIONS, R.string.nav_subscriptions, null),
                     new Extension(NAV_BAR_SHOW_LIBRARY, R.string.nav_library, null),

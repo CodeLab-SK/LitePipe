@@ -5,13 +5,14 @@ import java.util.Map;
 public final class Constant {
     // Nav Bar
     public static final String NAV_BAR_SHOW_HOME = "nav_bar_show_home";
+    public static final String NAV_BAR_SHOW_MUSIC = "nav_bar_show_music";
     public static final String NAV_BAR_SHOW_SHORTS = "nav_bar_show_shorts";
     public static final String NAV_BAR_SHOW_SUBSCRIPTIONS = "nav_bar_show_subscriptions";
     public static final String NAV_BAR_SHOW_LIBRARY = "nav_bar_show_library";
     public static final String NAV_BAR_SHOW_DOWNLOADS = "nav_bar_show_downloads";
     public static final String NAV_BAR_SHOW_SETTINGS = "nav_bar_show_settings";
     public static final String NAV_BAR_ORDER = "nav_bar_order";
-    public static final String DEFAULT_NAV_BAR_ORDER = "home,shorts,subscriptions,library,downloads,settings";
+    public static final String DEFAULT_NAV_BAR_ORDER = "home,music,shorts,subscriptions,library,downloads,settings";
     public static final String HIDE_NAV_BAR_LABELS = "hide_nav_bar_labels";
 
     // Action Bar
@@ -93,6 +94,7 @@ public final class Constant {
 
     public static final Map<String, Object> DEFAULT_PREFERENCES = Map.ofEntries(
             Map.entry(NAV_BAR_SHOW_HOME, true),
+            Map.entry(NAV_BAR_SHOW_MUSIC, true),
             Map.entry(NAV_BAR_SHOW_SHORTS, true),
             Map.entry(NAV_BAR_SHOW_SUBSCRIPTIONS, true),
             Map.entry(NAV_BAR_SHOW_LIBRARY, true),

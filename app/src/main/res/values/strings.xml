@@ -50,6 +50,7 @@
     <string name="restart">Restart</string>
 
     <string name="nav_home">Home</string>
+    <string name="nav_music">Music</string>
     <string name="nav_shorts">Shorts</string>
     <string name="nav_subscriptions">Subscriptions</string>
     <string name="nav_library">You</string>
