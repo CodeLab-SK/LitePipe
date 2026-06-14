@@ -99,6 +99,7 @@ dependencies {
     annotationProcessor(libs.hilt.compiler)
     implementation(libs.commons.io)
     implementation(libs.documentfile)
+    implementation(libs.glide.transformations)
     testImplementation(libs.junit)
     testImplementation(libs.mockito.core)
     androidTestImplementation(libs.ext.junit)

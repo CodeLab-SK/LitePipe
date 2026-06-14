@@ -20,6 +20,7 @@ media = "1.7.1"
 newpipeextractor = "v0.26.0-hyde4"
 photoview = "2.3.0"
 glide = "4.16.0"
+glideTransformations = "4.3.0"
 r8 = "9.1.31"
 swiperefreshlayout = "1.2.0"
 webkit = "1.15.0"
@@ -60,6 +61,7 @@ newpipeextractor = { module = "com.github.HydeYYHH:NewPipeExtractor", version.re
 photoview = { module = "com.github.chrisbanes:PhotoView", version.ref = "photoview" }
 glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }
 glide-compiler = { module = "com.github.bumptech.glide:compiler", version.ref = "glide" }
+glide-transformations = { module = "jp.wasabeef:glide-transformations", version.ref = "glideTransformations" }
 r8 = { module = "com.android.tools:r8", version.ref = "r8" }
 swiperefreshlayout = { module = "androidx.swiperefreshlayout:swiperefreshlayout", version.ref = "swiperefreshlayout" }
 webkit = { group = "androidx.webkit", name = "webkit", version.ref = "webkit" }
@@ -74,6 +76,7 @@ lifecycle-process = { group = "androidx.lifecycle", name = "lifecycle-process", 
 lifecycle-livedata = { group = "androidx.lifecycle", name = "lifecycle-livedata", version.ref = "lifecycleProcess" }
 lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmodel", version.ref = "lifecycleProcess" }
 androidx-media3-exoplayer-hls = { group = "androidx.media3", name = "media3-exoplayer-hls", version.ref = "media3ExoplayerHls" }
+
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
