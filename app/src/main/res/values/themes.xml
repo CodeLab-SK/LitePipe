@@ -119,7 +119,7 @@
         <item name="android:textAppearance">?attr/textAppearanceTitleMedium</item>
         <item name="android:textColor">?attr/colorOnSurface</item>
         <item name="android:drawablePadding">16dp</item>
-        <item name="drawableTint">?attr/colorOnSurfaceVariant</item>
+        <item name="android:drawableTint">?attr/colorOnSurfaceVariant</item>
         <item name="android:clickable">false</item>
         <item name="android:focusable">false</item>
     </style>

@@ -45,6 +45,7 @@
                     style="@style/AppCardItem"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:drawableStart="@drawable/ic_tune"
                     android:text="@string/general" />
             </com.google.android.material.card.MaterialCardView>
 
@@ -59,6 +60,7 @@
                     style="@style/AppCardItem"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:drawableStart="@drawable/ic_shorts"
                     android:text="@string/shorts" />
             </com.google.android.material.card.MaterialCardView>
 
@@ -73,6 +75,7 @@
                     style="@style/AppCardItem"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:drawableStart="@drawable/ic_play_circle"
                     android:text="@string/player" />
             </com.google.android.material.card.MaterialCardView>
 
@@ -87,6 +90,7 @@
                     style="@style/AppCardItem"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:drawableStart="@drawable/ic_sponsorblock"
                     android:text="@string/sponsorblock" />
             </com.google.android.material.card.MaterialCardView>
 
@@ -101,6 +105,7 @@
                     style="@style/AppCardItem"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:drawableStart="@drawable/ic_download"
                     android:text="@string/download" />
             </com.google.android.material.card.MaterialCardView>
 
@@ -122,6 +127,8 @@
                     style="@style/AppCardItem"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:drawableStart="@drawable/ic_refresh"
+                    android:drawableTint="?attr/colorError"
                     android:text="@string/reset"
                     android:textColor="?attr/colorError" />
             </com.google.android.material.card.MaterialCardView>
