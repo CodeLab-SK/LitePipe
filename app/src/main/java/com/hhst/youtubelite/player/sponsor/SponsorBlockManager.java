@@ -23,6 +23,7 @@ import java.util.Set;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
@@ -42,13 +43,25 @@ public final class SponsorBlockManager {
 	private final PlayerPreferences preferences;
 	@Getter
 	@NonNull
-	private volatile List<long[]> segments = Collections.emptyList();
+	private volatile List<Segment> segments = Collections.emptyList();
 
 	@Inject
 	public SponsorBlockManager(@NonNull final OkHttpClient client, @NonNull final Gson gson, @NonNull final PlayerPreferences preferences) {
 		this.client = client;
 		this.gson = gson;
 		this.preferences = preferences;
+	}
+
+	@Getter
+	@AllArgsConstructor
+	public static class Segment {
+		private final long start;
+		private final long end;
+		private final String category;
+
+		public long[] asPair() {
+			return new long[]{start, end};
+		}
 	}
 
 
@@ -99,7 +112,7 @@ public final class SponsorBlockManager {
 			return;
 		}
 
-		final List<long[]> newSegments = new ArrayList<>();
+		final List<Segment> newSegments = new ArrayList<>();
 		final JsonArray root = rootElement.getAsJsonArray();
 
 		for (final JsonElement el : root) {
@@ -116,14 +129,14 @@ public final class SponsorBlockManager {
 						long start = (long) (pair.get(0).getAsDouble() * 1000);
 						long end = (long) (pair.get(1).getAsDouble() * 1000);
 						if (end > start) {
-							newSegments.add(new long[]{start, end});
+							newSegments.add(new Segment(start, end, seg.get("category").getAsString()));
 						}
 					}
 				}
 			}
 		}
 		
-		newSegments.sort(Comparator.comparingLong(a -> a[0]));
+		newSegments.sort(Comparator.comparingLong(Segment::getStart));
 
 		Log.d(TAG, "Loaded " + newSegments.size() + " segments for " + videoId);
 		segments = newSegments;

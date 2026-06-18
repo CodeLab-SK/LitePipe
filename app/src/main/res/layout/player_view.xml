@@ -385,12 +385,13 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|center_horizontal"
-        android:layout_marginBottom="120dp"
+        android:layout_marginBottom="40dp"
         android:background="@drawable/bg_gesture_hint"
-        android:padding="12dp"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="4dp"
         android:text="@string/undo_skip"
         android:textColor="@android:color/white"
-        android:textStyle="bold"
+        android:textSize="12sp"
         android:visibility="gone" />
 
     <com.google.android.material.card.MaterialCardView

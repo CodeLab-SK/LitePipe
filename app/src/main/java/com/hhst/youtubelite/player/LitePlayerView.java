@@ -954,22 +954,21 @@ public class LitePlayerView extends PlayerView {
 	}
 
 	public void updateSkipMarkers(long duration, TimeUnit unit) {
-		List<long[]> segs = sponsor.getSegments();
-		List<long[]> validSegs = new ArrayList<>();
-		for (long[] seg : segs) if (seg != null && seg.length >= 2) validSegs.add(seg);
+		List<SponsorBlockManager.Segment> segs = sponsor.getSegments();
 
 		SponsorOverlayView layer = findViewById(R.id.sponsor_overlay);
-		if (layer != null) layer.setData(validSegs.isEmpty() ? null : validSegs, duration, unit);
+		if (layer != null) layer.setData(segs.isEmpty() ? null : segs, duration, unit);
 
 		DefaultTimeBar bar = findViewById(R.id.exo_progress);
 		if (bar != null) {
-			if (validSegs.isEmpty()) {
+			if (segs.isEmpty()) {
 				bar.setAdGroupTimesMs(null, null, 0);
 			} else {
-				long[] times = new long[validSegs.size() * 2];
-				for (int i = 0; i < validSegs.size(); i++) {
-					times[i * 2] = validSegs.get(i)[0];
-					times[i * 2 + 1] = validSegs.get(i)[1];
+				long[] times = new long[segs.size() * 2];
+				for (int i = 0; i < segs.size(); i++) {
+					SponsorBlockManager.Segment seg = segs.get(i);
+					times[i * 2] = seg.getStart();
+					times[i * 2 + 1] = seg.getEnd();
 				}
 				bar.setAdGroupTimesMs(times, new boolean[times.length], times.length);
 			}

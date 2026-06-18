@@ -88,7 +88,7 @@ public class Engine {
 	private static final String TAG = "Engine";
 	static final String NO_PLAYABLE_SOURCE_MESSAGE = "No playable stream found";
 	private static final int SAFE_ZONE_MS = 5000;
-	private static final long SYNC_INTERVAL_MS = 30000;
+	private static final long SYNC_INTERVAL_MS = 2000;
 
 	@NonNull
 	private final ExoPlayer player;
@@ -120,7 +120,7 @@ public class Engine {
 			long pos = player.getCurrentPosition();
 			long duration = player.getDuration();
 
-			if (videoId != null && duration > 0 
+			if (videoId != null && duration > 0
 					&& prefs.getExtensionManager().isEnabled(Constant.REMEMBER_LAST_POSITION)
 					&& !IncognitoManager.getInstance().isIncognito()) {
 				if (pos > SAFE_ZONE_MS && pos < duration - SAFE_ZONE_MS) {
@@ -140,13 +140,13 @@ public class Engine {
 				playerView.updateRemainingTime(pos, duration, player.getPlaybackParameters().speed);
 			}
 
-			List<long[]> segments = sponsor.getSegments();
-			for (final long[] segment : segments) {
-				if (pos >= segment[0] && pos < segment[1]) {
+			List<SponsorBlockManager.Segment> segments = sponsor.getSegments();
+			for (final SponsorBlockManager.Segment segment : segments) {
+				if (pos >= segment.getStart() && pos < segment.getEnd()) {
 					if (sponsorListener != null) {
 						sponsorListener.onSponsorDetected(segment);
 					} else {
-						player.seekTo(segment[1]);
+						player.seekTo(segment.getEnd());
 					}
 					break;
 				}
@@ -157,7 +157,7 @@ public class Engine {
 	@Nullable
 	private VideoDetails videoDetails;
 	@Getter
-    @NonNull
+	@NonNull
 	private List<StreamSegment> segments = List.of();
 	@NonNull
 	private List<SubtitlesStream> subtitles = List.of();
@@ -178,12 +178,12 @@ public class Engine {
 
 	@Inject
 	public Engine(@NonNull @ApplicationContext Context context,
-	              @NonNull LitePlayerView playerView,
-	              @Nullable SimpleCache simpleCache,
-	              @NonNull PlayerPreferences prefs,
-	              @NonNull TabManager tabManager,
-	              @NonNull SponsorBlockManager sponsor,
-	              @NonNull QueueRepository queueRepository) {
+				  @NonNull LitePlayerView playerView,
+				  @Nullable SimpleCache simpleCache,
+				  @NonNull PlayerPreferences prefs,
+				  @NonNull TabManager tabManager,
+				  @NonNull SponsorBlockManager sponsor,
+				  @NonNull QueueRepository queueRepository) {
 		this.playerView = playerView;
 		this.prefs = prefs;
 		this.tabManager = tabManager;
@@ -191,21 +191,21 @@ public class Engine {
 		this.queueRepository = queueRepository;
 		this.sources = new PlayerDataSource(simpleCache);
 		DefaultTrackSelector trackSelector = new DefaultTrackSelector(context, new AdaptiveTrackSelection.Factory());
-		
+
 		this.player = new ExoPlayer.Builder(context)
-						.setTrackSelector(trackSelector)
-						.setLoadControl(PlayerLoadControl.create())
-						.setAudioAttributes(new AudioAttributes.Builder()
-										.setUsage(C.USAGE_MEDIA)
-										.setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
-										.build(), true)
-						.setWakeMode(C.WAKE_MODE_NETWORK)
-						.setHandleAudioBecomingNoisy(true)
-						.setUsePlatformDiagnostics(false)
-						.setMediaSourceFactory(
-										new DefaultMediaSourceFactory(context)
-														.setLiveMaxSpeed(1.0f)
-						).build();
+				.setTrackSelector(trackSelector)
+				.setLoadControl(PlayerLoadControl.create())
+				.setAudioAttributes(new AudioAttributes.Builder()
+						.setUsage(C.USAGE_MEDIA)
+						.setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+						.build(), true)
+				.setWakeMode(C.WAKE_MODE_NETWORK)
+				.setHandleAudioBecomingNoisy(true)
+				.setUsePlatformDiagnostics(false)
+				.setMediaSourceFactory(
+						new DefaultMediaSourceFactory(context)
+								.setLiveMaxSpeed(1.0f)
+				).build();
 		this.player.addListener(new Player.Listener() {
 
 			@Override
@@ -229,6 +229,11 @@ public class Engine {
 						playerView.updateSkipMarkers(duration, TimeUnit.MILLISECONDS);
 						playerView.updateRemainingTime(player.getCurrentPosition(), duration, player.getPlaybackParameters().speed);
 					}
+
+					String watchUrl = tabManager.getWatchUrl();
+					if (watchUrl != null && UrlUtils.isMusicUrl(watchUrl)) {
+						tabManager.evalWatchJs("if(window.__syncNativeReady) window.__syncNativeReady();", null);
+					}
 				}
 			}
 
@@ -238,6 +243,15 @@ public class Engine {
 				if (isPlaying) {
 					handler.post(onTimeUpdate);
 					triggerSync();
+				}
+
+				String watchUrl = tabManager.getWatchUrl();
+				if (watchUrl != null && UrlUtils.isMusicUrl(watchUrl)) {
+					if (isPlaying) {
+						tabManager.evalWatchJs("if(window.__syncNativePlay) window.__syncNativePlay();", null);
+					} else {
+						tabManager.evalWatchJs("if(window.__syncNativePause) window.__syncNativePause();", null);
+					}
 				}
 			}
 
@@ -259,6 +273,10 @@ public class Engine {
 				}
 				if (reason == Player.DISCONTINUITY_REASON_SEEK) {
 					triggerSync(newPosition.positionMs);
+					String watchUrl = tabManager.getWatchUrl();
+					if (watchUrl != null && UrlUtils.isMusicUrl(watchUrl)) {
+						tabManager.evalWatchJs(String.format(Locale.US, "if(window.__syncNativeSeek) window.__syncNativeSeek(%d);", newPosition.positionMs / 1000), null);
+					}
 				}
 			}
 
@@ -335,11 +353,11 @@ public class Engine {
 
 	@Nullable
 	private static StreamCandidate findAudioCandidate(@NonNull StreamCatalog catalog,
-	                                                  @NonNull AudioStream stream) {
+													  @NonNull AudioStream stream) {
 		String content = stream.getContent();
 		for (StreamCandidate candidate : catalog.getAudioCandidates()) {
 			if (candidate.getAudioStream() != null
-							&& content.equals(candidate.getAudioStream().getContent())) {
+					&& content.equals(candidate.getAudioStream().getContent())) {
 				return candidate;
 			}
 		}
@@ -349,52 +367,52 @@ public class Engine {
 	static String buildPlaylistNavigationScript(int playlistOffset) {
 		boolean nextNavigation = playlistOffset > 0;
 		return """
-						(function(){
-						const playlistContents=globalThis.ytInitialData?.contents?.singleColumnWatchNextResults?.playlist?.playlist?.contents;
-						if(!Array.isArray(playlistContents) || playlistContents.length===0) return 'missing-playlist';
-						const watchUrl=new URL(location.href);
-						const videoId=watchUrl.searchParams.get('v') ?? globalThis.ytInitialPlayerResponse?.videoDetails?.videoId;
-						if(!videoId) return 'missing-current-video-id';
-						const index=playlistContents.findIndex(item => item?.playlistPanelVideoRenderer?.videoId === videoId);
-						if(index < 0) return 'missing-current-video';
-						let targetIndex;
-						if (__NEXT_NAVIGATION__) {
-							targetIndex = (index + 1) % playlistContents.length;
-						} else {
-							if (index === 0) return 'playlist-head';
-							targetIndex = index - 1;
-						}
-						const targetVideo=playlistContents[targetIndex]?.playlistPanelVideoRenderer;
-						const targetUrl=targetVideo?.navigationEndpoint?.commandMetadata?.webCommandMetadata?.url;
-						if(typeof targetUrl !== 'string' || targetUrl.length === 0) return 'missing-target-url';
-						location.href = new URL(targetUrl, location.origin).toString();
-						return 'navigating';
-						})();
-						""".replace("__NEXT_NAVIGATION__", Boolean.toString(nextNavigation));
+                        (function(){
+                        const playlistContents=globalThis.ytInitialData?.contents?.singleColumnWatchNextResults?.playlist?.playlist?.contents;
+                        if(!Array.isArray(playlistContents) || playlistContents.length===0) return 'missing-playlist';
+                        const watchUrl=new URL(location.href);
+                        const videoId=watchUrl.searchParams.get('v') ?? globalThis.ytInitialPlayerResponse?.videoDetails?.videoId;
+                        if(!videoId) return 'missing-current-video-id';
+                        const index=playlistContents.findIndex(item => item?.playlistPanelVideoRenderer?.videoId === videoId);
+                        if(index < 0) return 'missing-current-video';
+                        let targetIndex;
+                        if (__NEXT_NAVIGATION__) {
+                            targetIndex = (index + 1) % playlistContents.length;
+                        } else {
+                            if (index === 0) return 'playlist-head';
+                            targetIndex = index - 1;
+                        }
+                        const targetVideo=playlistContents[targetIndex]?.playlistPanelVideoRenderer;
+                        const targetUrl=targetVideo?.navigationEndpoint?.commandMetadata?.webCommandMetadata?.url;
+                        if(typeof targetUrl !== 'string' || targetUrl.length === 0) return 'missing-target-url';
+                        location.href = new URL(targetUrl, location.origin).toString();
+                        return 'navigating';
+                        })();
+                        """.replace("__NEXT_NAVIGATION__", Boolean.toString(nextNavigation));
 	}
 
 	static String buildRandomPlaylistNavigationScript() {
 		return """
-						(function(){
-						const playlistContents=globalThis.ytInitialData?.contents?.singleColumnWatchNextResults?.playlist?.playlist?.contents;
-						if(!Array.isArray(playlistContents) || playlistContents.length===0) return 'missing-playlist';
-						const watchUrl=new URL(location.href);
-						const videoId=watchUrl.searchParams.get('v') ?? globalThis.ytInitialPlayerResponse?.videoDetails?.videoId;
-						if(!videoId) return 'missing-current-video-id';
-						const i=playlistContents.findIndex(item => item?.playlistPanelVideoRenderer?.videoId === videoId);
-						if(i < 0) return 'missing-current-video';
-						const candidateIndices=playlistContents
-							.map((item,index)=>item?.playlistPanelVideoRenderer ? index : -1)
-							.filter(index=>index >= 0 && (playlistContents.length === 1 || index !== i));
-						if(candidateIndices.length === 0) return 'missing-random-target';
-						const targetIndex=candidateIndices[Math.floor(Math.random() * candidateIndices.length)];
-						const targetVideo=playlistContents[targetIndex]?.playlistPanelVideoRenderer;
-						const targetUrl=targetVideo?.navigationEndpoint?.commandMetadata?.webCommandMetadata?.url;
-						if(typeof targetUrl !== 'string' || targetUrl.length === 0) return 'missing-target-url';
-						location.href = new URL(targetUrl, location.origin).toString();
-						return 'navigating';
-						})();
-						""";
+                        (function(){
+                        const playlistContents=globalThis.ytInitialData?.contents?.singleColumnWatchNextResults?.playlist?.playlist?.contents;
+                        if(!Array.isArray(playlistContents) || playlistContents.length===0) return 'missing-playlist';
+                        const watchUrl=new URL(location.href);
+                        const videoId=watchUrl.searchParams.get('v') ?? globalThis.ytInitialPlayerResponse?.videoDetails?.videoId;
+                        if(!videoId) return 'missing-current-video-id';
+                        const i=playlistContents.findIndex(item => item?.playlistPanelVideoRenderer?.videoId === videoId);
+                        if(i < 0) return 'missing-current-video';
+                        const candidateIndices=playlistContents
+                            .map((item,index)=>item?.playlistPanelVideoRenderer ? index : -1)
+                            .filter(index=>index >= 0 && (playlistContents.length === 1 || index !== i));
+                        if(candidateIndices.length === 0) return 'missing-random-target';
+                        const targetIndex=candidateIndices[Math.floor(Math.random() * candidateIndices.length)];
+                        const targetVideo=playlistContents[targetIndex]?.playlistPanelVideoRenderer;
+                        const targetUrl=targetVideo?.navigationEndpoint?.commandMetadata?.webCommandMetadata?.url;
+                        if(typeof targetUrl !== 'string' || targetUrl.length === 0) return 'missing-target-url';
+                        location.href = new URL(targetUrl, location.origin).toString();
+                        return 'navigating';
+                        })();
+                        """;
 	}
 
 	private boolean isShortVideo() {
@@ -434,7 +452,6 @@ public class Engine {
 		this.player.setMediaSource(PlaybackSourceFactory.create(sources, details, plan));
 		this.player.setPlaybackParameters(new PlaybackParameters(this.prefs.getSpeed()));
 
-
 		if (prefs.getExtensionManager().isEnabled(Constant.REMEMBER_LAST_POSITION) && !IncognitoManager.getInstance().isIncognito()) {
 			long resumePos = prefs.getResumePosition(videoId);
 			if (resumePos > SAFE_ZONE_MS && resumePos < duration - SAFE_ZONE_MS) {
@@ -445,6 +462,11 @@ public class Engine {
 		this.player.prepare();
 		this.player.setPlayWhenReady(true);
 		lastSyncTime = 0;
+
+		String watchUrl = tabManager.getWatchUrl();
+		if (watchUrl != null && UrlUtils.isMusicUrl(watchUrl)) {
+			tabManager.evalWatchJs("if(window.__syncNativeLoading) window.__syncNativeLoading();", null);
+		}
 	}
 
 	public void playLocal(@NonNull Uri uri, @Nullable String title, @Nullable List<DownloadRecord> subtitles) {
@@ -462,7 +484,7 @@ public class Engine {
 				.setMediaMetadata(new MediaMetadata.Builder()
 						.setTitle(title)
 						.build());
-		
+
 		if (subtitles != null && !subtitles.isEmpty()) {
 			List<MediaItem.SubtitleConfiguration> configs = new ArrayList<>();
 			for (DownloadRecord sub : subtitles) {
@@ -478,7 +500,7 @@ public class Engine {
 			}
 			builder.setSubtitleConfigurations(configs);
 		}
-		
+
 		this.player.setMediaItem(builder.build());
 		this.player.setPlaybackParameters(new PlaybackParameters(this.prefs.getSpeed()));
 		this.player.prepare();
@@ -488,28 +510,28 @@ public class Engine {
 	public void addLocalSubtitle(@NonNull Uri uri, @NonNull String label) {
 		MediaItem currentItem = player.getCurrentMediaItem();
 		if (currentItem == null) return;
-		
+
 		String mime = playerView.getContext().getContentResolver().getType(uri);
 		if (mime == null || mime.equals("application/octet-stream") || mime.equals("text/plain")) {
 			mime = inferSubtitleMime(label);
 		}
-		
+
 		MediaItem.SubtitleConfiguration subConfig = new MediaItem.SubtitleConfiguration.Builder(uri)
 				.setMimeType(mime)
 				.setLabel(label)
 				.setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
 				.build();
-				
+
 		List<MediaItem.SubtitleConfiguration> subs = new ArrayList<>();
 		if (currentItem.localConfiguration != null) {
 			subs.addAll(currentItem.localConfiguration.subtitleConfigurations);
 		}
 		subs.add(subConfig);
-		
+
 		MediaItem newItem = currentItem.buildUpon()
 				.setSubtitleConfigurations(subs)
 				.build();
-		
+
 		long pos = player.getCurrentPosition();
 		boolean playWhenReady = player.getPlayWhenReady();
 		player.setMediaItem(newItem, false);
@@ -530,16 +552,16 @@ public class Engine {
 		}
 		rememberFailedAdaptiveCandidates(state.plan());
 		PlaybackPlan adaptiveFallback = PlaybackPlanner.adaptiveFallbackPlan(
-						state.deliveries(),
-						prefs.getQuality(),
-						null,
-						this::isFailedAdaptiveCandidate);
+				state.deliveries(),
+				prefs.getQuality(),
+				null,
+				this::isFailedAdaptiveCandidate);
 		if (adaptiveFallback != null) {
 			return recoverWithPlan(state, adaptiveFallback, reason, false);
 		}
 		PlaybackPlan muxedFallback = PlaybackPlanner.muxedFallbackPlan(
-						state.deliveries(),
-						prefs.getQuality());
+				state.deliveries(),
+				prefs.getQuality());
 		if (muxedFallback == null) {
 			return false;
 		}
@@ -547,9 +569,9 @@ public class Engine {
 	}
 
 	private boolean recoverWithPlan(@NonNull State state,
-	                                @NonNull PlaybackPlan fallback,
-	                                @NonNull PlaybackRecoveryReason reason,
-	                                boolean rememberVideoFallback) {
+									@NonNull PlaybackPlan fallback,
+									@NonNull PlaybackRecoveryReason reason,
+									boolean rememberVideoFallback) {
 		long position = Math.max(0L, player.getCurrentPosition());
 		PlaybackParameters speed = player.getPlaybackParameters();
 		boolean playWhenReady = player.getPlayWhenReady();
@@ -557,9 +579,9 @@ public class Engine {
 			playbackPlan = fallback;
 			videoStream = selectedVideo(fallback);
 			player.setMediaSource(PlaybackSourceFactory.create(sources,
-							new PlaybackDetails(state.video(), state.catalog(), state.deliveries(),
-											fallback, segments, subtitles),
-							fallback));
+					new PlaybackDetails(state.video(), state.catalog(), state.deliveries(),
+							fallback, segments, subtitles),
+					fallback));
 			player.seekTo(position);
 			player.setPlaybackParameters(speed);
 			player.prepare();
@@ -568,7 +590,7 @@ public class Engine {
 				prefs.markAdaptiveMuxedFallback(state.video().getId());
 			}
 			Log.w(TAG, "recovered from adaptive " + reason.logLabel + " with " + fallback.getMode()
-							+ " videoId=" + state.video().getId());
+					+ " videoId=" + state.video().getId());
 			return true;
 		} catch (RuntimeException e) {
 			Log.w(TAG, fallback.getMode() + " fallback failed", e);
@@ -593,7 +615,7 @@ public class Engine {
 		if (lower.endsWith(".vtt")) return MimeTypes.TEXT_VTT;
 		if (lower.endsWith(".ttml")) return MimeTypes.APPLICATION_TTML;
 		if (lower.endsWith(".xml")) return MimeTypes.APPLICATION_TTML;
-		
+
 		String ext = MimeTypeMap.getFileExtensionFromUrl(fileName);
 		if (ext != null) {
 			String mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext);
@@ -672,8 +694,8 @@ public class Engine {
 	public void setSubtitlesEnabled(boolean enabled) {
 		this.prefs.setSubtitleEnabled(enabled);
 		this.player.setTrackSelectionParameters(this.player.getTrackSelectionParameters().buildUpon()
-						.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !enabled)
-						.build());
+				.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !enabled)
+				.build());
 	}
 
 	public void setSubtitleLanguage(@Nullable String language) {
@@ -686,10 +708,10 @@ public class Engine {
 					Format format = group.getTrackFormat(i);
 					if (language.equals(format.label) || language.equals(format.language)) {
 						this.player.setTrackSelectionParameters(this.player.getTrackSelectionParameters().buildUpon()
-										.clearOverrides()
-										.setOverrideForType(new TrackSelectionOverride(group.getMediaTrackGroup(), i))
-										.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
-										.build());
+								.clearOverrides()
+								.setOverrideForType(new TrackSelectionOverride(group.getMediaTrackGroup(), i))
+								.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+								.build());
 						return;
 					}
 				}
@@ -717,8 +739,8 @@ public class Engine {
 		}
 		if (playlistContext) {
 			this.tabManager.evalWatchJs(
-							buildPlaylistNavigationScript(1),
-							null);
+					buildPlaylistNavigationScript(1),
+					null);
 		}
 	}
 
@@ -749,19 +771,19 @@ public class Engine {
 		}
 		if (playlistContext) {
 			tabManager.evalWatchJs(
-							buildPlaylistNavigationScript(-1),
-							value -> {
-								if (didNavigate(value)) return;
-								if ("\"playlist-head\"".equals(value)) {
-									if (canGoBack) tabManager.goBackInWatch();
-									return;
-								}
-								if ("\"missing-playlist\"".equals(value)
-												|| "\"missing-current-video-id\"".equals(value)
-												|| "\"missing-current-video\"".equals(value)) {
-									if (canGoBack) tabManager.goBackInWatch();
-								}
-							});
+					buildPlaylistNavigationScript(-1),
+					value -> {
+						if (didNavigate(value)) return;
+						if ("\"playlist-head\"".equals(value)) {
+							if (canGoBack) tabManager.goBackInWatch();
+							return;
+						}
+						if ("\"missing-playlist\"".equals(value)
+								|| "\"missing-current-video-id\"".equals(value)
+								|| "\"missing-current-video\"".equals(value)) {
+							if (canGoBack) tabManager.goBackInWatch();
+						}
+					});
 			return;
 		}
 		if (canGoBack) {
@@ -904,7 +926,7 @@ public class Engine {
 		float speed = this.player.getPlaybackParameters().speed;
 		play(new PlaybackDetails(state.video(), state.catalog(), state.deliveries(), plan, segments, subtitles));
 		if (plan.getMode() != PlaybackMode.LIVE_DASH
-						&& plan.getMode() != PlaybackMode.LIVE_HLS) {
+				&& plan.getMode() != PlaybackMode.LIVE_HLS) {
 			this.player.seekTo(pos);
 		}
 		this.player.setPlaybackParameters(new PlaybackParameters(speed));
@@ -913,10 +935,10 @@ public class Engine {
 	public void setVideoQuality(int height) {
 		DefaultTrackSelector trackSelector = trackSelector();
 		final DefaultTrackSelector.Parameters.Builder builder = params(trackSelector)
-						.clearOverridesOfType(C.TRACK_TYPE_VIDEO)
-						.setForceHighestSupportedBitrate(false)
-						.setMaxVideoSize(Integer.MAX_VALUE, height)
-						.setMinVideoSize(0, height);
+				.clearOverridesOfType(C.TRACK_TYPE_VIDEO)
+				.setForceHighestSupportedBitrate(false)
+				.setMaxVideoSize(Integer.MAX_VALUE, height)
+				.setMinVideoSize(0, height);
 		TrackOverride override = findVideoOverride(height);
 		if (override != null) {
 			builder.setOverrideForType(new TrackSelectionOverride(override.group(), override.track()));
@@ -942,8 +964,8 @@ public class Engine {
 	private void applyPlaybackTrackMode() {
 		DefaultTrackSelector trackSelector = trackSelector();
 		final DefaultTrackSelector.Parameters.Builder builder = params(trackSelector)
-						.clearOverridesOfType(C.TRACK_TYPE_VIDEO)
-						.setForceHighestSupportedBitrate(false);
+				.clearOverridesOfType(C.TRACK_TYPE_VIDEO)
+				.setForceHighestSupportedBitrate(false);
 		PlaybackPlan plan = playbackPlan;
 		if (plan == null || plan.getDelivery() == null) {
 			builder.clearVideoSizeConstraints();
@@ -1053,7 +1075,7 @@ public class Engine {
 		return subtitles;
 	}
 
-    @Nullable
+	@Nullable
 	public String getThumbnailUrl() {
 		return videoDetails != null ? videoDetails.getThumbnailUrl() : null;
 	}
@@ -1085,8 +1107,8 @@ public class Engine {
 		boolean playWhenReady = player.getPlayWhenReady();
 		plan.setAudioCandidate(findAudioCandidate(state.catalog(), stream));
 		player.setMediaSource(PlaybackSourceFactory.create(sources,
-						new PlaybackDetails(state.video(), state.catalog(), state.deliveries(), plan, segments, subtitles),
-						plan));
+				new PlaybackDetails(state.video(), state.catalog(), state.deliveries(), plan, segments, subtitles),
+				plan));
 		player.seekTo(pos);
 		player.setPlayWhenReady(playWhenReady);
 		player.prepare();
@@ -1106,7 +1128,7 @@ public class Engine {
 
 	private boolean isLiveMode(@Nullable PlaybackPlan plan) {
 		return plan != null && (plan.getMode() == PlaybackMode.LIVE_DASH
-						|| plan.getMode() == PlaybackMode.LIVE_HLS);
+				|| plan.getMode() == PlaybackMode.LIVE_HLS);
 	}
 
 	@Nullable
@@ -1121,12 +1143,12 @@ public class Engine {
 			}
 			visited.add(current);
 			if (current instanceof HttpDataSource.InvalidResponseCodeException http
-							&& http.responseCode == 403) {
+					&& http.responseCode == 403) {
 				return PlaybackRecoveryReason.HTTP_403;
 			}
 			if (current instanceof HttpDataSource.HttpDataSourceException http
-							&& http.type == HttpDataSource.HttpDataSourceException.TYPE_OPEN
-							&& hasCause(http, SocketTimeoutException.class, ConnectException.class, NoRouteToHostException.class)) {
+					&& http.type == HttpDataSource.HttpDataSourceException.TYPE_OPEN
+					&& hasCause(http, SocketTimeoutException.class, ConnectException.class, NoRouteToHostException.class)) {
 				return PlaybackRecoveryReason.CONNECTION_OPEN_FAILED;
 			}
 			if (current.getCause() != null) {
@@ -1138,7 +1160,7 @@ public class Engine {
 	}
 
 	private static boolean hasCause(@NonNull Throwable throwable,
-	                                @NonNull Class<? extends Throwable>... causeTypes) {
+									@NonNull Class<? extends Throwable>... causeTypes) {
 		Throwable current = throwable;
 		while (current != null) {
 			for (Class<? extends Throwable> causeType : causeTypes) {
@@ -1158,7 +1180,7 @@ public class Engine {
 	private void triggerSync(long positionMs) {
 		if (videoId == null || IncognitoManager.getInstance().isIncognito()) return;
 		lastSyncTime = System.currentTimeMillis();
-		tabManager.evalWatchJs(String.format(Locale.US, "window.__syncNativeProgress(%d)", positionMs / 1000), null);
+		tabManager.evalWatchJs(String.format(Locale.US, "if(window.__syncNativeProgress) window.__syncNativeProgress(%d);", positionMs / 1000), null);
 	}
 
 	public void clear() {
@@ -1177,15 +1199,15 @@ public class Engine {
 	}
 
 	public interface OnSponsorDetectedListener {
-		void onSponsorDetected(long[] segment);
+		void onSponsorDetected(SponsorBlockManager.Segment segment);
 	}
 	private record TrackOverride(@NonNull TrackGroup group, int track) {
 	}
 
 	private record State(@NonNull VideoDetails video,
-	                     @NonNull StreamCatalog catalog,
-	                     @NonNull DeliveryCatalog deliveries,
-	                     @NonNull PlaybackPlan plan) {
+						 @NonNull StreamCatalog catalog,
+						 @NonNull DeliveryCatalog deliveries,
+						 @NonNull PlaybackPlan plan) {
 	}
 
 	enum PlaybackRecoveryReason {

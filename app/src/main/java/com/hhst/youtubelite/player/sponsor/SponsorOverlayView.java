@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 
 public class SponsorOverlayView extends View {
 	private final Paint paint = new Paint();
-	private List<long[]> segments;
+	private List<SponsorBlockManager.Segment> segments;
 	private long duration;
 
 	public SponsorOverlayView(Context context, AttributeSet attrs) {
@@ -23,7 +23,7 @@ public class SponsorOverlayView extends View {
 		paint.setStyle(Paint.Style.FILL);
 	}
 
-	public void setData(List<long[]> segments, long duration, TimeUnit unit) {
+	public void setData(List<SponsorBlockManager.Segment> segments, long duration, TimeUnit unit) {
 		this.segments = segments;
 		this.duration = unit.toMillis(duration);
 		invalidate();
@@ -34,9 +34,9 @@ public class SponsorOverlayView extends View {
 		super.onDraw(canvas);
 		if (segments == null || duration <= 0) return;
 		int width = getWidth();
-		for (long[] seg : segments) {
-			float startX = (float) seg[0] / duration * width;
-			float endX = (float) seg[1] / duration * width;
+		for (SponsorBlockManager.Segment seg : segments) {
+			float startX = (float) seg.getStart() / duration * width;
+			float endX = (float) seg.getEnd() / duration * width;
 			if (endX < startX) endX = startX;
 			canvas.drawRect(startX, 0, endX, getHeight(), paint);
 		}

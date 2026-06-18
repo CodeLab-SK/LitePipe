@@ -36,7 +36,9 @@ import com.hhst.youtubelite.player.sponsor.SponsorBlockManager;
 import com.hhst.youtubelite.player.sponsor.SponsorOverlayView;
 import com.hhst.youtubelite.ui.ErrorDialog;
 import com.hhst.youtubelite.util.DeviceUtils;
+import com.hhst.youtubelite.util.StringUtils;
 import com.hhst.youtubelite.util.ToastUtils;
+import com.hhst.youtubelite.util.UrlUtils;
 import com.tencent.mmkv.MMKV;
 
 import java.util.HashSet;
@@ -102,7 +104,7 @@ public class LitePlayer {
 	@Getter
 	private boolean inAppMiniPlayer;
 	private boolean wasInPictureInPicture;
-	private final Set<long[]> ignoredSponsorSegments = new HashSet<>();
+	private final Set<Long> ignoredSponsorStarts = new HashSet<>();
 
 	public interface OnFullscreenChangeListener {
 		void onFullscreenChanged(boolean isFullscreen);
@@ -111,13 +113,13 @@ public class LitePlayer {
 
 	@Inject
 	public LitePlayer(@NonNull final Activity activity,
-	                  @NonNull final YoutubeExtractor extractor,
-	                  @NonNull final LitePlayerView playerView,
-	                  @NonNull final Controller controller,
-	                  @NonNull final Engine engine,
-	                  @NonNull final SponsorBlockManager sponsor,
-	                  @NonNull final QueueRepository queueRepository,
-	                  @NonNull final PlayerPreferences prefs) {
+					  @NonNull final YoutubeExtractor extractor,
+					  @NonNull final LitePlayerView playerView,
+					  @NonNull final Controller controller,
+					  @NonNull final Engine engine,
+					  @NonNull final SponsorBlockManager sponsor,
+					  @NonNull final QueueRepository queueRepository,
+					  @NonNull final PlayerPreferences prefs) {
 		this.activity = activity;
 		this.extractor = extractor;
 		this.playerView = playerView;
@@ -129,7 +131,7 @@ public class LitePlayer {
 
 		playerView.setup();
 		setupEngineListeners();
-		
+
 		this.controller.setOnFullscreenChangeListener(isFullscreen -> {
 			if (fullscreenChangeListener != null) {
 				fullscreenChangeListener.onFullscreenChanged(isFullscreen);
@@ -169,7 +171,7 @@ public class LitePlayer {
 				if (engine.recoverFromPlaybackError(error)) {
 					return;
 				}
-				
+
 				if (isCodecError(error)) {
 					handleCodecError(error);
 					return;
@@ -188,13 +190,22 @@ public class LitePlayer {
 		});
 
 		engine.setSponsorDetectedListener(segment -> {
-			if (ignoredSponsorSegments.contains(segment)) return;
+			if (ignoredSponsorStarts.contains(segment.getStart())) return;
 
 			activity.runOnUiThread(() -> {
-				engine.seekTo(segment[1]);
-				controller.showUndoSkip(segment, s -> {
+				engine.seekTo(segment.getEnd());
+				String category = segment.getCategory();
+				String hint;
+				if (category != null) {
+					hint = "Skipped " + StringUtils.capitalize(category.replace("selfpromo", "promotion"));
+				} else {
+					hint = "Skipped Sponsor";
+				}
+				controller.showHint(hint, 2000);
+
+				controller.showUndoSkip(segment.asPair(), s -> {
 					engine.seekTo(s[0]);
-					ignoredSponsorSegments.add(s);
+					ignoredSponsorStarts.add(s[0]);
 				});
 			});
 		});
@@ -202,7 +213,7 @@ public class LitePlayer {
 
 	private boolean isCodecError(@NonNull PlaybackException error) {
 		if (error.errorCode == PlaybackException.ERROR_CODE_DECODER_INIT_FAILED
-						|| error.errorCode == PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED) {
+				|| error.errorCode == PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED) {
 			return true;
 		}
 		Throwable cause = error.getCause();
@@ -236,11 +247,11 @@ public class LitePlayer {
 
 	private boolean shouldRetryOnSourceError(@NonNull PlaybackException error) {
 		if (error.errorCode == PlaybackException.ERROR_CODE_IO_UNSPECIFIED
-						|| error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED
-						|| error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS
-						|| error.errorCode == PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE
-						|| error.errorCode == PlaybackException.ERROR_CODE_IO_CLEARTEXT_NOT_PERMITTED
-						|| error.errorCode == PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE) {
+				|| error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED
+				|| error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS
+				|| error.errorCode == PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE
+				|| error.errorCode == PlaybackException.ERROR_CODE_IO_CLEARTEXT_NOT_PERMITTED
+				|| error.errorCode == PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE) {
 			return true;
 		}
 		Throwable cause = error.getCause();
@@ -300,11 +311,11 @@ public class LitePlayer {
 				subView.setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, 18f);
 				CaptionStyleCompat style = switch (styleId) {
 					case 2 ->
-									new CaptionStyleCompat(Color.YELLOW, Color.parseColor("#CC000000"), Color.TRANSPARENT, CaptionStyleCompat.EDGE_TYPE_NONE, Color.TRANSPARENT, null);
+							new CaptionStyleCompat(Color.YELLOW, Color.parseColor("#CC000000"), Color.TRANSPARENT, CaptionStyleCompat.EDGE_TYPE_NONE, Color.TRANSPARENT, null);
 					case 3 ->
-									new CaptionStyleCompat(Color.WHITE, Color.TRANSPARENT, Color.TRANSPARENT, CaptionStyleCompat.EDGE_TYPE_OUTLINE, Color.BLACK, null);
+							new CaptionStyleCompat(Color.WHITE, Color.TRANSPARENT, Color.TRANSPARENT, CaptionStyleCompat.EDGE_TYPE_OUTLINE, Color.BLACK, null);
 					default ->
-									new CaptionStyleCompat(Color.WHITE, Color.parseColor("#CC000000"), Color.TRANSPARENT, CaptionStyleCompat.EDGE_TYPE_NONE, Color.TRANSPARENT, null);
+							new CaptionStyleCompat(Color.WHITE, Color.parseColor("#CC000000"), Color.TRANSPARENT, CaptionStyleCompat.EDGE_TYPE_NONE, Color.TRANSPARENT, null);
 				};
 				subView.setStyle(style);
 			}
@@ -352,6 +363,7 @@ public class LitePlayer {
 	}
 
 	public void play(String url, final long initialPositionMs) {
+		final boolean isMusic = UrlUtils.isMusicUrl(url);
 		this.currentUrl = url;
 		final String videoId = YoutubeExtractor.getVideoId(url);
 		if (videoId == null || (Objects.equals(this.vid, videoId) && initialPositionMs < 0L)) return;
@@ -364,10 +376,13 @@ public class LitePlayer {
 			if (layer != null) layer.setData(null, 0, TimeUnit.MILLISECONDS);
 			final DefaultTimeBar bar = playerView.findViewById(R.id.exo_progress);
 			if (bar != null) bar.setAdGroupTimesMs(null, null, 0);
-			playerView.show();
-			controller.syncRotation(
-							DeviceUtils.isRotateOn(activity),
-							activity.getResources().getConfiguration().orientation);
+
+			if (isMusic) {
+				playerView.hide();
+			} else {
+				playerView.show();
+			}
+			controller.syncRotation(DeviceUtils.isRotateOn(activity), activity.getResources().getConfiguration().orientation);
 		});
 
 		cancelCurrentExtraction();
@@ -375,44 +390,49 @@ public class LitePlayer {
 		extractionSession = session;
 
 		extractor.getInfo(url, session).thenAccept(er -> {
-            CompletableFuture.runAsync(() -> sponsor.load(videoId));
+			CompletableFuture.runAsync(() -> sponsor.load(videoId));
 
-            activity.runOnUiThread(() -> {
-                if (this.extractionSession == session) this.extractionSession = null;
-                if (!Objects.equals(this.vid, videoId)) return;
-                this.loadedVideoId = videoId;
-                playerView.setTitle(er.video().getTitle());
+			activity.runOnUiThread(() -> {
+				if (this.extractionSession == session) this.extractionSession = null;
+				if (!Objects.equals(this.vid, videoId)) return;
+				this.loadedVideoId = videoId;
+				playerView.setTitle(er.video().getTitle());
 
-                final List<QueueItem> items = queueRepository.getItems();
-                for (QueueItem item : items) {
-                    if (Objects.equals(item.getVideoId(), videoId)) {
-                        item.setTitle(er.video().getTitle());
-                        item.setAuthor(er.video().getAuthor());
-                        item.setThumbnailUrl(er.video().getThumbnailUrl());
-                        queueRepository.add(item);
-                        break;
-                    }
-                }
+				if (!isMusic) {
+					playerView.updateSkipMarkers(er.video().getDuration(), TimeUnit.SECONDS);
+				}
 
-                playerView.updateSkipMarkers(er.video().getDuration(), TimeUnit.SECONDS);
+				final List<QueueItem> items = queueRepository.getItems();
+				for (QueueItem item : items) {
+					if (Objects.equals(item.getVideoId(), videoId)) {
+						item.setTitle(er.video().getTitle());
+						item.setAuthor(er.video().getAuthor());
+						item.setThumbnailUrl(er.video().getThumbnailUrl());
+						queueRepository.add(item);
+						break;
+					}
+				}
 
-                String preferredQuality = prefs.getQuality();
-                PlaybackPlan plan = PlaybackPlanner.plan(er.deliveries(), preferredQuality, null);
-                PlaybackDetails details = new PlaybackDetails(er.video(), er.catalog(), er.deliveries(), plan, er.segments(), er.subtitles());
+				String preferredQuality = isMusic ? "Audio" : prefs.getQuality();
+				PlaybackPlan plan = PlaybackPlanner.plan(er.deliveries(), preferredQuality, null);
+				PlaybackDetails details = new PlaybackDetails(er.video(), er.catalog(), er.deliveries(), plan, er.segments(), er.subtitles());
 
-                engine.play(details);
-                if (initialPositionMs >= 0L) {
-                    engine.seekTo(initialPositionMs);
-                }
-                controller.updateSegmentsButtonState();
-                controller.updateSubtitleButtonState();
+				engine.play(details);
+				if (initialPositionMs >= 0L) {
+					engine.seekTo(initialPositionMs);
+				}
 
-                if (playbackService != null) {
-                    PlaybackService.start(activity);
-                    playbackService.showNotification(er.video().getTitle(), er.video().getAuthor(), er.video().getThumbnailUrl(), er.video().getDuration() * 1000);
-                }
-                refreshQueueNavigationAvailability();
-            });
+				if (!isMusic) {
+					controller.updateSegmentsButtonState();
+					controller.updateSubtitleButtonState();
+				}
+
+				if (playbackService != null) {
+					PlaybackService.start(activity);
+					playbackService.showNotification(er.video().getTitle(), er.video().getAuthor(), er.video().getThumbnailUrl(), er.video().getDuration() * 1000);
+				}
+				refreshQueueNavigationAvailability();
+			});
 		}).exceptionally(e -> {
 			if (this.extractionSession == session) this.extractionSession = null;
 			Throwable cause = e instanceof CompletionException ? e.getCause() : e;
@@ -459,8 +479,20 @@ public class LitePlayer {
 		});
 	}
 
+	public void play() {
+		engine.play();
+	}
+
 	public void pause() {
 		engine.pause();
+	}
+
+	public float getVolume() {
+		return engine.getVolume();
+	}
+
+	public void setVolume(float volume) {
+		engine.setVolume(volume);
 	}
 
 	public void seekToIfLoaded(final long positionMs) {
@@ -536,10 +568,10 @@ public class LitePlayer {
 		onMiniPlayerRestore = onRestore;
 		onMiniPlayerClose = onClose;
 		playerView.setMiniPlayerCallbacks(
-						onRestore != null ? this::dispatchMiniPlayerRestore : null,
-						onClose != null ? this::dispatchMiniPlayerClose : null,
-                engine::play,
-                engine::pause);
+				onRestore != null ? this::dispatchMiniPlayerRestore : null,
+				onClose != null ? this::dispatchMiniPlayerClose : null,
+				engine::play,
+				engine::pause);
 	}
 
 	public boolean shouldAutoEnterPictureInPicture() {
