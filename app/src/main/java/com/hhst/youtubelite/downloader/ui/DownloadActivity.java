@@ -709,7 +709,6 @@ public class DownloadActivity extends AppCompatActivity {
 			ShapeableImageView thumb;
 			TextView title, statusChip, typeChip, size;
 			LinearProgressIndicator progress;
-			View progressWrapper;
 			ImageButton more;
 			MaterialCheckBox checkBox;
 			String currentTaskId;
@@ -723,7 +722,6 @@ public class DownloadActivity extends AppCompatActivity {
 				typeChip = v.findViewById(R.id.type_chip);
 				size = v.findViewById(R.id.size_downloaded);
 				progress = v.findViewById(R.id.progress);
-				progressWrapper = v.findViewById(R.id.progress_wrapper);
 				more = v.findViewById(R.id.more);
 				checkBox = v.findViewById(R.id.checkbox);
 			}
@@ -868,8 +866,8 @@ public class DownloadActivity extends AppCompatActivity {
 				}
 				size.setText(sizeText);
 				
-				boolean showProgress = (s == DownloadStatus.RUNNING || s == DownloadStatus.QUEUED || s == DownloadStatus.MERGING);
-				progressWrapper.setVisibility(showProgress ? View.VISIBLE : View.GONE);
+				boolean isActivelyDownloading = (s == DownloadStatus.RUNNING || s == DownloadStatus.QUEUED || s == DownloadStatus.MERGING);
+                progress.setVisibility(isActivelyDownloading ? View.VISIBLE : View.GONE);
 				
 				if (s == DownloadStatus.RUNNING) {
 					progress.setIndeterminate(false);
