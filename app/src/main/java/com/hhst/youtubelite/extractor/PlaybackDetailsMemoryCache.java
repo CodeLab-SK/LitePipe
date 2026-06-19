@@ -17,8 +17,8 @@ import javax.inject.Singleton;
 
 @Singleton
 public final class PlaybackDetailsMemoryCache {
-	private static final int DEFAULT_MAX_ENTRIES = 16;
-	private static final long DEFAULT_TTL_MILLIS = TimeUnit.MINUTES.toMillis(5);
+	private static final int DEFAULT_MAX_ENTRIES = 32;
+	private static final long DEFAULT_TTL_MILLIS = TimeUnit.MINUTES.toMillis(15);
 
 	private final int maxEntries;
 	private final long ttlMillis;

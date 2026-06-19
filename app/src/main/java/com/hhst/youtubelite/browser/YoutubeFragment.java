@@ -56,6 +56,7 @@ public final class YoutubeFragment extends Fragment {
 	@Nullable private SwipeRefreshLayout swipeRefreshLayout;
 	@Nullable private WebBackForwardList historySnapshot;
 	@Nullable private Bundle pendingRestoreState;
+	private boolean persistent = false;
 
 	private final Handler handler = new Handler(Looper.getMainLooper());
 	private final Runnable refreshTimeoutRunnable = () -> {
@@ -74,6 +75,10 @@ public final class YoutubeFragment extends Fragment {
 		fragment.url = url;
 		fragment.mTag = tag;
 		return fragment;
+	}
+
+	public void setPersistent(boolean persistent) {
+		this.persistent = persistent;
 	}
 
 	public void loadUrl(@Nullable final String url) {
@@ -200,11 +205,16 @@ public final class YoutubeFragment extends Fragment {
 		super.onDestroyView();
 		handler.removeCallbacks(refreshTimeoutRunnable);
 		if (webview != null) {
-			webview.stopLoading();
-			webview.clearHistory();
-			webview.removeAllViews();
-			webview.destroy();
-			webview = null;
+			if (persistent) {
+				webview.stopLoading();
+				webview = null;
+			} else {
+				webview.stopLoading();
+				webview.clearHistory();
+				webview.removeAllViews();
+				webview.destroy();
+				webview = null;
+			}
 		}
 		swipeRefreshLayout = null;
 	}

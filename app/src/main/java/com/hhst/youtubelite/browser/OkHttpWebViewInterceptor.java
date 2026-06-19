@@ -65,6 +65,13 @@ public final class OkHttpWebViewInterceptor {
 						.addNetworkInterceptor(chain -> {
 							Request request = chain.request();
 							Response response = chain.proceed(request);
+							String url = request.url().toString();
+							if (url.contains("/yts/jsbin/") || url.contains("/s/player/") || url.contains("ytimg.com") || url.contains(".css") || url.contains(".js")) {
+								response = response.newBuilder()
+												.header("Cache-Control", "public, max-age=86400, immutable")
+												.removeHeader("Pragma")
+												.build();
+							}
 							final WebViewCachePolicy.CacheRequestInfo cacheRequestInfo = request.tag(WebViewCachePolicy.CacheRequestInfo.class);
 							return cachePolicy.maybeRewriteResponse(cacheRequestInfo, request, response);
 						}).build();

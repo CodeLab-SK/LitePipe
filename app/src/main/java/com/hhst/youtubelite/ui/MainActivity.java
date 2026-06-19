@@ -206,6 +206,11 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 		queueWarmer.warmItems(queueRepository.getItems());
 
 		checkOpenByDefault();
+
+		if (savedInstanceState == null && tabManager.getWebview() == null) {
+			tabManager.openTab(Constants.HOME_URL, UrlUtils.getPageClass(Constants.HOME_URL));
+		}
+
 		mainView.post(() -> handleIntent(getIntent()));
 
 		IncognitoManager.getInstance().addListener(incognitoListener);
@@ -216,6 +221,19 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 				if (web != null) web.reload();
 			});
 		});
+	}
+
+	@Override
+	public void onTrimMemory(int level) {
+		super.onTrimMemory(level);
+		if (level >= TRIM_MEMORY_RUNNING_LOW) {
+			YoutubeWebview wv = getWebview();
+			if (wv != null) wv.clearCache(false);
+		}
+		if (level >= TRIM_MEMORY_UI_HIDDEN) {
+			YoutubeWebview wv = getWebview();
+			if (wv != null) wv.pauseTimers();
+		}
 	}
 
 	public void showWatchLoadingOverlay() {
@@ -783,6 +801,9 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 			player.restoreInAppMiniPlayerUiIfNeeded();
 		}
 		linkDetection.checkClipboard();
+
+		YoutubeWebview wv = getWebview();
+		if (wv != null) wv.resumeTimers();
 	}
 
 	@Override
@@ -835,8 +856,6 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 					if (tabManager != null) tabManager.playInWatch(clean);
 				}
 			}
-		} else if (tabManager != null && tabManager.getWebview() == null) {
-			tabManager.openTab(Constants.HOME_URL, UrlUtils.getPageClass(Constants.HOME_URL));
 		}
 	}
 

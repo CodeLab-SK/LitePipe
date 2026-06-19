@@ -3,6 +3,7 @@ package com.hhst.youtubelite.browser;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.res.AssetManager;
+import android.util.Base64;
 import android.util.Log;
 import android.webkit.WebBackForwardList;
 import android.webkit.WebHistoryItem;
@@ -28,6 +29,7 @@ import com.hhst.youtubelite.util.UrlUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Deque;
@@ -64,7 +66,7 @@ public class TabManager {
 	private YoutubeFragment suspendedWatchFragment;
 
 	private static final List<String> cachedScripts = new ArrayList<>();
-	private static final List<String> cachedStyles = new ArrayList<>();
+	private static String cachedCssScript = null;
 	private static boolean assetsLoaded = false;
 
 	@Nullable private Consumer<String> onPageFinishedListener;
@@ -96,6 +98,11 @@ public class TabManager {
 
 		if (activity instanceof MainActivity mainActivity) {
 			mainActivity.setUiVisibility(!isWatch || Constants.PAGE_MUSIC_WATCH.equals(pageClass));
+		}
+
+		YoutubeWebview wv = fragment.getWebview();
+		if (wv != null) {
+			wv.setLayerType(isWatch ? android.view.View.LAYER_TYPE_HARDWARE : android.view.View.LAYER_TYPE_NONE, null);
 		}
 
 		if (isWatch) {
@@ -139,7 +146,11 @@ public class TabManager {
 
 	@NonNull
 	protected YoutubeFragment createFragment(@NonNull final String url, @NonNull final String tag) {
-		return YoutubeFragment.newInstance(url, tag);
+		YoutubeFragment f = YoutubeFragment.newInstance(url, tag);
+		if (NAV_TAGS.contains(tag)) {
+			f.setPersistent(true);
+		}
+		return f;
 	}
 
 	public void openTab(@NonNull final String url, @Nullable String tag) {
@@ -200,12 +211,16 @@ public class TabManager {
 				for (YoutubeFragment t : tabs) {
 					if (!Constants.PAGE_HOME.equals(t.getMTag())) {
 						ft.remove(t);
+					} else {
+						ft.detach(t);
 					}
 				}
 				tabs.clear();
 				tabs.offer(next);
+				ft.attach(next);
 			} else {
 				if (!tabs.contains(next)) tabs.offer(next);
+				ft.attach(next);
 			}
 		} else {
 			if (next != null) ft.remove(next);
@@ -227,15 +242,30 @@ public class TabManager {
 		if (assetsLoaded) return;
 		final AssetManager assetManager = activity.getAssets();
 		try {
+			StringBuilder cssBlock = new StringBuilder();
+			cssBlock.append("(function(){");
+			cssBlock.append("if(document.getElementById('_lp_css_injected'))return;");
+			cssBlock.append("var m=document.createElement('meta');");
+			cssBlock.append("m.id='_lp_css_injected';");
+			cssBlock.append("(document.head||document.documentElement).appendChild(m);");
+
 			String[] styles = assetManager.list("style");
 			if (styles != null) {
 				for (String style : styles) {
 					try (InputStream is = assetManager.open("style/" + style)) {
 						String content = StreamIOUtils.readInputStream(is);
-						if (content != null) cachedStyles.add(content);
+						if (content != null) {
+							String encoded = Base64.encodeToString(content.getBytes(StandardCharsets.UTF_8), Base64.NO_WRAP);
+							cssBlock.append("var s=document.createElement('style');");
+							cssBlock.append("s.textContent=atob('").append(encoded).append("');");
+							cssBlock.append("(document.head||document.documentElement).appendChild(s);");
+						}
 					}
 				}
 			}
+			cssBlock.append("})();");
+			cachedCssScript = cssBlock.toString();
+
 			String[] scripts = assetManager.list("script");
 			if (scripts != null) {
 				List<String> list = new ArrayList<>(Arrays.asList(scripts));
@@ -262,9 +292,7 @@ public class TabManager {
 
 	public void injectScripts(@NonNull final YoutubeWebview webview) {
 		if (!assetsLoaded) loadAssets();
-		for (String css : cachedStyles) {
-			webview.injectCssContent(css);
-		}
+		if (cachedCssScript != null) webview.injectJavaScriptContent(cachedCssScript);
 		for (String js : cachedScripts) {
 			webview.injectJavaScriptContent(js);
 		}

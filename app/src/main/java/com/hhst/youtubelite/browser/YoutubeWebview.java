@@ -301,7 +301,6 @@ public class YoutubeWebview extends WebView {
 
 		setFocusable(true);
 		setFocusableInTouchMode(true);
-		setLayerType(View.LAYER_TYPE_HARDWARE, null);
 		setOnLongClickListener(v -> true);
 
 		CookieManager.getInstance().setAcceptCookie(true);
@@ -338,6 +337,13 @@ public class YoutubeWebview extends WebView {
 				final Uri uri = request.getUrl();
 				final String host = uri.getHost();
 				final String scheme = uri.getScheme();
+				final String urlStr = uri.toString();
+
+				if (Constants.PAGE_WATCH.equals(UrlUtils.getPageClass(urlStr)) || Constants.PAGE_MUSIC_WATCH.equals(UrlUtils.getPageClass(urlStr))) {
+					if (queueWarmer != null) {
+						queueWarmer.prioritizeUrl(urlStr);
+					}
+				}
 
 				if (Objects.equals(scheme, "intent")) {
 					try {
