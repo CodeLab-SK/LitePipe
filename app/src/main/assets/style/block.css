@@ -10,11 +10,7 @@ yt-mealbar-promo-renderer,
 ad-slot-renderer,
 .ytp-unmute,
 a.yt-spec-button-shape-next.yt-spec-button-shape-next--overlay,
-ytm-companion-ad-renderer,
-ytm-premium-upsell-renderer,
-ytm-upsell-dialog-renderer,
-ytm-unlimited-offer-renderer,
-ytm-promoted-sparkles-web-renderer,
+
 [href*="/premium"],
 .playlist-engagement-panel-top-level-buttons,
 .yt-mini-app-container-view-model__background-blur,
@@ -24,7 +20,9 @@ ytm-promoted-sparkles-web-renderer,
 .dialog-container,
 yt-enforcement-message-view-model,
 .sign-in-header,
-ytm-settings .setting-generic-category:nth-last-child(2)
+ytm-settings .setting-generic-category:nth-last-child(2),
+.app-install-link.app-bar-button,
+ytmusic-guide-entry-renderer:has(path[d="M19 5H8a1 1 0 000 2h7.586L5.293 17.293a1 1 0 101.414 1.414L17 8.414V16a1 1 0 002 0V5Z"])
 {
     display: none !important;
 }
@@ -32,6 +30,10 @@ html[page-class="watch"] #player,
 html[page-class="watch"] #player-container-id {
     visibility: hidden !important;
     opacity: 0 !important;
+}
+
+html[page-class="music_watch"] #song-video {
+    display: none !important;
 }
 
 html[page-class="watch"].lp-hide-comments ytm-item-section-renderer[section-identifier="comments-entry-point"],

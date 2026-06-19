@@ -73,9 +73,9 @@ public final class JavascriptInterface {
     public void notifyNetworkRestored() {
         handler.post(() -> {
             final String currentUrl = webview.getUrl();
-            if (currentUrl != null && currentUrl.contains("/watch")) {
-                ToastUtils.show(context, "Network restored. Resuming video...");
-                player.play(currentUrl);
+            if (currentUrl != null && (currentUrl.contains("/watch") || currentUrl.contains("music.youtube.com"))) {
+                ToastUtils.show(context, "Network restored. Resuming...");
+                tabManager.playInWatch(currentUrl);
             }
         });
     }
@@ -236,7 +236,22 @@ public final class JavascriptInterface {
 
     @android.webkit.JavascriptInterface
     public void play(@Nullable final String url) {
-        if (url != null) handler.post(() -> player.play(url));
+        if (url != null) handler.post(() -> tabManager.playInWatch(url));
+    }
+
+    @android.webkit.JavascriptInterface
+    public void musicPlay() {
+        handler.post(player::play);
+    }
+
+    @android.webkit.JavascriptInterface
+    public void musicPause() {
+        handler.post(player::pause);
+    }
+
+    @android.webkit.JavascriptInterface
+    public void musicSeek(final long positionMs) {
+        handler.post(() -> player.seekToIfLoaded(positionMs));
     }
 
     @android.webkit.JavascriptInterface

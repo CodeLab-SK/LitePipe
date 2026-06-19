@@ -31,7 +31,6 @@ body {
 :root {
     --safe-area-inset-bottom: 0px !important;
 }
-
 ytm-promoted-sparkles-web-renderer,
 ytm-display-ad-renderer,
 ytm-ad-slot,
@@ -41,6 +40,18 @@ ytm-mealbar-promo-renderer,
 ytm-upsell-dialog-renderer,
 ytm-statement-banner-renderer,
 .ytm-premium-upsell-renderer,
-ytm-pinterstitial-renderer {
+ytm-pinterstitial-renderer,
+ytm-unlimited-offer-renderer,
+
+ytmusic-ad-slot-renderer,
+ytmusic-promoted-video-renderer,
+ytmusic-promoted-shelf-renderer,
+ytmusic-display-ad-renderer,
+ytmusic-mealbar-promo-renderer,
+ytmusic-upsell-renderer,
+ytmusic-promo-renderer,
+.ytmusic-ad-badge,
+[aria-label*="Sponsored"],
+[aria-label*="sponsored"] {
     display: none !important;
 }

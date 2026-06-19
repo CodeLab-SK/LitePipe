@@ -32,21 +32,22 @@ public final class UrlUtils {
 	private static final Locale NORMALIZATION_LOCALE = Locale.ROOT;
 
 	private static final Set<String> ALLOWED_DOMAINS = Set.of(
-					Constants.YOUTUBE_DOMAIN,
-					"youtu.be",
-					"youtube.googleapis.com",
-					"googlevideo.com",
-					"ytimg.com",
-					"accounts.google",
-					"accounts.google.com",
-					"google.com",
-					"googleusercontent.com",
-					"gstatic.com",
-					"googleapis.com",
-					"ggpht.com",
-					"yt.be",
-					"google.ad",
-					"doubleclick.net"
+			Constants.YOUTUBE_DOMAIN,
+			"youtu.be",
+			"youtube.googleapis.com",
+			"googlevideo.com",
+			"ytimg.com",
+			"accounts.google",
+			"accounts.google.com",
+			"google.com",
+			"googleusercontent.com",
+			"gstatic.com",
+			"googleapis.com",
+			"ggpht.com",
+			"yt.be",
+			"google.ad",
+			"doubleclick.net",
+			"music.youtube.com"
 	);
 
 	public static boolean isAllowedDomain(@Nullable final Uri uri) {
@@ -113,20 +114,20 @@ public final class UrlUtils {
 		final String lowerHost = host.toLowerCase(NORMALIZATION_LOCALE);
 		if (isGoogleAccountsHost(lowerHost)) return true;
 		return ALLOWED_DOMAINS.stream().anyMatch(domain ->
-						lowerHost.equals(domain) || lowerHost.endsWith("." + domain));
+				lowerHost.equals(domain) || lowerHost.endsWith("." + domain));
 	}
 
 	private static boolean isYoutubeHost(@NonNull String lowerHost) {
 		return lowerHost.equals(Constants.YOUTUBE_DOMAIN)
-						|| lowerHost.endsWith("." + Constants.YOUTUBE_DOMAIN);
+				|| lowerHost.endsWith("." + Constants.YOUTUBE_DOMAIN);
 	}
 
 	private static boolean isGoogleAccountsHost(@NonNull final String lowerHost) {
 		return lowerHost.equals("accounts.google")
-						|| lowerHost.equals("accounts.google.com")
-						|| lowerHost.startsWith("accounts.google.")
-						|| lowerHost.equals("accounts.youtube.com")
-						|| lowerHost.contains("myaccount.google");
+				|| lowerHost.equals("accounts.google.com")
+				|| lowerHost.startsWith("accounts.google.")
+				|| lowerHost.equals("accounts.youtube.com")
+				|| lowerHost.contains("myaccount.google");
 	}
 
 	public static boolean isPlaylistFirstItemUrl(@Nullable String url) {
@@ -141,6 +142,11 @@ public final class UrlUtils {
 		}
 	}
 
+	public static boolean isMusicUrl(@Nullable String url) {
+		if (url == null) return false;
+		return url.contains("music.youtube.com");
+	}
+
 	@NonNull
 	public static String getPageClass(@Nullable final String url) {
 		if (url == null || url.isEmpty()) return PAGE_UNKNOWN;
@@ -151,10 +157,10 @@ public final class UrlUtils {
 			if (host == null) return PAGE_UNKNOWN;
 			final String path = uri.getPath();
 			final List<String> segments = path == null || path.isEmpty()
-							? List.of()
-							: java.util.Arrays.stream(path.split("/"))
-											.filter(segment -> !segment.isEmpty())
-											.toList();
+					? List.of()
+					: java.util.Arrays.stream(path.split("/"))
+					.filter(segment -> !segment.isEmpty())
+					.toList();
 			return resolvePageClass(host, segments);
 		} catch (final IllegalArgumentException ignored) {
 			return PAGE_UNKNOWN;
@@ -164,33 +170,34 @@ public final class UrlUtils {
 	@NonNull
 	static String resolvePageClass(@NonNull final String host, @NonNull final List<String> segments) {
 		final String lowerHost = host.toLowerCase(NORMALIZATION_LOCALE);
+		boolean isMusicHost = lowerHost.equals("music.youtube.com");
+
 		if (lowerHost.equals("youtu.be")) {
 			return segments.isEmpty() ? PAGE_UNKNOWN : Constants.PAGE_WATCH;
 		}
-		if (!lowerHost.endsWith(Constants.YOUTUBE_DOMAIN))
-			return PAGE_UNKNOWN;
+		if (!lowerHost.endsWith(Constants.YOUTUBE_DOMAIN)) return PAGE_UNKNOWN;
 
-		if (segments.isEmpty()) return Constants.PAGE_HOME;
+		if (segments.isEmpty()) return isMusicHost ? Constants.PAGE_MUSIC : Constants.PAGE_HOME;
 
 		final String s0 = segments.get(0).toLowerCase(NORMALIZATION_LOCALE);
 		if (s0.startsWith("@")) return PAGE_USER_MENTION;
 
 		return switch (s0) {
 			case "shorts" -> Constants.PAGE_SHORTS;
-			case "watch" -> Constants.PAGE_WATCH;
+			case "watch" -> isMusicHost ? Constants.PAGE_MUSIC_WATCH : Constants.PAGE_WATCH;
 			case "channel" -> PAGE_CHANNEL;
 			case "gaming" -> PAGE_GAMING;
 			case "select_site" -> PAGE_SELECT_SITE;
 			case "results" -> PAGE_SEARCHING;
 			case "feed" -> (segments.size() > 1) ? switch (segments.get(1).toLowerCase(NORMALIZATION_LOCALE)) {
 				case "subscriptions" -> Constants.PAGE_SUBSCRIPTIONS;
-				case "library" , "you" -> Constants.PAGE_LIBRARY;
+				case "library", "you" -> Constants.PAGE_LIBRARY;
 				case "history" -> PAGE_HISTORY;
 				case "channels" -> PAGE_CHANNELS;
 				case "playlists" -> PAGE_PLAYLISTS;
 				default -> String.join("/", segments);
 			} : String.join("/", segments);
-			default -> String.join("/", segments);
+			default -> isMusicHost ? Constants.PAGE_MUSIC : String.join("/", segments);
 		};
 	}
 
@@ -236,46 +243,46 @@ public final class UrlUtils {
 		boolean isDark = (context.getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES;
 		
 		String prefValue = "hl=" + lang + (country.isEmpty() ? "" : "&gl=" + country) + (isDark ? "&f6=400" : "&f6=10000");
-		
-		String[] urls = {"https://www.youtube.com", "https://m.youtube.com", "https://youtube.com"};
+
+		String[] urls = {"https://www.youtube.com", "https://m.youtube.com", "https://youtube.com", "https://music.youtube.com"};
 		for (String url : urls) {
 			cookieManager.setCookie(url, "PREF=" + prefValue + "; Domain=.youtube.com; Path=/; Secure; SameSite=None");
 		}
 		cookieManager.flush();
 	}
 
-    @NonNull
-    public static String fetchLocalTitle(@NonNull Context context, @NonNull Uri uri, boolean keepExtension) {
-        String name = null;
-        if ("content".equals(uri.getScheme())) {
-            try (Cursor cursor = context.getContentResolver().query(uri, null, null, null, null)) {
-                if (cursor != null && cursor.moveToFirst()) {
-                    int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
-                    if (nameIndex != -1) {
-                        name = cursor.getString(nameIndex);
-                    }
-                }
-            } catch (Exception ignored) {}
-        }
-        if (name == null || name.isEmpty()) {
-            name = uri.getLastPathSegment();
-        }
+	@NonNull
+	public static String fetchLocalTitle(@NonNull Context context, @NonNull Uri uri, boolean keepExtension) {
+		String name = null;
+		if ("content".equals(uri.getScheme())) {
+			try (Cursor cursor = context.getContentResolver().query(uri, null, null, null, null)) {
+				if (cursor != null && cursor.moveToFirst()) {
+					int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+					if (nameIndex != -1) {
+						name = cursor.getString(nameIndex);
+					}
+				}
+			} catch (Exception ignored) {}
+		}
+		if (name == null || name.isEmpty()) {
+			name = uri.getLastPathSegment();
+		}
 
-        if (name == null || name.isEmpty()) {
-            try (MediaMetadataRetriever retriever = new MediaMetadataRetriever()) {
-                retriever.setDataSource(context, uri);
-                name = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
-            } catch (Exception ignored) {}
-        }
+		if (name == null || name.isEmpty()) {
+			try (MediaMetadataRetriever retriever = new MediaMetadataRetriever()) {
+				retriever.setDataSource(context, uri);
+				name = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
+			} catch (Exception ignored) {}
+		}
 
-        if (name != null) {
-            if (keepExtension) return name;
-            int dot = name.lastIndexOf('.');
-            if (dot > 0) {
-                return name.substring(0, dot);
-            }
-            return name;
-        }
-        return "Video";
-    }
+		if (name != null) {
+			if (keepExtension) return name;
+			int dot = name.lastIndexOf('.');
+			if (dot > 0) {
+				return name.substring(0, dot);
+			}
+			return name;
+		}
+		return "Video";
+	}
 }

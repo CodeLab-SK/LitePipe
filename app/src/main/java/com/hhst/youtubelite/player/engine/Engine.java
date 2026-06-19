@@ -231,7 +231,7 @@ public class Engine {
 					}
 
 					String watchUrl = tabManager.getWatchUrl();
-					if (watchUrl != null && UrlUtils.isMusicUrl(watchUrl)) {
+					if (UrlUtils.isMusicUrl(watchUrl)) {
 						tabManager.evalWatchJs("if(window.__syncNativeReady) window.__syncNativeReady();", null);
 					}
 				}
@@ -246,7 +246,7 @@ public class Engine {
 				}
 
 				String watchUrl = tabManager.getWatchUrl();
-				if (watchUrl != null && UrlUtils.isMusicUrl(watchUrl)) {
+				if (UrlUtils.isMusicUrl(watchUrl)) {
 					if (isPlaying) {
 						tabManager.evalWatchJs("if(window.__syncNativePlay) window.__syncNativePlay();", null);
 					} else {
@@ -274,7 +274,7 @@ public class Engine {
 				if (reason == Player.DISCONTINUITY_REASON_SEEK) {
 					triggerSync(newPosition.positionMs);
 					String watchUrl = tabManager.getWatchUrl();
-					if (watchUrl != null && UrlUtils.isMusicUrl(watchUrl)) {
+					if (UrlUtils.isMusicUrl(watchUrl)) {
 						tabManager.evalWatchJs(String.format(Locale.US, "if(window.__syncNativeSeek) window.__syncNativeSeek(%d);", newPosition.positionMs / 1000), null);
 					}
 				}
@@ -464,7 +464,7 @@ public class Engine {
 		lastSyncTime = 0;
 
 		String watchUrl = tabManager.getWatchUrl();
-		if (watchUrl != null && UrlUtils.isMusicUrl(watchUrl)) {
+		if (UrlUtils.isMusicUrl(watchUrl)) {
 			tabManager.evalWatchJs("if(window.__syncNativeLoading) window.__syncNativeLoading();", null);
 		}
 	}
@@ -658,11 +658,7 @@ public class Engine {
 
 	public void setVolume(float volume) {
 		this.currentVolume = volume;
-		if (volume > 1.0f) {
-			this.player.setVolume(1.0f);
-		} else {
-			this.player.setVolume(volume);
-		}
+		this.player.setVolume(Math.min(volume, 1.0f));
 		updateLoudnessEnhancer(volume);
 	}
 
@@ -1159,6 +1155,8 @@ public class Engine {
 		return null;
 	}
 
+	@SafeVarargs
+	@SuppressWarnings("SameParameterValue")
 	private static boolean hasCause(@NonNull Throwable throwable,
 									@NonNull Class<? extends Throwable>... causeTypes) {
 		Throwable current = throwable;

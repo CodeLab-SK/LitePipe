@@ -34,12 +34,13 @@ try {
         const getPageClass = (url) => {
             try {
                 const u = new URL(url.toLowerCase());
+                const isMusic = u.hostname === 'music.youtube.com';
                 if (!u.hostname.includes('youtube.com')) return 'unknown';
                 const segments = u.pathname.split('/').filter(Boolean);
-                if (segments.length === 0) return 'home';
+                if (segments.length === 0) return isMusic ? 'music' : 'home';
                 const s0 = segments[0];
                 if (s0 === 'shorts') return 'shorts';
-                if (s0 === 'watch') return 'watch';
+                if (s0 === 'watch') return isMusic ? 'music_watch' : 'watch';
                 if (s0 === 'channel') return 'channel';
                 if (s0 === 'gaming') return 'gaming';
                 if (s0 === 'feed' && segments.length > 1) return segments[1];
@@ -530,63 +531,63 @@ try {
             if (window.android?.setRefreshLayoutEnabled) android.setRefreshLayoutEnabled(true);
         };
 
-              const ensureLibraryButton = () => {
-                  const pc = getCachedPageClass(location.href);
-                  if (pc !== 'you' && pc !== 'library') {
-                      removeIncognitoFallbackBanner();
-                      document.documentElement.classList.remove('lp-library-loading', 'lp-library-loaded');
-                      return;
-                  }
-                  const row = document.querySelector('yt-flexible-actions-view-model .ytFlexibleActionsViewModelActionRow') || document.querySelector('.ytFlexibleActionsViewModelActionRow');
-                  const isIncognito = window.android?.isIncognito?.() === true;
+        const ensureLibraryButton = () => {
+            const pc = getCachedPageClass(location.href);
+            if (pc !== 'you' && pc !== 'library') {
+                removeIncognitoFallbackBanner();
+                document.documentElement.classList.remove('lp-library-loading', 'lp-library-loaded');
+                return;
+            }
+            const row = document.querySelector('yt-flexible-actions-view-model .ytFlexibleActionsViewModelActionRow') || document.querySelector('.ytFlexibleActionsViewModelActionRow');
+            const isIncognito = window.android?.isIncognito?.() === true;
 
-                  if (!row) {
-                      if (isIncognito) {
-                          document.documentElement.classList.add('lp-library-loading');
-                          document.documentElement.classList.remove('lp-library-loaded');
-                          injectIncognitoFallbackBanner();
-                      } else {
-                          document.documentElement.classList.remove('lp-library-loading');
-                          document.documentElement.classList.add('lp-library-loaded');
-                      }
-                      return;
-                  }
+            if (!row) {
+                if (isIncognito) {
+                    document.documentElement.classList.add('lp-library-loading');
+                    document.documentElement.classList.remove('lp-library-loaded');
+                    injectIncognitoFallbackBanner();
+                } else {
+                    document.documentElement.classList.remove('lp-library-loading');
+                    document.documentElement.classList.add('lp-library-loaded');
+                }
+                return;
+            }
 
-                  document.documentElement.classList.add('lp-library-loaded');
-                  document.documentElement.classList.remove('lp-library-loading');
-                  removeIncognitoFallbackBanner();
+            document.documentElement.classList.add('lp-library-loaded');
+            document.documentElement.classList.remove('lp-library-loading');
+            removeIncognitoFallbackBanner();
 
-                  let chip = document.getElementById('_lp_incognito_chip');
-                  if (!chip) {
-                      chip = createLibraryIncognitoButton(
-                          isIncognito ? getLocalizedText('incognito_off') : getLocalizedText('incognito'),
-                          INCOGNITO_ICON,
-                          isIncognito,
-                          () => {
-                              if (window.android?.toggleIncognito) android.toggleIncognito();
-                              st(ensureLibraryButton, 100);
-                          }
-                      );
-                      if (chip) {
-                          chip.id = '_lp_incognito_chip';
-                          row.prepend(chip);
-                      }
-                  } else {
-                      const btn = chip.querySelector('button');
-                      const currentLabel = isIncognito ? getLocalizedText('incognito_off') : getLocalizedText('incognito');
-                      replaceTextInNode(chip, currentLabel);
+            let chip = document.getElementById('_lp_incognito_chip');
+            if (!chip) {
+                chip = createLibraryIncognitoButton(
+                    isIncognito ? getLocalizedText('incognito_off') : getLocalizedText('incognito'),
+                    INCOGNITO_ICON,
+                    isIncognito,
+                    () => {
+                        if (window.android?.toggleIncognito) android.toggleIncognito();
+                        st(ensureLibraryButton, 100);
+                    }
+                );
+                if (chip) {
+                    chip.id = '_lp_incognito_chip';
+                    row.prepend(chip);
+                }
+            } else {
+                const btn = chip.querySelector('button');
+                const currentLabel = isIncognito ? getLocalizedText('incognito_off') : getLocalizedText('incognito');
+                replaceTextInNode(chip, currentLabel);
 
-                      if (btn) {
-                          if (isIncognito) {
-                              btn.style.outline = '2px solid currentColor';
-                              btn.style.outlineOffset = '-2px';
-                          } else {
-                              btn.style.outline = '';
-                              btn.style.outlineOffset = '';
-                          }
-                      }
-                  }
-              };
+                if (btn) {
+                    if (isIncognito) {
+                        btn.style.outline = '2px solid currentColor';
+                        btn.style.outlineOffset = '-2px';
+                    } else {
+                        btn.style.outline = '';
+                        btn.style.outlineOffset = '';
+                    }
+                }
+            }
+        };
 
         let libraryObserver = null;
         const startLibraryObserver = () => {
@@ -610,7 +611,7 @@ try {
         };
 
         let cachedPrefs = null, lastPrefCheckTime = 0;
-        const PREF_CACHE_DURATION = 1500;
+        const PREF_CACHE_DURATION = 5000;
         const getPrefs = () => {
             const now = Date.now();
             if (cachedPrefs && now - lastPrefCheckTime < PREF_CACHE_DURATION) return cachedPrefs;
@@ -619,218 +620,213 @@ try {
             return cachedPrefs;
         };
 
-                  const applyActionBarVisibility = (actionBar, prefs) => {
-                      actionBar.querySelectorAll([
-                          '.ytSpecButtonViewModelHost',
-                          'ytm-toggle-button-renderer',
-                          'ytm-button-renderer',
-                          '.slim_video_action_bar_renderer_button',
-                          'ytm-segmented-like-dislike-button-renderer',
-                          'segmented-like-dislike-button-view-model',
-                          'button-view-model',
-                      ].join(',')).forEach((btn) => {
-                          // Removed the line that skipped custom injected buttons to enforce unified hiding logic
-                          const label = (btn.getAttribute('aria-label') || btn.textContent || '').toLowerCase().trim();
-                          const id = btn.id || '';
-                          const tag = btn.tagName.toLowerCase();
-                          const isLikeDislike = (
-                              tag === 'ytm-segmented-like-dislike-button-renderer' ||
-                              tag === 'segmented-like-dislike-button-view-model' ||
-                              btn.classList.contains('ytSegmentedLikeDislikeButtonViewModelHost') ||
-                              btn.closest?.('ytm-segmented-like-dislike-button-renderer, segmented-like-dislike-button-view-model') !== null ||
-                              (label.includes('like') && !label.includes('dislike') && tag !== 'div') ||
-                              label === 'like' || label === 'dislike' ||
-                              label.includes('like this video') || label.includes('dislike this video')
-                          );
-                          let hide = false;
-                          if (prefs.action_bar_show_like_dislike === false && isLikeDislike) hide = true;
-                          if (prefs.action_bar_show_download === false && (label.includes('download') || id === 'downloadButton')) hide = true;
-                          if (prefs.action_bar_show_queue === false && (label.includes('add to queue') || id === 'queueButton')) hide = true;
-                          if (prefs.enable_pip === false && id === 'pipButton') hide = true;
-                          if (prefs.action_bar_show_chat === false && (label.includes('chat') || id === 'chatButton')) hide = true;
-                          if (prefs.action_bar_show_share === false && label.includes('share')) hide = true;
-                          if (prefs.action_bar_show_remix === false && label.includes('remix')) hide = true;
-                          if (prefs.action_bar_show_thanks === false && label.includes('thanks')) hide = true;
-                          if (prefs.action_bar_show_clip === false && label.includes('clip')) hide = true;
-                          if (prefs.action_bar_show_save === false && (label.includes('save') || label.includes('playlist'))) hide = true;
-                          if (prefs.action_bar_show_report === false && label.includes('report')) hide = true;
-                          if (prefs.action_bar_show_ask_ai === false && (label.includes('ask') || label.includes('ai'))) hide = true;
-                          if (hide) btn.style.setProperty('display', 'none', 'important');
-                          else btn.style.removeProperty('display');
-                      });
+        const applyActionBarVisibility = (actionBar, prefs) => {
+            actionBar.querySelectorAll([
+                '.ytSpecButtonViewModelHost',
+                'ytm-toggle-button-renderer',
+                'ytm-button-renderer',
+                '.slim_video_action_bar_renderer_button',
+                'ytm-segmented-like-dislike-button-renderer',
+                'segmented-like-dislike-button-view-model',
+                'button-view-model',
+            ].join(',')).forEach((btn) => {
+                const label = (btn.getAttribute('aria-label') || btn.textContent || '').toLowerCase().trim();
+                const id = btn.id || '';
+                const tag = btn.tagName.toLowerCase();
+                const isLikeDislike = (
+                    tag === 'ytm-segmented-like-dislike-button-renderer' ||
+                    tag === 'segmented-like-dislike-button-view-model' ||
+                    btn.classList.contains('ytSegmentedLikeDislikeButtonViewModelHost') ||
+                    btn.closest?.('ytm-segmented-like-dislike-button-renderer, segmented-like-dislike-button-view-model') !== null ||
+                    (label.includes('like') && !label.includes('dislike') && tag !== 'div') ||
+                    label === 'like' || label === 'dislike' ||
+                    label.includes('like this video') || label.includes('dislike this video')
+                );
+                let hide = false;
+                if (prefs.action_bar_show_like_dislike === false && isLikeDislike) hide = true;
+                if (prefs.action_bar_show_download === false && (label.includes('download') || id === 'downloadButton')) hide = true;
+                if (prefs.action_bar_show_queue === false && (label.includes('add to queue') || id === 'queueButton')) hide = true;
+                if (prefs.enable_pip === false && id === 'pipButton') hide = true;
+                if (prefs.action_bar_show_chat === false && (label.includes('chat') || id === 'chatButton')) hide = true;
+                if (prefs.action_bar_show_share === false && label.includes('share')) hide = true;
+                if (prefs.action_bar_show_remix === false && label.includes('remix')) hide = true;
+                if (prefs.action_bar_show_thanks === false && label.includes('thanks')) hide = true;
+                if (prefs.action_bar_show_clip === false && label.includes('clip')) hide = true;
+                if (prefs.action_bar_show_save === false && (label.includes('save') || label.includes('playlist'))) hide = true;
+                if (prefs.action_bar_show_report === false && label.includes('report')) hide = true;
+                if (prefs.action_bar_show_ask_ai === false && (label.includes('ask') || label.includes('ai'))) hide = true;
+                if (hide) btn.style.setProperty('display', 'none', 'important');
+                else btn.style.removeProperty('display');
+            });
 
-                      if (prefs.action_bar_show_like_dislike === false) {
-                          actionBar.querySelectorAll('ytm-segmented-like-dislike-button-renderer, segmented-like-dislike-button-view-model').forEach(el => {
-                              el.style.setProperty('display', 'none', 'important');
-                          });
-                      } else {
-                          actionBar.querySelectorAll('ytm-segmented-like-dislike-button-renderer, segmented-like-dislike-button-view-model').forEach(el => {
-                              el.style.removeProperty('display');
-                          });
-                      }
-                  };
+            if (prefs.action_bar_show_like_dislike === false) {
+                actionBar.querySelectorAll('ytm-segmented-like-dislike-button-renderer, segmented-like-dislike-button-view-model').forEach(el => {
+                    el.style.setProperty('display', 'none', 'important');
+                });
+            } else {
+                actionBar.querySelectorAll('ytm-segmented-like-dislike-button-renderer, segmented-like-dislike-button-view-model').forEach(el => {
+                    el.style.removeProperty('display');
+                });
+            }
+        };
 
-                  let watchObserver = null, watchDebounce = null;
-                  const startWatchObserver = () => {
-                      if (watchObserver) watchObserver.disconnect();
-                      const container = document.querySelector('ytm-slim-video-action-bar-renderer');
-                      if (container) {
-                          watchObserver = new MutationObserver(() => {
-                              ct(watchDebounce);
-                              watchDebounce = st(ensureWatchButtons, 50);
-                          });
-                          watchObserver.observe(container, { childList: true, subtree: true });
-                          ensureWatchButtons();
-                      }
-                  };
+        let watchObserver = null, watchDebounce = null;
+        const startWatchObserver = () => {
+            if (watchObserver) watchObserver.disconnect();
+            const container = document.querySelector('ytm-slim-video-action-bar-renderer');
+            if (container) {
+                watchObserver = new MutationObserver(() => {
+                    ct(watchDebounce);
+                    watchDebounce = st(ensureWatchButtons, 50);
+                });
+                watchObserver.observe(container, { childList: true, subtree: true });
+                ensureWatchButtons();
+            }
+        };
 
-                  const ensureWatchButtons = () => {
-                      if (getCachedPageClass(location.href) !== 'watch') return;
-                      const actionBar = document.querySelector('ytm-slim-video-action-bar-renderer');
-                      if (!actionBar) return;
-                      const prefs = getPrefs();
-                      const container = actionBar.querySelector('.slim-video-action-bar-actions') || actionBar;
-                      let anchor = container.querySelector('ytm-segmented-like-dislike-button-renderer') ||
-                                   container.querySelector('ytm-toggle-button-renderer') ||
-                                   container.querySelector('segmented-like-dislike-button-view-model') ||
-                                   container.firstElementChild;
-                      if (!anchor) return;
-                      const moviePlayer = document.querySelector('#movie_player');
-                      const isLive = moviePlayer?.getPlayerResponse?.()?.playabilityStatus?.liveStreamability && location.href.includes('/watch');
-                      const targetOrder = [];
+        const ensureWatchButtons = () => {
+            if (getCachedPageClass(location.href) !== 'watch') return;
+            const actionBar = document.querySelector('ytm-slim-video-action-bar-renderer');
+            if (!actionBar) return;
+            const prefs = getPrefs();
+            const container = actionBar.querySelector('.slim-video-action-bar-actions') || actionBar;
+            let anchor = container.querySelector('ytm-segmented-like-dislike-button-renderer') ||
+                         container.querySelector('ytm-toggle-button-renderer') ||
+                         container.querySelector('segmented-like-dislike-button-view-model') ||
+                         container.firstElementChild;
+            if (!anchor) return;
+            const moviePlayer = document.querySelector('#movie_player');
+            const isLive = moviePlayer?.getPlayerResponse?.()?.playabilityStatus?.liveStreamability && location.href.includes('/watch');
+            const targetOrder = [];
 
-                      // Download Button: Check preference and live status before loading
-                      if (prefs.action_bar_show_download !== false && !isLive) {
-                          targetOrder.push({
-                              id: 'downloadButton', key: 'download',
-                              icon: 'M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z',
-                              fn: () => window.android?.download(location.href),
-                          });
-                      } else {
-                          const el = document.getElementById('downloadButton');
-                          if (el) el.remove();
-                      }
+            if (prefs.action_bar_show_download !== false && !isLive) {
+                targetOrder.push({
+                    id: 'downloadButton', key: 'download',
+                    icon: 'M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z',
+                    fn: () => window.android?.download(location.href),
+                });
+            } else {
+                const el = document.getElementById('downloadButton');
+                if (el) el.remove();
+            }
 
-                      // Queue Button: Check preference before loading
-                      if (prefs.action_bar_show_queue !== false) {
-                          targetOrder.push({
-                              id: 'queueButton', key: 'add_to_queue',
-                              icon: 'M4 10h12v2H4zm0-4h12v2H4zm0 8h8v2H4zm10 0v6l5-3z',
-                              fn: () => {
-                                  const videoId = getVideoId(location.href);
-                                  if (!videoId) return;
-                                  const metadata = {
-                                      url: location.href,
-                                      videoId: videoId,
-                                      title: document.querySelector('.slim-video-information-title, .watch-title, ytm-slim-video-metadata-renderer .title')?.textContent?.trim() || videoId,
-                                      author: document.querySelector('.slim-owner-name, .channel-name, ytm-slim-owner-renderer .ytm-slim-owner-renderer-text')?.textContent?.trim() || '',
-                                      thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
-                                  };
-                                  if (window.android?.addToQueue) android.addToQueue(JSON.stringify(metadata));
-                              }
-                          });
-                      } else {
-                          const el = document.getElementById('queueButton');
-                          if (el) el.remove();
-                      }
+            if (prefs.action_bar_show_queue !== false) {
+                targetOrder.push({
+                    id: 'queueButton', key: 'add_to_queue',
+                    icon: 'M4 10h12v2H4zm0-4h12v2H4zm0 8h8v2H4zm10 0v6l5-3z',
+                    fn: () => {
+                        const videoId = getVideoId(location.href);
+                        if (!videoId) return;
+                        const metadata = {
+                            url: location.href,
+                            videoId: videoId,
+                            title: document.querySelector('.slim-video-information-title, .watch-title, ytm-slim-video-metadata-renderer .title')?.textContent?.trim() || videoId,
+                            author: document.querySelector('.slim-owner-name, .channel-name, ytm-slim-owner-renderer .ytm-slim-owner-renderer-text')?.textContent?.trim() || '',
+                            thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+                        };
+                        if (window.android?.addToQueue) android.addToQueue(JSON.stringify(metadata));
+                    }
+                });
+            } else {
+                const el = document.getElementById('queueButton');
+                if (el) el.remove();
+            }
 
-                      // Chat Button: Check preference and live status before loading
-                      if (prefs.action_bar_show_chat !== false && isLive) {
-                          targetOrder.push({
-                              id: 'chatButton', key: 'chat',
-                              icon: 'M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z',
-                              fn: () => {
-                                  let chatContainer = document.getElementById('live_chat_container');
-                                  if (chatContainer) {
-                                      if (chatContainer.style.display === 'none') {
-                                          chatContainer.style.display = 'flex';
-                                          document.body.style.overflow = 'hidden';
-                                          document.documentElement.style.overflow = 'hidden';
-                                          history.pushState({ chatOpen: true }, '', location.href + '#chat');
-                                      } else {
-                                          chatContainer.style.display = 'none';
-                                          document.body.style.overflow = '';
-                                          document.documentElement.style.overflow = '';
-                                          if (location.hash === '#chat') history.back();
-                                      }
-                                      return;
-                                  }
-                                  const panelContainer = document.querySelector('#panel-container') || document.querySelector('.watch-below-the-player');
-                                  if (!panelContainer) return;
-                                  chatContainer = document.createElement('div');
-                                  chatContainer.id = 'live_chat_container';
-                                  chatContainer.style.cssText = 'position:fixed;top:calc(56.25vw + 48px);bottom:0;left:0;right:0;z-index:4;display:flex;flex-direction:column;box-shadow:0 -2px 10px rgba(0,0,0,0.1);border-top-left-radius:12px;border-top-right-radius:12px;overflow:hidden;';
-                                  document.body.style.overflow = 'hidden'; document.documentElement.style.overflow = 'hidden';
-                                  history.pushState({ chatOpen: true }, '', location.href + '#chat');
-                                  const header = document.createElement('div');
-                                  header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--yt-spec-10-percent-layer);background-color:inherit;border-top-left-radius:12px;border-top-right-radius:12px;';
-                                  const title = document.createElement('h2');
-                                  title.className = 'engagement-panel-section-list-header-title';
-                                  title.innerText = getLocalizedText('chat');
-                                  title.style.cssText = 'font-family:"YouTube Sans","Roboto",sans-serif;font-size:1.8rem;font-weight:600;color:var(--yt-spec-text-primary);margin:0;';
-                                  const closeBtn = document.createElement('div');
-                                  const closeSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                                  closeSvg.setAttribute('viewBox', '0 0 24 24'); closeSvg.setAttribute('width', '24'); closeSvg.setAttribute('height', '24');
-                                  closeSvg.setAttribute('fill', 'currentColor'); closeSvg.style.display = 'block';
-                                  const closePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                                  closePath.setAttribute('d', 'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z');
-                                  closeSvg.appendChild(closePath); closeBtn.appendChild(closeSvg);
-                                  closeBtn.style.cssText = 'cursor:pointer;color:var(--yt-spec-text-primary);padding:4px;';
-                                  closeBtn.onclick = (e) => { e.stopPropagation(); chatContainer.style.display = 'none'; document.body.style.overflow = ''; document.documentElement.style.overflow = ''; if (location.hash === '#chat') history.back(); };
-                                  header.appendChild(title); header.appendChild(closeBtn); chatContainer.appendChild(header);
-                                  const videoId = getVideoId(location.href);
-                                  if (videoId) {
-                                      const iframe = document.createElement('iframe');
-                                      const isDark = document.documentElement.getAttribute('dark') === 'true' || window.matchMedia('(prefers-color-scheme: dark)').matches;
-                                      chatContainer.style.backgroundColor = isDark ? '#0f0f0f' : '#ffffff';
-                                      iframe.src = `https://www.youtube.com/live_chat?v=${videoId}&embed_domain=${location.hostname}${isDark ? '&dark_theme=1' : ''}`;
-                                      iframe.style.cssText = 'width:100%;height:100%;border:none;flex:1;background-color:transparent;';
-                                      chatContainer.appendChild(iframe);
-                                      panelContainer.insertBefore(chatContainer, panelContainer.firstChild);
-                                      bindListener(window, 'popstate', () => {
-                                          if (chatContainer && chatContainer.style.display !== 'none' && !location.hash.includes('chat')) {
-                                              chatContainer.style.display = 'none'; document.body.style.overflow = ''; document.documentElement.style.overflow = '';
-                                          }
-                                      });
-                                  }
-                              },
-                          });
-                      } else {
-                          const el = document.getElementById('chatButton');
-                          if (el) el.remove();
-                          // Also close and remove the chat container if setting is toggled off
-                          const chatContainer = document.getElementById('live_chat_container');
-                          if (chatContainer) {
-                              chatContainer.remove();
-                              document.body.style.overflow = '';
-                              document.documentElement.style.overflow = '';
-                          }
-                      }
+            if (prefs.action_bar_show_chat !== false && isLive) {
+                targetOrder.push({
+                    id: 'chatButton', key: 'chat',
+                    icon: 'M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z',
+                    fn: () => {
+                        let chatContainer = document.getElementById('live_chat_container');
+                        if (chatContainer) {
+                            if (chatContainer.style.display === 'none') {
+                                chatContainer.style.display = 'flex';
+                                document.body.style.overflow = 'hidden';
+                                document.documentElement.style.overflow = 'hidden';
+                                history.pushState({ chatOpen: true }, '', location.href + '#chat');
+                            } else {
+                                chatContainer.style.display = 'none';
+                                document.body.style.overflow = '';
+                                document.documentElement.style.overflow = '';
+                                if (location.hash === '#chat') history.back();
+                            }
+                            return;
+                        }
+                        const panelContainer = document.querySelector('#panel-container') || document.querySelector('.watch-below-the-player');
+                        if (!panelContainer) return;
+                        chatContainer = document.createElement('div');
+                        chatContainer.id = 'live_chat_container';
+                        chatContainer.style.cssText = 'position:fixed;top:calc(56.25vw + 48px);bottom:0;left:0;right:0;z-index:4;display:flex;flex-direction:column;box-shadow:0 -2px 10px rgba(0,0,0,0.1);border-top-left-radius:12px;border-top-right-radius:12px;overflow:hidden;';
+                        document.body.style.overflow = 'hidden'; document.documentElement.style.overflow = 'hidden';
+                        history.pushState({ chatOpen: true }, '', location.href + '#chat');
+                        const header = document.createElement('div');
+                        header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--yt-spec-10-percent-layer);background-color:inherit;border-top-left-radius:12px;border-top-right-radius:12px;';
+                        const title = document.createElement('h2');
+                        title.className = 'engagement-panel-section-list-header-title';
+                        title.innerText = getLocalizedText('chat');
+                        title.style.cssText = 'font-family:"YouTube Sans","Roboto",sans-serif;font-size:1.8rem;font-weight:600;color:var(--yt-spec-text-primary);margin:0;';
+                        const closeBtn = document.createElement('div');
+                        const closeSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                        closeSvg.setAttribute('viewBox', '0 0 24 24'); closeSvg.setAttribute('width', '24'); closeSvg.setAttribute('height', '24');
+                        closeSvg.setAttribute('fill', 'currentColor'); closeSvg.style.display = 'block';
+                        const closePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                        closePath.setAttribute('d', 'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z');
+                        closeSvg.appendChild(closePath); closeBtn.appendChild(closeSvg);
+                        closeBtn.style.cssText = 'cursor:pointer;color:var(--yt-spec-text-primary);padding:4px;';
+                        closeBtn.onclick = (e) => { e.stopPropagation(); chatContainer.style.display = 'none'; document.body.style.overflow = ''; document.documentElement.style.overflow = ''; if (location.hash === '#chat') history.back(); };
+                        header.appendChild(title); header.appendChild(closeBtn); chatContainer.appendChild(header);
+                        const videoId = getVideoId(location.href);
+                        if (videoId) {
+                            const iframe = document.createElement('iframe');
+                            const isDark = document.documentElement.getAttribute('dark') === 'true' || window.matchMedia('(prefers-color-scheme: dark)').matches;
+                            chatContainer.style.backgroundColor = isDark ? '#0f0f0f' : '#ffffff';
+                            iframe.src = `https://www.youtube.com/live_chat?v=${videoId}&embed_domain=${location.hostname}${isDark ? '&dark_theme=1' : ''}`;
+                            iframe.style.cssText = 'width:100%;height:100%;border:none;flex:1;background-color:transparent;';
+                            chatContainer.appendChild(iframe);
+                            panelContainer.insertBefore(chatContainer, panelContainer.firstChild);
+                            bindListener(window, 'popstate', () => {
+                                if (chatContainer && chatContainer.style.display !== 'none' && !location.hash.includes('chat')) {
+                                    chatContainer.style.display = 'none'; document.body.style.overflow = ''; document.documentElement.style.overflow = '';
+                                }
+                            });
+                        }
+                    },
+                });
+            } else {
+                const el = document.getElementById('chatButton');
+                if (el) el.remove();
+                const chatContainer = document.getElementById('live_chat_container');
+                if (chatContainer) {
+                    chatContainer.remove();
+                    document.body.style.overflow = '';
+                    document.documentElement.style.overflow = '';
+                }
+            }
 
-                      // PiP Button: Check preference before loading
-                      if (prefs.enable_pip) {
-                          targetOrder.push({
-                              id: 'pipButton', key: 'pip',
-                              icon: 'M19 11h-8v6h8v-6zm4 8V4.98C23 3.88 22.1 3 21 3H3c-1.1 0-2 .88-2 1.98V19c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2zm-2 .02H3V4.97h18v14.05z',
-                              fn: () => window.android?.pip(),
-                          });
-                      } else {
-                          const el = document.getElementById('pipButton');
-                          if (el) el.remove();
-                      }
+            if (prefs.enable_pip) {
+                targetOrder.push({
+                    id: 'pipButton', key: 'pip',
+                    icon: 'M19 11h-8v6h8v-6zm4 8V4.98C23 3.88 22.1 3 21 3H3c-1.1 0-2 .88-2 1.98V19c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2zm-2 .02H3V4.97h18v14.05z',
+                    fn: () => window.android?.pip(),
+                });
+            } else {
+                const el = document.getElementById('pipButton');
+                if (el) el.remove();
+            }
 
-                      targetOrder.forEach(item => {
-                          let btn = document.getElementById(item.id);
-                          if (!btn) btn = createWatchButton(getLocalizedText(item.key), item.icon, item.id, item.fn);
-                          if (btn) {
-                              if (anchor.nextElementSibling !== btn) anchor.after(btn);
-                              anchor = btn;
-                          }
-                      });
+            targetOrder.forEach(item => {
+                let btn = document.getElementById(item.id);
+                if (!btn) btn = createWatchButton(getLocalizedText(item.key), item.icon, item.id, item.fn);
+                if (btn) {
+                    if (anchor.nextElementSibling !== btn) anchor.after(btn);
+                    anchor = btn;
+                }
+            });
 
-                      applyActionBarVisibility(actionBar, prefs);
-                      window.watchInjected = true;
-                  };
+            applyActionBarVisibility(actionBar, prefs);
+            window.watchInjected = true;
+        };
+
         const closeBottomSheet = () => {
             const scrimBtn = document.querySelector('.ytWebScrimHiddenButton');
             if (scrimBtn) { scrimBtn.click(); return; }
@@ -872,6 +868,26 @@ try {
                     closeBottomSheet();
                 }, true);
             };
+
+            if (type === 'music') {
+                const item = document.createElement('ytmusic-menu-service-item-renderer');
+                item.setAttribute('role', 'menuitem');
+                item.setAttribute('tabindex', '-1');
+                item.setAttribute('aria-disabled', 'false');
+                item.dataset.lpCustom = 'true';
+                item.innerHTML = `
+                    <yt-icon class="icon style-scope ytmusic-menu-service-item-renderer" style="width: 18px; height: 18px;">
+                        <span class="yt-icon-shape style-scope yt-icon ytSpecIconShapeHost">
+                            <div style="width: 100%; height: 100%; display: block; fill: currentcolor;">
+                                <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24" width="18" focusable="false" aria-hidden="true" style="pointer-events: none; display: inherit; width: 100%; height: 100%;"><path d="${iconPath}"></path></svg>
+                            </div>
+                        </span>
+                    </yt-icon>
+                    <yt-formatted-string class="text style-scope ytmusic-menu-service-item-renderer">${label}</yt-formatted-string>
+                `;
+                bindClick(item, () => { onClick(); closeBottomSheet(); });
+                return item;
+            }
 
             if (type === 'list') {
                 const wrapper = document.createElement('yt-list-item-view-model');
@@ -973,10 +989,10 @@ try {
                 document.addEventListener('click', Sheet.onAnyClick, true);
                 if (sheetObserver) return;
                 sheetObserver = new MutationObserver(() => {
-                    const sheet = document.querySelector('.ytSpecBottomSheetLayoutHost, bottom-sheet-layout, .ytm-bottom-sheet-renderer');
+                    const sheet = document.querySelector('.ytSpecBottomSheetLayoutHost, bottom-sheet-layout, .ytm-bottom-sheet-renderer, ytmusic-menu-popup-renderer');
                     if (!sheet || sheet.querySelector('[data-lp-custom]')) return;
 
-                    const hasItems = sheet.querySelector('.bottom-sheet-media-menu-item, yt-list-item-view-model, ytm-menu-service-item-renderer, ytm-menu-navigation-item-renderer, toggleable-list-item-view-model, ytm-menu-item');
+                    const hasItems = sheet.querySelector('.bottom-sheet-media-menu-item, yt-list-item-view-model, ytm-menu-service-item-renderer, ytm-menu-navigation-item-renderer, ytmusic-menu-service-item-renderer, ytmusic-menu-navigation-item-renderer, toggleable-list-item-view-model, ytm-menu-item');
                     if (hasItems) Sheet.inject(sheet);
                 });
                 sheetObserver.observe(document.body, { childList: true, subtree: true });
@@ -995,7 +1011,7 @@ try {
                     return;
                 }
 
-                const root = event.target.closest('ytm-media-item, yt-lockup-view-model, ytm-rich-item-renderer, .ytLockupViewModelHost, ytm-compact-video-renderer, ytm-video-with-context-renderer, ytm-playlist-renderer, ytm-compact-playlist-renderer, ytm-history-item-renderer');
+                const root = event.target.closest('ytm-media-item, yt-lockup-view-model, ytm-rich-item-renderer, .ytLockupViewModelHost, ytm-compact-video-renderer, ytm-video-with-context-renderer, ytm-playlist-renderer, ytm-compact-playlist-renderer, ytm-history-item-renderer, ytmusic-responsive-list-item-renderer, ytmusic-two-row-item-renderer');
                 if (!root) return;
 
                 const tag = root.tagName.toLowerCase();
@@ -1024,14 +1040,14 @@ try {
 
                 let metadata = Sheet.resolveMetadata(Sheet._root) || Sheet._metadata;
 
-                if (!metadata && getCachedPageClass(location.href) === 'watch') {
+                if (!metadata && (getCachedPageClass(location.href) === 'watch' || getCachedPageClass(location.href) === 'music_watch')) {
                     const videoId = getVideoId(location.href);
                     if (videoId) {
                         metadata = {
                             url: location.href,
                             videoId,
-                            title: document.querySelector('.slim-video-information-title, .watch-title, ytm-slim-video-metadata-renderer .title')?.textContent?.trim() || videoId,
-                            author: document.querySelector('.slim-owner-name, .channel-name, ytm-slim-owner-renderer .ytm-slim-owner-renderer-text')?.textContent?.trim() || '',
+                            title: document.querySelector('.slim-video-information-title, .watch-title, ytm-slim-video-metadata-renderer .title, yt-formatted-string.title')?.textContent?.trim() || videoId,
+                            author: document.querySelector('.slim-owner-name, .channel-name, ytm-slim-owner-renderer .ytm-slim-owner-renderer-text, yt-formatted-string.byline')?.textContent?.trim() || '',
                             thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
                         };
                     }
@@ -1042,7 +1058,7 @@ try {
                 const doInject = () => {
                     if (sheet.querySelector('[data-lp-custom]')) return true;
 
-                    const firstItem = sheet.querySelector('.bottom-sheet-media-menu-item, yt-list-item-view-model, ytm-menu-service-item-renderer, ytm-menu-navigation-item-renderer, toggleable-list-item-view-model');
+                    const firstItem = sheet.querySelector('.bottom-sheet-media-menu-item, yt-list-item-view-model, ytm-menu-service-item-renderer, ytm-menu-navigation-item-renderer, ytmusic-menu-service-item-renderer, ytmusic-menu-navigation-item-renderer, toggleable-list-item-view-model');
                     if (!firstItem) return false;
 
                     const container = firstItem.parentElement;
@@ -1053,6 +1069,8 @@ try {
 
                     if (firstItem.tagName.toLowerCase() === 'yt-list-item-view-model') {
                         itemType = 'list';
+                    } else if (firstItem.tagName.toLowerCase() === 'ytmusic-menu-service-item-renderer' || firstItem.tagName.toLowerCase() === 'ytmusic-menu-navigation-item-renderer') {
+                        itemType = 'music';
                     } else if (firstItem.tagName.toLowerCase() === 'ytm-menu-service-item-renderer') {
                         itemType = 'menu';
                         needsWrapper = 'ytm-menu-service-item-renderer';
@@ -1072,10 +1090,12 @@ try {
                         return el;
                     };
 
-                    const dlItem = createItem('download', 'M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z', () => {
-                        if (window.android?.download) android.download(metadata.url);
-                    });
-                    container.insertBefore(dlItem, container.firstElementChild);
+                    if (itemType !== 'music') {
+                        const dlItem = createItem('download', 'M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z', () => {
+                            if (window.android?.download) android.download(metadata.url);
+                        });
+                        container.insertBefore(dlItem, container.firstElementChild);
+                    }
 
                     if (!Sheet._playlistOnly) {
                         const qItem = createItem('add_to_queue', 'M4 10h12v2H4zm0-4h12v2H4zm0 8h8v2H4zm10 0v6l5-3z', () => {
@@ -1095,6 +1115,26 @@ try {
                     st(retry, 100);
                 }
             }
+        };
+
+        const ensureMusicPlayerDownloadButton = () => {
+            if (getCachedPageClass(location.href) !== 'music_watch') return;
+            const controls = document.querySelector('ytmusic-player-controls') || document.querySelector('ytmusic-player');
+            if (!controls) return;
+            const bylineWrapper = controls.querySelector('.byline-wrapper') || document.querySelector('.byline-wrapper');
+            if (!bylineWrapper || document.getElementById('_lp_music_dl_btn')) return;
+
+            const btn = document.createElement('button');
+            btn.id = '_lp_music_dl_btn';
+            btn.setAttribute('aria-label', getLocalizedText('download'));
+            btn.style.cssText = 'background: transparent; border: none; color: var(--ytmusic-text-primary, #fff); cursor: pointer; padding: 4px; margin-left: 8px; display: inline-flex; align-items: center; border-radius: 50%; -webkit-tap-highlight-color: transparent;';
+            btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 0 24 24" width="20" fill="currentColor" style="pointer-events: none;"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"></path></svg>';
+
+            bylineWrapper.appendChild(btn);
+            bindListener(btn, 'click', (e) => {
+                e.preventDefault(); e.stopPropagation();
+                if (window.android?.download) android.download(location.href);
+            }, true);
         };
 
         Sheet.init();
@@ -1119,7 +1159,7 @@ try {
         window.addEventListener('onRefresh', () => location.reload());
         window.addEventListener('doUpdateVisitedHistory', () => {
             const pc = getCachedPageClass(location.href);
-            if (window.android?.setRefreshLayoutEnabled) android.setRefreshLayoutEnabled(['home', 'subscriptions', '@', 'library'].includes(pc));
+            if (window.android?.setRefreshLayoutEnabled) android.setRefreshLayoutEnabled(['home', 'subscriptions', '@', 'library', 'music'].includes(pc));
             if (window.android?.finishRefresh) android.finishRefresh();
         });
 
@@ -1159,20 +1199,107 @@ try {
         });
 
         window.__liteSyncInFlight = false;
-        window.__syncNativeProgress = function(seconds) {
-            const p = document.querySelector('#movie_player');
-            if (!p || window.__liteSyncInFlight) return false;
+
+        const getMusicPlayer = () => document.querySelector('#movie_player') || document.querySelector('ytmusic-player')?.player_;
+        const getMusicVideo = () => document.querySelector('ytmusic-player video') || document.querySelector('#movie_player video');
+
+        window.__syncNativeLoading = function() {
+            if (getCachedPageClass(location.href) !== 'music_watch') return;
+            const p = getMusicPlayer();
+            const v = getMusicVideo();
+            if (p && typeof p.pauseVideo === 'function') p.pauseVideo();
+            else if (v) v.pause();
+        };
+
+        window.__syncNativeReady = function() {
+            if (getCachedPageClass(location.href) !== 'music_watch') return;
+            const p = getMusicPlayer();
+            const v = getMusicVideo();
+            if (p && typeof p.playVideo === 'function') {
+                if (!p.isMuted?.()) p.mute?.();
+                p.playVideo();
+            } else if (v) {
+                v.muted = true;
+                v.play()?.catch(() => {});
+            }
+        };
+
+        window.__syncNativePlay = function() {
+            if (getCachedPageClass(location.href) !== 'music_watch') return;
+            const p = getMusicPlayer();
+            const v = getMusicVideo();
+            if (p && typeof p.playVideo === 'function') {
+                window.__liteSyncInFlight = true;
+                p.playVideo();
+                setTimeout(() => { window.__liteSyncInFlight = false; }, 500);
+            } else if (v && v.paused) {
+                window.__liteSyncInFlight = true;
+                try { v.muted = true; v.play()?.catch(() => {}); } catch(e) {}
+                setTimeout(() => { window.__liteSyncInFlight = false; }, 500);
+            }
+        };
+
+        window.__syncNativePause = function() {
+            if (getCachedPageClass(location.href) !== 'music_watch') return;
+            const p = getMusicPlayer();
+            const v = getMusicVideo();
+            if (p && typeof p.pauseVideo === 'function') {
+                window.__liteSyncInFlight = true;
+                p.pauseVideo();
+                setTimeout(() => { window.__liteSyncInFlight = false; }, 500);
+            } else if (v && !v.paused) {
+                window.__liteSyncInFlight = true;
+                try { v.pause(); } catch(e) {}
+                setTimeout(() => { window.__liteSyncInFlight = false; }, 500);
+            }
+        };
+
+        window.__syncNativeSeek = function(seconds) {
+            if (getCachedPageClass(location.href) !== 'music_watch') return;
+            const p = getMusicPlayer();
+            const v = getMusicVideo();
+            if (!p && !v) return;
             window.__liteSyncInFlight = true;
             try {
-                p.mute?.(); p.seekTo?.(seconds); p.playVideo?.();
-                setTimeout(() => { p.pauseVideo?.(); window.__liteSyncInFlight = false; }, 2000);
-                return true;
-            } catch (e) { window.__liteSyncInFlight = false; return false; }
+                if (p && typeof p.seekTo === 'function') p.seekTo(seconds);
+                else if (v) v.currentTime = seconds;
+            } catch(e) {}
+            setTimeout(() => { window.__liteSyncInFlight = false; }, 500);
+        };
+
+        window.__syncNativeProgress = function(seconds) {
+            if (getCachedPageClass(location.href) !== 'music_watch') return;
+            const v = getMusicVideo();
+            if (!v) return;
+            window.__liteSyncInFlight = true;
+            try {
+                if (Math.abs(v.currentTime - seconds) > 2) v.currentTime = seconds;
+            } catch(e) {}
+            setTimeout(() => { window.__liteSyncInFlight = false; }, 500);
+        };
+
+        const setupMusicVideoListeners = () => {
+            const v = getMusicVideo();
+            if (!v || v.dataset.lpSyncBound === 'true') return;
+            v.dataset.lpSyncBound = 'true';
+
+            v.addEventListener('play', () => {
+                if (!window.__liteSyncInFlight) window.android?.musicPlay?.();
+            });
+            v.addEventListener('pause', () => {
+                if (!window.__liteSyncInFlight) window.android?.musicPause?.();
+            });
+            v.addEventListener('seeked', () => {
+                if (!window.__liteSyncInFlight) window.android?.musicSeek?.(Math.floor(v.currentTime * 1000));
+            });
         };
 
         document.addEventListener('animationstart', (e) => {
             if (e.animationName !== 'nodeInserted') return;
             const node = e.target, pc = getCachedPageClass(location.href);
+            if (pc === 'music_watch' && (node.id === 'movie_player' || node.tagName.toLowerCase() === 'ytmusic-player')) {
+                setTimeout(setupMusicVideoListeners, 500);
+            }
             if (node.id === 'movie_player') {
                 if (pc === 'watch') {
                     node.mute?.();
@@ -1216,6 +1343,11 @@ try {
                 if (ad) ad.currentTime = ad.duration;
                 const mp = document.querySelector('#movie_player');
                 if (mp && !window.__liteSyncInFlight) { mp.mute?.(); mp.pauseVideo?.(); }
+            } else if (pc === 'music_watch') {
+                setupMusicVideoListeners();
+                ensureMusicPlayerDownloadButton();
+                const v = getMusicVideo();
+                if (v) v.muted = true;
             } else if (pc === 'shorts') {
                 if (!cachedHeaderElement) cachedHeaderElement = document.querySelector('ytm-header-bar-renderer, .ytm-header-bar-renderer');
                 if (cachedHeaderElement) cachedHeaderElement.style.setProperty('display', 'none', 'important');
@@ -1223,11 +1355,8 @@ try {
 
                 document.querySelectorAll('yt-shorts-suggested-action-view-model:not([data-lp-tagged])').forEach(el => {
                     const text = el.textContent.toLowerCase();
-                    if (text.includes('view products')) {
-                        el.classList.add('lp-shorts-product-banner');
-                    } else if (text.includes('search "')) {
-                        el.classList.add('lp-shorts-search-suggestion');
-                    }
+                    if (text.includes('view products')) el.classList.add('lp-shorts-product-banner');
+                    else if (text.includes('search "')) el.classList.add('lp-shorts-search-suggestion');
                     el.dataset.lpTagged = 'true';
                 });
             } else {
@@ -1280,7 +1409,7 @@ try {
                     settings.dataset.buttonsInjected = 'true';
                 }
             }
-        }, 800);
+        }, 1500);
 
         document.addEventListener('click', e => {
             handleWatchTimestampClick(e);

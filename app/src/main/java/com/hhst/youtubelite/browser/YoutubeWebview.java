@@ -69,53 +69,53 @@ import okhttp3.Response;
 public class YoutubeWebview extends WebView {
 
 	private static final String PO_TOKEN_CONTEXT_SCRIPT = """
-					(function(){
-					try{
-					var ytcfgObject=globalThis.ytcfg||null;
-					var ytcfgData=ytcfgObject&&ytcfgObject.data_?ytcfgObject.data_:null;
-					var getCfg=function(key){
-					try{
-					if(ytcfgObject&&typeof ytcfgObject.get==='function'){
-					var value=ytcfgObject.get(key);
-					if(value!==undefined&&value!==null&&value!==''){return value;}
-					}
-					}catch(ignored){}
-					return ytcfgData&&ytcfgData[key]!==undefined?ytcfgData[key]:null;
-					};
-					var initialDataContext=globalThis.ytInitialData&&globalThis.ytInitialData.responseContext?globalThis.ytInitialData.responseContext:null;
-					var initialPlayerContext=globalThis.ytInitialPlayerResponse&&globalThis.ytInitialPlayerResponse.responseContext?globalThis.ytInitialPlayerResponse.responseContext:null;
-					var innertubeContext=getCfg('INNERTUBE_CONTEXT')||initialDataContext||initialPlayerContext||null;
-					var client=innertubeContext&&innertubeContext.client?innertubeContext.client:null;
-					var initialData=globalThis.ytInitialData||null;
-					var rawFlags=getCfg('EXPERIMENT_FLAGS')||getCfg('serializedExperimentFlags')||null;
-					var serializedExperimentFlags=null;
-					if(typeof rawFlags==='string'){serializedExperimentFlags=rawFlags;}
-					else if(rawFlags&&typeof rawFlags==='object'){
-					try{serializedExperimentFlags=Object.keys(rawFlags).map(function(key){return key+'='+rawFlags[key];}).join(',');}catch(ignored){}
-					}
-					var premium=false;
-					try{
-					var topbar=initialData&&initialData.topbar&&initialData.topbar.desktopTopbarRenderer?initialData.topbar.desktopTopbarRenderer:null;
-					var logo=topbar&&topbar.logo&&topbar.logo.topbarLogoRenderer?topbar.logo.topbarLogoRenderer:null;
-					var iconType=logo&&logo.iconImage?logo.iconImage.iconType:null;
-					var tooltip=logo&&typeof logo.tooltipText==='string'?logo.tooltipText.toLowerCase():null;
-					premium=!!(getCfg('IS_SUBSCRIBED_TO_PREMIUM')||getCfg('IS_PREMIUM_USER')||iconType==='YOUTUBE_PREMIUM_LOGO'||(tooltip&&tooltip.indexOf('premium')>=0));
-					}catch(ignored){}
-					return JSON.stringify({
-					url:location.href,
-					visitorData:getCfg('VISITOR_DATA')||(client?client.visitorData:null),
-					dataSyncId:getCfg('DATASYNC_ID')||getCfg('DELEGATED_SESSION_ID')||null,
-					clientVersion:getCfg('INNERTUBE_CLIENT_VERSION')||getCfg('INNERTUBE_CONTEXT_CLIENT_VERSION')||(client?client.clientVersion:null),
-					sessionIndex:getCfg('SESSION_INDEX')||null,
-					serializedExperimentFlags:serializedExperimentFlags,
-					loggedIn:!!(getCfg('LOGGED_IN')||getCfg('DATASYNC_ID')||getCfg('DELEGATED_SESSION_ID')),
-					premium:premium
-					});
-					}catch(error){
-					return JSON.stringify({error:String(error&&error.stack?error.stack:error)});
-					}
-					})();
-					""";
+                    (function(){
+                    try{
+                    var ytcfgObject=globalThis.ytcfg||null;
+                    var ytcfgData=ytcfgObject&&ytcfgObject.data_?ytcfgObject.data_:null;
+                    var getCfg=function(key){
+                    try{
+                    if(ytcfgObject&&typeof ytcfgObject.get==='function'){
+                    var value=ytcfgObject.get(key);
+                    if(value!==undefined&&value!==null&&value!==''){return value;}
+                    }
+                    }catch(ignored){}
+                    return ytcfgData&&ytcfgData[key]!==undefined?ytcfgData[key]:null;
+                    };
+                    var initialDataContext=globalThis.ytInitialData&&globalThis.ytInitialData.responseContext?globalThis.ytInitialData.responseContext:null;
+                    var initialPlayerContext=globalThis.ytInitialPlayerResponse&&globalThis.ytInitialPlayerResponse.responseContext?globalThis.ytInitialPlayerResponse.responseContext:null;
+                    var innertubeContext=getCfg('INNERTUBE_CONTEXT')||initialDataContext||initialPlayerContext||null;
+                    var client=innertubeContext&&innertubeContext.client?innertubeContext.client:null;
+                    var initialData=globalThis.ytInitialData||null;
+                    var rawFlags=getCfg('EXPERIMENT_FLAGS')||getCfg('serializedExperimentFlags')||null;
+                    var serializedExperimentFlags=null;
+                    if(typeof rawFlags==='string'){serializedExperimentFlags=rawFlags;}
+                    else if(rawFlags&&typeof rawFlags==='object'){
+                    try{serializedExperimentFlags=Object.keys(rawFlags).map(function(key){return key+'='+rawFlags[key];}).join(',');}catch(ignored){}
+                    }
+                    var premium=false;
+                    try{
+                    var topbar=initialData&&initialData.topbar&&initialData.topbar.desktopTopbarRenderer?initialData.topbar.desktopTopbarRenderer:null;
+                    var logo=topbar&&topbar.logo&&topbar.logo.topbarLogoRenderer?topbar.logo.topbarLogoRenderer:null;
+                    var iconType=logo&&logo.iconImage?logo.iconImage.iconType:null;
+                    var tooltip=logo&&typeof logo.tooltipText==='string'?logo.tooltipText.toLowerCase():null;
+                    premium=!!(getCfg('IS_SUBSCRIBED_TO_PREMIUM')||getCfg('IS_PREMIUM_USER')||iconType==='YOUTUBE_PREMIUM_LOGO'||(tooltip&&tooltip.indexOf('premium')>=0));
+                    }catch(ignored){}
+                    return JSON.stringify({
+                    url:location.href,
+                    visitorData:getCfg('VISITOR_DATA')||(client?client.visitorData:null),
+                    dataSyncId:getCfg('DATASYNC_ID')||getCfg('DELEGATED_SESSION_ID')||null,
+                    clientVersion:getCfg('INNERTUBE_CLIENT_VERSION')||getCfg('INNERTUBE_CONTEXT_CLIENT_VERSION')||(client?client.clientVersion:null),
+                    sessionIndex:getCfg('SESSION_INDEX')||null,
+                    serializedExperimentFlags:serializedExperimentFlags,
+                    loggedIn:!!(getCfg('LOGGED_IN')||getCfg('DATASYNC_ID')||getCfg('DELEGATED_SESSION_ID')),
+                    premium:premium
+                    });
+                    }catch(error){
+                    return JSON.stringify({error:String(error&&error.stack?error.stack:error)});
+                    }
+                    })();
+                    """;
 	private final ArrayList<String> scripts = new ArrayList<>();
 	@NonNull
 	private final Frame frame = new Frame();
@@ -266,7 +266,7 @@ public class YoutubeWebview extends WebView {
 
 	@NonNull
 	static String sanitizeLoadUrl(@NonNull final String url, final boolean queueEnabled) {
-		if (!queueEnabled || !Constants.PAGE_WATCH.equals(UrlUtils.getPageClass(url))) {
+		if (!queueEnabled || (!Constants.PAGE_WATCH.equals(UrlUtils.getPageClass(url)) && !Constants.PAGE_MUSIC_WATCH.equals(UrlUtils.getPageClass(url)))) {
 			return url;
 		}
 		try {
@@ -442,6 +442,7 @@ public class YoutubeWebview extends WebView {
 				YoutubeWebview.this.postEvaluateJavascript("window.dispatchEvent(new Event('onProgressChangeFinish'));");
 
 				refreshPoTokenContext();
+				enableBackgroundPlayback();
 				if (onPageFinishedListener != null) onPageFinishedListener.accept(url);
 				postDelayed(() -> {
 					if (getParent() instanceof SwipeRefreshLayout) {
@@ -535,6 +536,17 @@ public class YoutubeWebview extends WebView {
 		});
 	}
 
+	private void enableBackgroundPlayback() {
+		if (!UrlUtils.isMusicUrl(getUrl())) return;
+		evaluateJavascript("if(!window._bgInjected){" +
+				"window._bgInjected=true;" +
+				"Object.defineProperty(document,'hidden',{value:false,writable:false});" +
+				"Object.defineProperty(document,'visibilityState',{value:'visible',writable:false});" +
+				"window.addEventListener('visibilitychange',e=>e.stopImmediatePropagation(),true);" +
+				"window.addEventListener('webkitvisibilitychange',e=>e.stopImmediatePropagation(),true);" +
+				"}", null);
+	}
+
 	public void refreshPoTokenContext() {
 		PoTokenContextStore contextStore = poTokenContextStore;
 		String pageUrl = frame.url;
@@ -571,14 +583,14 @@ public class YoutubeWebview extends WebView {
 	public void injectCssContent(@NonNull String css) {
 		String encoded = Base64.getEncoder().encodeToString(css.getBytes());
 		String js = String.format("""
-						(function(){
-						let style = document.createElement('style');
-						style.type = 'text/css';
-						style.textContent = window.atob('%s');
-						let target = document.head || document.documentElement;
-						if (target) target.appendChild(style);
-						})()
-						""", encoded);
+                        (function(){
+                        let style = document.createElement('style');
+                        style.type = 'text/css';
+                        style.textContent = window.atob('%s');
+                        let target = document.head || document.documentElement;
+                        if (target) target.appendChild(style);
+                        })()
+                        """, encoded);
 		addScript(js);
 	}
 
