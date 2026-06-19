@@ -88,6 +88,8 @@ public class NavigationBar extends HorizontalScrollView {
                 (isShorts && showInShorts) ||
                 pageClass.equals(Constants.PAGE_SUBSCRIPTIONS) ||
                 pageClass.equals(Constants.PAGE_LIBRARY) ||
+                pageClass.equals(UrlUtils.PAGE_HISTORY) ||
+                pageClass.equals(UrlUtils.PAGE_PLAYLISTS) ||
                 pageClass.equals(UrlUtils.PAGE_SEARCHING) ||
                 pageClass.equals(UrlUtils.PAGE_CHANNEL) ||
                 pageClass.equals(UrlUtils.PAGE_USER_MENTION);
@@ -137,6 +139,14 @@ public class NavigationBar extends HorizontalScrollView {
                 case "subscriptions":
                     if (signedIn && !isIncognito && extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.NAV_BAR_SHOW_SUBSCRIPTIONS))
                         visibleItems.add(new NavItemInfo(R.drawable.ic_subscriptions, R.string.nav_subscriptions, pageClass.equals(Constants.PAGE_SUBSCRIPTIONS), () -> tabManager.openTab("https://m.youtube.com/feed/subscriptions", Constants.PAGE_SUBSCRIPTIONS)));
+                    break;
+                case "history":
+                    if (signedIn && !isIncognito && extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.NAV_BAR_SHOW_HISTORY))
+                        visibleItems.add(new NavItemInfo(R.drawable.ic_update, R.string.nav_history, pageClass.equals(UrlUtils.PAGE_HISTORY), () -> tabManager.openTab(Constants.HISTORY_URL, UrlUtils.PAGE_HISTORY)));
+                    break;
+                case "playlists":
+                    if (signedIn && !isIncognito && extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.NAV_BAR_SHOW_PLAYLISTS))
+                        visibleItems.add(new NavItemInfo(R.drawable.ic_playlist_mix, R.string.nav_playlists, pageClass.equals(UrlUtils.PAGE_PLAYLISTS), () -> tabManager.openTab(Constants.PLAYLISTS_URL, UrlUtils.PAGE_PLAYLISTS)));
                     break;
                 case "library":
                     if (extensionManager.isEnabled(com.hhst.youtubelite.extension.Constant.NAV_BAR_SHOW_LIBRARY)) {

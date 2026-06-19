@@ -5,6 +5,8 @@ public class Constants {
 
 	public static final String HOME_URL = "https://m.youtube.com";
 	public static final String MUSIC_URL = "https://music.youtube.com";
+	public static final String HISTORY_URL = "https://m.youtube.com/feed/history";
+	public static final String PLAYLISTS_URL = "https://m.youtube.com/feed/playlists";
 	public static final String YOUTUBE_DOMAIN = "youtube.com";
 	public static final String YOUTUBE_MOBILE_HOST = "m.youtube.com";
 

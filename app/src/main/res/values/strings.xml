@@ -53,7 +53,9 @@
     <string name="nav_music">Music</string>
     <string name="nav_shorts">Shorts</string>
     <string name="nav_subscriptions">Subscriptions</string>
-    <string name="nav_library">You</string>
+    <string name="nav_history">History</string>
+    <string name="nav_playlists">Playlists</string>
+    <string name="nav_library">Library</string>
     <string name="nav_downloads">Downloads</string>
     <string name="nav_settings">Settings</string>
 
