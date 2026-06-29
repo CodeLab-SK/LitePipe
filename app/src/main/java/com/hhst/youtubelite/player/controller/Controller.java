@@ -85,7 +85,7 @@ public class Controller {
 	private static final int HINT_PADDING_DP = 8;
 	private static final int HINT_TOP_MARGIN_DP = 24;
 	private static final int CONTROLS_HIDE_DELAY_MS = 1500;
-	private static final int UNDO_HIDE_DELAY_MS = 7000;
+	private static final int UNDO_HIDE_DELAY_MS = 5000;
 	static final float DISABLED_BUTTON_ALPHA = 0.38f;
 
 	@NonNull

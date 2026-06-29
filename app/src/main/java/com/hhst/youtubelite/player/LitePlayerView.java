@@ -293,6 +293,10 @@ public class LitePlayerView extends PlayerView {
 		setResizeMode(miniPlayerRestoreResizeMode);
 		updateMiniPlayerInteractionHandlers();
 		animateMiniTransition(startX, startY, startWidth, startHeight);
+		post(() -> {
+			requestLayout();
+			invalidate();
+		});
 	}
 
 	public void closeInAppMiniPlayerWithFade(@Nullable Runnable onClosed) {
@@ -760,7 +764,7 @@ public class LitePlayerView extends PlayerView {
 						pxToDp(miniPlayerSavedTranslationY));
 	}
 
-	private void resetMiniPlayerTouchTracking() {
+	public void resetMiniPlayerTouchTracking() {
 		clearMiniPlayerPendingTapTarget();
 		miniPlayerTouchCaptured = false;
 		miniPlayerDragging = false;
@@ -938,6 +942,9 @@ public class LitePlayerView extends PlayerView {
 
 	public void show() {
 		setVisibility(View.VISIBLE);
+		setAlpha(1.0f);
+		setClickable(true);
+		setFocusable(true);
 	}
 
 	public void hide() {

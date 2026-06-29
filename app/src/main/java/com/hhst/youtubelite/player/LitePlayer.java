@@ -379,8 +379,10 @@ public class LitePlayer {
 
 			if (isMusic) {
 				playerView.hide();
+				playerView.resetMiniPlayerTouchTracking();
 			} else {
 				playerView.show();
+				playerView.resetMiniPlayerTouchTracking();
 			}
 			controller.syncRotation(DeviceUtils.isRotateOn(activity), activity.getResources().getConfiguration().orientation);
 		});
@@ -453,6 +455,7 @@ public class LitePlayer {
 			engine.clear();
 			playerView.setTitle(title);
 			playerView.show();
+			playerView.resetMiniPlayerTouchTracking();
 			engine.playLocal(uri, title, subtitles);
 			controller.syncRotation(DeviceUtils.isRotateOn(activity), activity.getResources().getConfiguration().orientation);
 		});
@@ -468,6 +471,7 @@ public class LitePlayer {
 		cancelCurrentExtraction();
 		activity.runOnUiThread(() -> {
 			playerView.hide();
+			playerView.resetMiniPlayerTouchTracking();
 			engine.clear();
 			controller.clearRotation();
 			playerView.disableAutoPiP();
