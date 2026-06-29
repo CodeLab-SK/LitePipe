@@ -8,7 +8,6 @@
     <string name="source_link">https://github.com/CodeLab-SK/LitePipe</string>
     <string name="check_for_updates">Check for Updates</string>
     <string name="checking_for_updates">Checking for updates…</string>
-    <string name="update_available">Update available (%1$s)</string>
     <string name="no_updates_available">You are using the latest version</string>
     <string name="failed_to_check_for_updates">Failed to check for updates</string>
     <string name="clear_cache">Clear Cache</string>
@@ -186,6 +185,11 @@
     <string name="general">General</string>
     <string name="show_search_suggestions">Search Suggestions</string>
     <string name="hide_comments">Hide Comments</string>
+    <string name="update_dialog_title">New Update Available</string>
+    <string name="update_dialog_message">A new version (%1$s) of LitePipe is available. Would you like to update?</string>
+    <string name="update">Update</string>
+    <string name="downloading_update">Downloading update…</string>
+    <string name="install">Install</string>
 
     <string name="custom_navigation">Navigation Bar</string>
     <string name="hide_nav_bar_labels">Hide Navigation Labels</string>

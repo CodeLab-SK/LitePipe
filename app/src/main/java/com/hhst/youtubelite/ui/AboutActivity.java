@@ -15,7 +15,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
@@ -25,27 +24,19 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
 import com.hhst.youtubelite.Constants;
 import com.hhst.youtubelite.R;
+import com.hhst.youtubelite.util.UpdateManager;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
-import java.util.Objects;
 
 import javax.inject.Inject;
 
 import dagger.hilt.android.AndroidEntryPoint;
-import okhttp3.Call;
-import okhttp3.Callback;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
 import okio.BufferedSink;
 import okio.Okio;
 import okio.Source;
@@ -53,12 +44,9 @@ import okio.Source;
 @AndroidEntryPoint
 public class AboutActivity extends AppCompatActivity {
 	private static final String TAG = "AboutActivity";
-	private static final String GITHUB_RELEASE_API = "https://api.github.com/repos/CodeLab-SK/LitePipe/releases/latest";
 	
 	@Inject
-	OkHttpClient client;
-	@Inject
-	Gson gson;
+	UpdateManager updateManager;
 	
 	private TextView checkUpdateText;
 	private View checkUpdateLayout;
@@ -107,7 +95,7 @@ public class AboutActivity extends AppCompatActivity {
 			startActivity(intent);
 		});
 
-		checkUpdateLayout.setOnClickListener(v -> checkForUpdates());
+		checkUpdateLayout.setOnClickListener(v -> updateManager.checkForUpdates(this, true));
 		clearCacheLayout.setOnClickListener(v -> showClearCacheDialog());
 		exportLogLayout.setOnClickListener(v -> exportLogs());
 	}
@@ -119,76 +107,6 @@ public class AboutActivity extends AppCompatActivity {
 				.setPositiveButton(R.string.clear, (dialog, which) -> clearAppCache())
 				.setNegativeButton(android.R.string.cancel, null)
 				.show();
-	}
-
-	private void checkForUpdates() {
-		checkUpdateLayout.setEnabled(false);
-		checkUpdateText.setText(R.string.checking_for_updates);
-
-		Request request = new Request.Builder()
-				.url(GITHUB_RELEASE_API)
-				.header("Accept", "application/vnd.github.v3+json")
-				.header("User-Agent", "LitePipe-App")
-				.build();
-
-		client.newCall(request).enqueue(new Callback() {
-			@Override
-			public void onFailure(@NonNull Call call, @NonNull IOException e) {
-				Log.e(TAG, "Update check network failure", e);
-				runOnUiThread(() -> {
-					checkUpdateLayout.setEnabled(true);
-					checkUpdateText.setText(R.string.check_for_updates);
-					Toast.makeText(AboutActivity.this, R.string.failed_to_check_for_updates, Toast.LENGTH_SHORT).show();
-				});
-			}
-
-			@Override
-			public void onResponse(@NonNull Call call, @NonNull Response response) {
-				try (response) {
-					if (!response.isSuccessful()) {
-						String errorBody = response.body() != null ? response.body().string() : "no body";
-						Log.e(TAG, "Update check failed: " + response.code() + " " + errorBody);
-						throw new IOException("Unexpected code " + response);
-					}
-
-					String body = Objects.requireNonNull(response.body()).string();
-					JsonObject json = gson.fromJson(body, JsonObject.class);
-					
-					if (json == null || !json.has("tag_name") || !json.has("html_url")) {
-						throw new IOException("Invalid JSON response from GitHub");
-					}
-					
-					String latest = json.get("tag_name").getAsString();
-					String url = json.get("html_url").getAsString();
-
-					String version = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
-					if (isNewerVersion(version, latest)) {
-						runOnUiThread(() -> {
-							checkUpdateLayout.setEnabled(true);
-							checkUpdateText.setText(getString(R.string.update_available, latest));
-							checkUpdateLayout.setOnClickListener(v -> {
-								Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-								startActivity(intent);
-							});
-							Toast.makeText(AboutActivity.this, getString(R.string.update_available, latest), Toast.LENGTH_LONG).show();
-						});
-					} else {
-						runOnUiThread(() -> {
-							checkUpdateLayout.setEnabled(true);
-							checkUpdateText.setText(R.string.check_for_updates);
-							Toast.makeText(AboutActivity.this, R.string.no_updates_available, Toast.LENGTH_SHORT).show();
-						});
-					}
-				} catch (Exception e) {
-					Log.e(TAG, "Update check error", e);
-					runOnUiThread(() -> {
-						checkUpdateLayout.setEnabled(true);
-						checkUpdateText.setText(R.string.check_for_updates);
-						Toast.makeText(AboutActivity.this, R.string.failed_to_check_for_updates, Toast.LENGTH_SHORT).show();
-					});
-				}
-			}
-		});
 	}
 
 	private void clearAppCache() {
@@ -260,35 +178,4 @@ public class AboutActivity extends AppCompatActivity {
 			}
 		}).start();
 	}
-
-	private boolean isNewerVersion(String current, String latest) {
-		if (current == null || latest == null) return false;
-
-		String c = current.startsWith("v") ? current.substring(1) : current;
-		String l = latest.startsWith("v") ? latest.substring(1) : latest;
-
-		String[] currentParts = c.split("\\.");
-		String[] latestParts = l.split("\\.");
-		int length = Math.max(currentParts.length, latestParts.length);
-
-		for (int i = 0; i < length; i++) {
-			int cPart = i < currentParts.length ? parseSafeInt(currentParts[i]) : 0;
-			int lPart = i < latestParts.length ? parseSafeInt(latestParts[i]) : 0;
-			if (lPart > cPart) return true;
-			if (lPart < cPart) return false;
-		}
-		return false;
-	}
-
-	private int parseSafeInt(String part) {
-		if (part == null) return 0;
-		String digits = part.replaceAll("\\D", "");
-		if (digits.isEmpty()) return 0;
-		try {
-			return Integer.parseInt(digits);
-		} catch (NumberFormatException e) {
-			return 0;
-		}
-	}
-
 }

@@ -81,6 +81,7 @@ import com.hhst.youtubelite.player.queue.QueueWarmer;
 import com.hhst.youtubelite.ui.queue.QueueAdapter;
 import com.hhst.youtubelite.ui.queue.QueueTouch;
 import com.hhst.youtubelite.util.DeviceUtils;
+import com.hhst.youtubelite.util.UpdateManager;
 import com.hhst.youtubelite.util.UrlUtils;
 import com.hhst.youtubelite.util.ViewUtils;
 import com.tencent.mmkv.MMKV;
@@ -121,6 +122,7 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 	@Inject QueueRepository queueRepository;
 	@Inject QueueWarmer queueWarmer;
 	@Inject LinkDetection linkDetection;
+	@Inject UpdateManager updateManager;
 
 	@Nullable private PlaybackService playbackService;
 	@Nullable private OnBackPressedCallback appBackCallback;
@@ -221,6 +223,8 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 				if (web != null) web.reload();
 			});
 		});
+
+		updateManager.checkForUpdates(this, false);
 	}
 
 	@Override
