@@ -1,15 +1,34 @@
 <div align="center">
 
+<img src="https://raw.githubusercontent.com/CodeLab-SK/LitePipe/master/app/src/main/ic_launcher-playstore.png"
+width="140" alt="LitePipe Logo">
+
 # LitePipe
 
-**An advanced, performance-focused YouTube client for Android**  
-*Ad-free • SponsorBlock • Powerful Downloader • Custom Player • Lightweight WebView Wrapper*
+**A fast, feature-rich YouTube client for Android**
 
-![GitHub stars](https://img.shields.io/github/stars/CodeLab-SK/LitePipe?style=flat-square)
-![GitHub forks](https://img.shields.io/github/forks/CodeLab-SK/LitePipe?style=flat-square)
-![License](https://img.shields.io/github/license/CodeLab-SK/LitePipe?style=flat-square)
-![Latest Release](https://img.shields.io/github/v/release/CodeLab-SK/LitePipe?style=flat-square)
+*Ad-free • SponsorBlock • Powerful Downloader • Custom Player • Youtube Music*
 
+<br>
+
+<img src="https://img.shields.io/badge/Status-Active%20Development-success?style=for-the-badge">
+
+<br>
+
+<img src="https://img.shields.io/github/v/release/CodeLab-SK/LitePipe?style=for-the-badge&label=Latest%20Version">
+<img src="https://img.shields.io/github/downloads/CodeLab-SK/LitePipe/total?style=for-the-badge&label=Downloads">
+
+<br>
+
+<img src="https://img.shields.io/badge/Android-9%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white">
+<img src="https://img.shields.io/github/license/CodeLab-SK/LitePipe?style=for-the-badge&label=License">
+<img src="https://img.shields.io/github/last-commit/CodeLab-SK/LitePipe?style=for-the-badge&label=Last%20Commit">
+
+<br>
+
+<img src="https://img.shields.io/github/stars/CodeLab-SK/LitePipe?style=for-the-badge">
+<img src="https://img.shields.io/github/forks/CodeLab-SK/LitePipe?style=for-the-badge">
+<img src="https://img.shields.io/badge/Material%203-UI-6750A4?style=for-the-badge">
 </div>
 
 ## ✨ Features
@@ -19,12 +38,14 @@
 -  **Return YouTube Dislike:** See dislikes again.
 -  **Powerful Downloader:** Built-in video, audio, caption, playlist and thumbnail downloader.
 -  **Advanced Player:** Custom player supporting subtitles, multiple audio tracks, and gesture controls.
+-  **Offline Player:** Play local device videos with our advanced player.
 -  **Background Play:** Listen to videos while using other apps or with the screen off.
 - ️ **Picture-in-Picture (PiP):** Multitask with a floating video window.
 -  **Live Chat:** Full support for live chat during streams.
 -  **Modern UI:** Clean Material 3 interface that is fast and responsive.
 -  **Incognito Mode:** Watch videos without saving history.
 -  **Playback Queue:** Add videos in a queue to keep watching.
+-  **Youtube Music:** Enjoy Youtube Music ad-free and bg playback.
 
 ## 📸 Screenshots
 
@@ -48,9 +69,14 @@
 
 
 ## 📥 Installation
-
+</p>
 ### Option 1: Download APK (Recommended)
-Download the latest stable APK from the [Releases page](https://github.com/CodeLab-SK/LitePipe/releases).
+</p>
+<p>
+<a href="https://github.com/CodeLab-SK/LitePipe/releases/latest">
+<img src="https://img.shields.io/badge/⬇️-Download_Latest_APK-red?style=for-the-badge"/>
+</a>
+</p>
 
 ### Option 2: Build from Source
 If you prefer to build it yourself:
@@ -67,12 +93,20 @@ cd LitePipe
 The APK will be available in `app/build/outputs/apk/debug/`.
 
 ## 🤝 Contributing
-Whether you have ideas, bug reports, translations, design improvements, code cleanups, or major feature changes — **all help is welcome**!
 
-### How to Contribute
-- **Found a bug?** → Open an [Issue](https://github.com/CodeLab-SK/LitePipe/issues)
-- **Have an idea or feature request?** → Open a new issue
-- **Want to contribute code?** → Fork the repo and submit a Pull Request
+Whether you have ideas, bug reports, translations, design improvements, code cleanups, or major feature changes — **all help is welcome!**
+
+<p align="center">
+
+<a href="https://github.com/CodeLab-SK/LitePipe/issues">
+<img src="https://img.shields.io/badge/🐞-Report_Bug-blue?style=for-the-badge"/>
+</a>
+
+<a href="https://github.com/CodeLab-SK/LitePipe/issues/new">
+<img src="https://img.shields.io/badge/💡-Request_Feature-success?style=for-the-badge"/>
+</a>
+
+</p>
 
 ## ❓ FAQ
 **Q: Is this app safe?**  
