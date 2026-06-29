@@ -1,2 +1,0 @@
-- Fix: Video playback is unavailable, and the downloader is not working.
-- Opt: Remove fragment transition animations.

@@ -1,4 +1,0 @@
-- Fixed: Some Shorts were not blocked by the shorts-block extension.
-- Added: Playback controls in the notification center and on the lock screen.
-- Added: H264ify extension
-- Added: Show live chat during live streams extension.

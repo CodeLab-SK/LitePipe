@@ -1,5 +1,0 @@
-- Added skip-sponsor-segment option
-- Optimized, downloader, faster fetching of video info
-- Refactor extension dialog
-- Added more controls on player
-- Added open youtube video in app using share link

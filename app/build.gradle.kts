@@ -21,14 +21,18 @@ android {
         applicationId = "com.google.LitePipe"
         minSdk = 26
         targetSdk = 36
-        versionCode = 110
-        versionName = "1.1.0"
+        versionCode = 120
+        versionName = "1.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
 
-        ndk {
-            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a"))
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            isUniversalApk = true
         }
-
     }
 
     buildTypes {

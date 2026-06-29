@@ -95,3 +95,5 @@
 -dontwarn java.beans.**
 -dontwarn com.google.errorprone.annotations.**
 -dontwarn javax.annotation.**
+-dontwarn org.jsoup.helper.Re2jRegex**
+-dontwarn com.google.re2j.**

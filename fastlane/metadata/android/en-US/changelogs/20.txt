@@ -1,4 +1,0 @@
-Refactor: Rebuilt downloader with NewPipeExtractor for improved stability and lightweight performance.  
-Feat: Added pinch-to-zoom support in fullscreen player.  
-Feat: Introduced themed app icon.  
-Opt: Improved edge-to-edge UI and notification handling.

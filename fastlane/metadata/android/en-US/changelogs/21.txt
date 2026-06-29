@@ -1,1 +1,0 @@
-Fix: App crashes when the Android version is below 12.

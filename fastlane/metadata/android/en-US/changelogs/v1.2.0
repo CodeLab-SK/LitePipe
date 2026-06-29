@@ -1,0 +1,25 @@
+Changelog v1.2.0
+
+- Fixed player quality stuck at 360p and live streams not working.
+- Fixed miniplayer close button causing flash.
+- Merged latest commits from Litube.
+- Add Youtube Music to the app.
+- Added Download and add to queue buttons in the native context menu.
+- Fixed incognito mode changing navigation bar colors.
+- Fixed incognito mode showing stale recommendations for signed out sessions.
+- Improved watch page buttons loading and added 'add to queue' button in action bar.
+- Fixed volume booster feature not actually boosting volume.
+- Fixed layout issues in watch page.
+- Fixed video title clipping in various places.
+- Improved the queue bar and container.
+- Improve download resuming logic.
+- Fixed playback quality preference.(not following settings)
+- Fixed close button of queue bar not showing in light theme.
+- Added bottom recommendations bar in player.
+- Fixed toggles not working for some settings.
+- Added default preferences for all settings.
+- Applied performance optimizations.
+- Improved downoads list record.
+- Improve the sponsor skip feature.
+- Added History and Playlists buttons in the navigation bar.
+- Added in-app update downloading and installation.
