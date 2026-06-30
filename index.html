@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LitePipe — The YouTube Client You Deserve</title>
+  <meta name="description" content="Ad-free YouTube for Android. SponsorBlock, background play, powerful downloader, and a custom player. Open source, free forever.">
+  <meta property="og:title" content="LitePipe — Advanced YouTube Client for Android">
+  <meta property="og:description" content="Ad-free, SponsorBlock, background play, downloader. Open source.">
+  <meta property="og:type" content="website">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #0C0C10;
+      --surface:    #13131A;
+      --surface-2:  #1C1C26;
+      --surface-3:  #25252F;
+      --border:     rgba(255,255,255,0.07);
+      --border-2:   rgba(255,255,255,0.13);
+      --text:       #EEEEF5;
+      --text-muted: #7E7E95;
+      --text-dim:   #4A4A5A;
+      --red:        #FF4038;
+      --violet:     #8B5CF6;
+      --green:      #34C759;
+      --grad:       linear-gradient(125deg, #FF4038 0%, #C450C0 50%, #8B5CF6 100%);
+      --grad-border: linear-gradient(125deg, rgba(255,64,56,0.4), rgba(139,92,246,0.4));
+      --r:          16px;
+      --r-sm:       10px;
+      --font-d:     'Space Grotesk', sans-serif;
+      --font-b:     'Inter', sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-b);
+      font-size: 16px;
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3 { font-family: var(--font-d); font-weight: 700; line-height: 1.15; }
+    h1 { font-size: clamp(2.8rem, 6vw, 5rem); letter-spacing: -0.03em; }
+    h2 { font-size: clamp(1.8rem, 3.5vw, 2.6rem); letter-spacing: -0.02em; }
+    h3 { font-size: 1rem; font-weight: 600; }
+    a { color: inherit; text-decoration: none; }
+    img { display: block; max-width: 100%; }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+    .grad-text {
+      background: var(--grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal.visible { opacity: 1; transform: none; }
+    .d1 { transition-delay: 0.08s; }
+    .d2 { transition-delay: 0.16s; }
+    .d3 { transition-delay: 0.24s; }
+    .d4 { transition-delay: 0.32s; }
+    .d5 { transition-delay: 0.40s; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 0 24px;
+    }
+    nav.scrolled {
+      background: rgba(12,12,16,0.82);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      height: 62px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-family: var(--font-d);
+      font-weight: 700;
+      font-size: 1.05rem;
+      flex-shrink: 0;
+    }
+    .logo-mark {
+      width: 30px; height: 30px;
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .logo-mark img { width: 100%; height: 100%; object-fit: cover; }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      list-style: none;
+    }
+    .nav-links a {
+      font-size: 0.875rem;
+      color: rgba(238,238,245,0.78);
+      transition: color 0.2s;
+      font-family: var(--font-d);
+      font-weight: 500;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .nav-right { display: flex; align-items: center; gap: 10px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 18px;
+      border-radius: 50px;
+      font-family: var(--font-d);
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+      border: none;
+      transition: transform 0.18s, box-shadow 0.18s, opacity 0.18s, background 0.18s;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn-primary {
+      background: var(--grad);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(255,64,56,0.28);
+    }
+    .btn-primary:hover {
+      box-shadow: 0 6px 28px rgba(139,92,246,0.36);
+      transform: translateY(-1px);
+    }
+    .btn-ghost {
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { background: var(--surface-3); border-color: var(--border-2); }
+    .btn-sm { padding: 7px 14px; font-size: 0.82rem; }
+
+    .hamburger { display: none; background: none; border: none; color: var(--text); cursor: pointer; padding: 4px; }
+
+    @media (max-width: 760px) {
+      .nav-links, .nav-gh { display: none; }
+      .nav-links.open {
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        top: 62px; left: 0; right: 0;
+        background: rgba(12,12,16,0.97);
+        backdrop-filter: blur(20px);
+        padding: 24px;
+        gap: 18px;
+        border-bottom: 1px solid var(--border);
+      }
+      .nav-links.open a { font-size: 1rem; }
+      .hamburger { display: flex; }
+    }
+
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+      padding: 80px 24px 60px;
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(90px);
+      opacity: 0.18;
+    }
+    .orb-1 {
+      width: 560px; height: 560px;
+      background: #FF4038;
+      top: -160px; left: -120px;
+      animation: f1 14s ease-in-out infinite;
+    }
+    .orb-2 {
+      width: 500px; height: 500px;
+      background: #8B5CF6;
+      bottom: -140px; right: -100px;
+      animation: f2 18s ease-in-out infinite;
+    }
+    .orb-3 {
+      width: 280px; height: 280px;
+      background: #C450C0;
+      top: 40%; left: 45%;
+      opacity: 0.10;
+      animation: f1 10s ease-in-out infinite reverse;
+    }
+    @keyframes f1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(36px,28px)} }
+    @keyframes f2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-28px,-36px)} }
+
+    .hero-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 64px;
+      align-items: center;
+      width: 100%;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      padding: 5px 13px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 22px;
+      font-family: var(--font-d);
+      font-weight: 500;
+    }
+    .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+
+    .hero-h1 { margin-bottom: 18px; }
+    .hero-sub {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      margin-bottom: 28px;
+      max-width: 480px;
+      line-height: 1.75;
+    }
+    .hero-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-bottom: 36px;
+    }
+    .pill {
+      padding: 4px 11px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-family: var(--font-d);
+      font-weight: 500;
+    }
+    .hero-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .phone-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+    .phone-glow {
+      position: absolute;
+      width: 260px; height: 400px;
+      background: radial-gradient(ellipse at center, rgba(196,80,192,0.22) 0%, transparent 70%);
+      animation: pulseGlow 4s ease-in-out infinite;
+    }
+    @keyframes pulseGlow {
+      0%,100%{opacity:0.7;transform:scale(1)}
+      50%{opacity:1;transform:scale(1.08)}
+    }
+.phone {
+  width: 220px;
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 30px 60px rgba(0,0,0,0.7));
+  animation: floatIn 1s ease-out;
+}
+@keyframes floatIn {
+  from { transform: translateY(24px) scale(0.96) rotate(-2deg); opacity: 0; }
+  to   { transform: translateY(0) scale(1) rotate(0deg); opacity: 1; }
+}
+    .phone-shell {
+      background: #18181E;
+      border-radius: 40px;
+      padding: 10px;
+      border: 1.5px solid #2E2E3A;
+      position: relative;
+    }
+    .phone-notch {
+      position: absolute;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 72px; height: 24px;
+      background: #18181E;
+      border-radius: 0 0 14px 14px;
+      z-index: 3;
+    }
+    .phone-screen {
+      border-radius: 30px;
+      overflow: hidden;
+      aspect-ratio: 9/20;
+      background: #0D0D10;
+      position: relative;
+    }
+    .phone-screen img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top;
+    }
+    .phone-screen-placeholder {
+      width: 100%; height: 100%;
+      background: linear-gradient(160deg, #1C1C2E 0%, #0D0D18 100%);
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 10px;
+    }
+    .phone-screen-placeholder svg { opacity: 0.3; }
+
+    @media (max-width: 860px) {
+      .hero-inner { grid-template-columns: 1fr; text-align: center; }
+      .hero-sub { max-width: none; }
+      .hero-pills { justify-content: center; }
+      .hero-btns { justify-content: center; }
+      .phone-wrap { display: none; }
+    }
+
+    #stats { padding: 64px 24px; }
+    .stats-grid {
+      max-width: 800px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      overflow: hidden;
+    }
+    .stat-cell {
+      background: var(--surface);
+      padding: 28px 20px;
+      text-align: center;
+      transition: background 0.2s;
+    }
+    .stat-cell:hover { background: var(--surface-2); }
+    .stat-num {
+      font-family: var(--font-d);
+      font-size: 1.9rem;
+      font-weight: 700;
+      background: var(--grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.1;
+    }
+    .stat-lbl {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 5px;
+      font-family: var(--font-d);
+      font-weight: 500;
+    }
+    @media (max-width: 580px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .section { padding: 96px 24px; }
+    .eyebrow {
+      font-family: var(--font-d);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--red);
+      margin-bottom: 10px;
+    }
+    .sec-head { margin-bottom: 52px; }
+    .sec-head p {
+      margin-top: 14px;
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      max-width: 520px;
+      line-height: 1.75;
+    }
+
+    #features { padding: 96px 24px; }
+    .feat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .feat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 26px;
+      transition: border-color 0.2s, transform 0.25s, box-shadow 0.25s;
+      cursor: default;
+      position: relative;
+      overflow: hidden;
+    }
+    .feat-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--grad);
+      opacity: 0;
+      transition: opacity 0.3s;
+      border-radius: inherit;
+    }
+    .feat-card:hover {
+      border-color: var(--border-2);
+      transform: translateY(-4px);
+      box-shadow: 0 16px 44px rgba(0,0,0,0.4);
+    }
+    .feat-card:hover::before { opacity: 0.04; }
+    .feat-icon {
+      width: 42px; height: 42px;
+      border-radius: 11px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+      margin-bottom: 14px;
+      background: var(--surface-2);
+      position: relative;
+      z-index: 1;
+    }
+    .feat-card h3 { margin-bottom: 7px; position: relative; z-index: 1; }
+    .feat-card p  { color: var(--text-muted); font-size: 0.875rem; line-height: 1.65; position: relative; z-index: 1; }
+
+    @media (max-width: 860px) { .feat-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 520px) { .feat-grid { grid-template-columns: 1fr; } }
+
+    #screenshots { padding: 96px 0; }
+    .ss-head { padding: 0 24px; margin-bottom: 36px; }
+    .ss-track-outer { position: relative; }
+    .ss-track-outer::before, .ss-track-outer::after {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0;
+      width: 60px;
+      z-index: 2;
+      pointer-events: none;
+    }
+    .ss-track-outer::before { left: 0; background: linear-gradient(to right, var(--bg), transparent); }
+    .ss-track-outer::after  { right: 0; background: linear-gradient(to left, var(--bg), transparent); }
+
+    .ss-track {
+      display: flex;
+      gap: 14px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      padding: 16px 24px 24px;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      cursor: grab;
+    }
+    .ss-track::-webkit-scrollbar { display: none; }
+    .ss-track.grabbing { cursor: grabbing; }
+
+    .ss-item {
+      flex: 0 0 auto;
+      width: 190px;
+      align-self: flex-start;
+      scroll-snap-align: start;
+      border-radius: var(--r);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      transition: transform 0.3s, box-shadow 0.3s, border-color 0.2s;
+    }
+    .ss-item:hover {
+      transform: translateY(-6px) scale(1.02);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+      border-color: var(--border-2);
+    }
+    .ss-item img { width: 100%; aspect-ratio: 9 / 19.5; object-fit: cover; display: block; }
+
+    .ss-nav {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 16px;
+      padding: 0 24px;
+    }
+    .ss-btn {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.2s, border-color 0.2s, transform 0.15s;
+    }
+    .ss-btn:hover { background: var(--surface-3); border-color: var(--border-2); transform: scale(1.05); }
+
+    #release { padding: 96px 24px; }
+    .release-wrap { max-width: 680px; margin: 0 auto; }
+    .release-card {
+      background: var(--surface);
+      border-radius: 20px;
+      overflow: hidden;
+      position: relative;
+      border: 1px solid var(--border);
+    }
+    .release-top {
+      padding: 36px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      position: relative;
+      z-index: 1;
+    }
+    .release-card::before {
+      content: '';
+      position: absolute;
+      top: 0; right: 0;
+      width: 280px; height: 280px;
+      background: radial-gradient(ellipse at top right, rgba(139,92,246,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .rel-ver {
+      font-family: var(--font-d);
+      font-size: 2.6rem;
+      font-weight: 700;
+      line-height: 1;
+      background: var(--grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .rel-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 11px;
+      background: rgba(52,199,89,0.1);
+      border: 1px solid rgba(52,199,89,0.22);
+      border-radius: 50px;
+      font-size: 0.74rem;
+      font-family: var(--font-d);
+      font-weight: 600;
+      color: var(--green);
+      margin-top: 8px;
+    }
+    .rel-badge-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
+    .rel-date { color: var(--text-muted); font-size: 0.875rem; margin-top: 7px; }
+    .release-bottom {
+      border-top: 1px solid var(--border);
+      padding: 20px 40px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .rel-info-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-family: var(--font-d);
+    }
+    .rel-info-item svg { opacity: 0.6; }
+
+    @media (max-width: 540px) {
+      .release-top { flex-direction: column; align-items: flex-start; padding: 28px 24px; }
+      .release-bottom { padding: 16px 24px; }
+    }
+
+    #faq { padding: 96px 24px; }
+    .faq-list {
+      max-width: 680px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .faq-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .faq-item.open { border-color: var(--border-2); }
+    .faq-q {
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-family: var(--font-d);
+      font-size: 0.92rem;
+      font-weight: 600;
+      padding: 18px 22px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .faq-q:focus-visible { outline: 2px solid var(--violet); outline-offset: -2px; }
+    .faq-chevron {
+      flex-shrink: 0;
+      width: 18px; height: 18px;
+      color: var(--text-muted);
+      transition: transform 0.3s;
+    }
+    .faq-item.open .faq-chevron { transform: rotate(180deg); color: var(--text); }
+    .faq-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.38s ease;
+    }
+    .faq-item.open .faq-body { max-height: 240px; }
+    .faq-answer {
+      padding: 0 22px 18px;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      line-height: 1.75;
+    }
+
+    #cta { padding: 80px 24px 100px; }
+    .cta-inner {
+      max-width: 560px;
+      margin: 0 auto;
+      text-align: center;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 56px 40px;
+      position: relative;
+      overflow: hidden;
+    }
+    .cta-inner::before {
+      content: '';
+      position: absolute;
+      top: -80px; left: 50%;
+      transform: translateX(-50%);
+      width: 320px; height: 320px;
+      background: radial-gradient(ellipse, rgba(255,64,56,0.1) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .cta-inner h2 { margin-bottom: 12px; font-size: 1.9rem; position: relative; }
+    .cta-inner p { color: var(--text-muted); margin-bottom: 30px; font-size: 0.95rem; position: relative; }
+    .cta-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; position: relative; }
+
+    footer {
+      padding: 40px 24px;
+      border-top: 1px solid var(--border);
+    }
+    .foot-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .foot-left { color: rgba(238,238,245,0.7); font-size: 0.83rem; }
+    .foot-left a { color: var(--text); transition: color 0.2s; }
+    .foot-left a:hover { color: var(--red); }
+    .foot-links { display: flex; gap: 20px; flex-wrap: wrap; }
+    .foot-links a { font-size: 0.83rem; color: rgba(238,238,245,0.85); transition: color 0.2s; }
+    .foot-links a:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+
+<nav id="mainNav">
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">
+      <div class="logo-mark">
+        <img src="https://github.com/user-attachments/assets/143932c4-5d9b-4846-b7cc-9c2855d65758" alt="LitePipe logo">
+      </div>
+      LitePipe
+    </a>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#screenshots">Screenshots</a></li>
+      <li><a href="#release">Download</a></li>
+      <li><a href="#faq">FAQ</a></li>
+    </ul>
+    <div class="nav-right">
+      <a href="https://github.com/CodeLab-SK/LitePipe" class="btn btn-ghost btn-sm nav-gh" target="_blank" rel="noopener">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+        GitHub
+      </a>
+      <a href="https://github.com/CodeLab-SK/LitePipe/releases/latest" id="navDownload" class="btn btn-primary btn-sm" target="_blank" rel="noopener">
+        Download
+      </a>
+      <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<section id="hero">
+  <div class="hero-bg">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+  <div class="hero-inner">
+    <div class="hero-copy">
+      <div class="hero-badge reveal">
+        <span class="badge-dot"></span>
+        Open Source &middot; Free Forever
+      </div>
+      <h1 class="hero-h1 reveal d1">YouTube,<br><span class="grad-text">your way.</span></h1>
+      <p class="hero-sub reveal d2">LitePipe gives you a completely ad-free YouTube and YouTube Music experience — with SponsorBlock, background play, a powerful downloader, and a custom player — in a 6&nbsp;MB open-source app.</p>
+      <div class="hero-pills reveal d3">
+        <span class="pill">Ad-free</span>
+        <span class="pill">YouTube Music</span>
+        <span class="pill">SponsorBlock</span>
+        <span class="pill">Background Play</span>
+        <span class="pill">Downloader</span>
+        <span class="pill">Picture-in-Picture</span>
+      </div>
+      <div class="hero-btns reveal d4">
+        <a href="https://github.com/CodeLab-SK/LitePipe/releases/latest" id="heroDownload" class="btn btn-primary" target="_blank" rel="noopener">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download APK
+        </a>
+        <a href="https://github.com/CodeLab-SK/LitePipe" class="btn btn-ghost" target="_blank" rel="noopener">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          View Source
+        </a>
+      </div>
+    </div>
+    <div class="phone-wrap reveal d5">
+      <div class="phone-glow"></div>
+      <div class="phone">
+        <div class="phone-shell">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <img
+                    src="fastlane/metadata/android/en-US/images/phoneScreenshots/home.png"
+                    alt="LitePipe app home screen"
+                    loading="eager"
+                    onerror="this.style.display='none';this.parentElement.querySelector('.phone-screen-placeholder').style.display='flex'">
+            <div class="phone-screen-placeholder" style="display:none">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="stats">
+  <div class="stats-grid reveal">
+    <div class="stat-cell">
+      <div class="stat-num" id="statStars">—</div>
+      <div class="stat-lbl">GitHub Stars</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num" id="statForks">—</div>
+      <div class="stat-lbl">Forks</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num" id="statDownloads">—</div>
+      <div class="stat-lbl">Total Downloads</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num" id="statVersion">—</div>
+      <div class="stat-lbl">Latest Version</div>
+    </div>
+  </div>
+</div>
+
+<section id="features">
+  <div class="container">
+    <div class="sec-head reveal">
+      <div class="eyebrow">Features</div>
+      <h2>Built for people who want<br>more than the official app.</h2>
+      <p>Everything you love about YouTube, and everything you always wished it had.</p>
+    </div>
+    <div class="feat-grid">
+      <div class="feat-card reveal">
+        <div class="feat-icon">🚫</div>
+        <h3>Completely Ad-Free</h3>
+        <p>Watch without interruptions. No pre-rolls, mid-rolls, banners, or overlays — ever.</p>
+      </div>
+      <div class="feat-card reveal d1">
+        <div class="feat-icon">🎧</div>
+        <h3>YouTube Music</h3>
+        <p>Listen to music ad-free with full background playback support.</p>
+      </div>
+      <div class="feat-card reveal d2">
+        <div class="feat-icon">⏭️</div>
+        <h3>SponsorBlock</h3>
+        <p>Automatically skips sponsors, intros, outros, and self-promotion segments.</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="feat-icon">🎵</div>
+        <h3>Background Play</h3>
+        <p>Keep listening with the screen off or while using any other app.</p>
+      </div>
+      <div class="feat-card reveal d1">
+        <div class="feat-icon">🖼️</div>
+        <h3>Picture-in-Picture</h3>
+        <p>Float a video window over any app while you multitask.</p>
+      </div>
+      <div class="feat-card reveal d2">
+        <div class="feat-icon">⬇️</div>
+        <h3>Powerful Downloader</h3>
+        <p>Download video, audio, playlists, captions, and thumbnails with a single tap.</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="feat-icon">👎</div>
+        <h3>Return YouTube Dislike</h3>
+        <p>See accurate dislike counts alongside likes, the way it was meant to be.</p>
+      </div>
+      <div class="feat-card reveal d1">
+        <div class="feat-icon">💬</div>
+        <h3>Live Chat</h3>
+        <p>Full live chat support during streams — never miss the conversation.</p>
+      </div>
+      <div class="feat-card reveal d2">
+        <div class="feat-icon">📂</div>
+        <h3>Local Video Player</h3>
+        <p>Play videos stored on your device using LitePipe's advanced player.</p>
+      </div>
+      <div class="feat-card reveal">
+        <div class="feat-icon">🕵️</div>
+        <h3>Incognito Mode</h3>
+        <p>Watch without saving history. Your viewing stays private on this device.</p>
+      </div>
+      <div class="feat-card reveal d1">
+        <div class="feat-icon">🎮</div>
+        <h3>Advanced Player</h3>
+        <p>Subtitles, multiple audio tracks, gesture controls, and a playback queue — built in.</p>
+      </div>
+      <div class="feat-card reveal d2">
+        <div class="feat-icon">🪶</div>
+        <h3>Lightweight</h3>
+        <p>The full APK is just 6 MB — lighter than almost anything else out there.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="screenshots">
+  <div class="ss-head reveal container">
+    <div class="eyebrow">Screenshots</div>
+    <h2>See it in action.</h2>
+  </div>
+  <div class="ss-track-outer">
+    <div class="ss-track" id="ssTrack">
+      <div class="ss-item"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/S1.png"              alt="Home screen" loading="lazy"></div>
+      <div class="ss-item"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/S2.png"              alt="Video player" loading="lazy"></div>
+      <div class="ss-item"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/S3.jpg"              alt="Music player" loading="lazy"></div>
+      <div class="ss-item"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/s4.png"              alt="Downloader" loading="lazy"></div>
+      <div class="ss-item"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/s5.png"              alt="Features" loading="lazy"></div>
+      <div class="ss-item"><img src="fastlane/metadata/android/en-US/images/phoneScreenshots/hold to download.png" alt="Hold to download" loading="lazy"></div>
+    </div>
+  </div>
+  <div class="ss-nav">
+    <button class="ss-btn" id="ssLeft" aria-label="Scroll left">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <button class="ss-btn" id="ssRight" aria-label="Scroll right">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+    </button>
+  </div>
+</section>
+
+<section id="release">
+  <div class="container">
+    <div class="sec-head reveal" style="text-align:center">
+      <div class="eyebrow">Download</div>
+      <h2>Always up to date.</h2>
+    </div>
+    <div class="release-wrap reveal">
+      <div class="release-card">
+        <div class="release-top">
+          <div>
+            <div class="rel-ver" id="relVer">—</div>
+            <div class="rel-badge">
+              <span class="rel-badge-dot"></span>
+              Latest Stable
+            </div>
+            <div class="rel-date" id="relDate">Fetching release info…</div>
+          </div>
+          <a href="https://github.com/CodeLab-SK/LitePipe/releases/latest" id="relDownload" class="btn btn-primary" target="_blank" rel="noopener">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download APK
+          </a>
+        </div>
+        <div class="release-bottom">
+          <div class="rel-info-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span id="relAge">—</span>
+          </div>
+          <div class="rel-info-item" id="relApkSize" style="display:none">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span id="relSize">—</span>
+          </div>
+          <div class="rel-info-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+            <a href="https://github.com/CodeLab-SK/LitePipe/releases" target="_blank" style="color:inherit;text-decoration:none;transition:color 0.2s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color=''">All releases →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="container">
+    <div class="sec-head reveal" style="text-align:center">
+      <div class="eyebrow">FAQ</div>
+      <h2>Common questions.</h2>
+    </div>
+    <div class="faq-list reveal">
+      <div class="faq-item">
+        <button class="faq-q">Is LitePipe safe to use?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="faq-body"><div class="faq-answer">Yes. LitePipe uses the official YouTube mobile site as its base, giving you the same security as the official app while adding powerful features on top.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Can I sign in with my Google account?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="faq-body"><div class="faq-answer">Yes. You can sign in through YouTube's official login page to access your subscriptions, playlists, watch history, and all other account features.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Does it require YouTube Premium?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="faq-body"><div class="faq-answer">No. Background play, ad-blocking, and downloads are all built directly into LitePipe — no YouTube Premium subscription needed.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Can I install it alongside the official YouTube app?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="faq-body"><div class="faq-answer">Yes. LitePipe is completely separate from the official YouTube app and can be installed and used at the same time without any conflicts.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Can I set it as the default app for YouTube links?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="faq-body"><div class="faq-answer">Yes. LitePipe supports all YouTube links and can be set as the default handler in Android Settings → Apps → Default apps.</div></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">Can I download from the official YouTube app via share?
+          <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="faq-body"><div class="faq-answer">Yes. Share any video from the YouTube app and select "LitePipe Download" from the share sheet to start downloading without even opening LitePipe.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="cta">
+  <div class="cta-inner reveal">
+    <h2>Ready to watch<br><span class="grad-text">without limits?</span></h2>
+    <p>Download LitePipe for free and take back control of your YouTube experience.</p>
+    <div class="cta-btns">
+      <a href="https://github.com/CodeLab-SK/LitePipe/releases/latest" id="ctaDownload" class="btn btn-primary" target="_blank" rel="noopener">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download APK
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="foot-inner">
+    <div class="foot-left">Made with ♥ by <a href="https://github.com/CodeLab-SK" target="_blank">Sahil Kumar</a></div>
+    <div class="foot-links">
+      <a href="https://github.com/CodeLab-SK/LitePipe" target="_blank">GitHub</a>
+      <a href="https://github.com/CodeLab-SK/LitePipe/releases" target="_blank">Releases</a>
+      <a href="https://github.com/CodeLab-SK/LitePipe/issues" target="_blank">Issues</a>
+      <a href="https://github.com/CodeLab-SK/LitePipe/blob/main/LICENSE" target="_blank">License</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    'use strict';
+
+      const nav = document.getElementById('mainNav');
+    window.addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 10), { passive: true });
+
+      document.getElementById('hamburger').addEventListener('click', () => {
+      document.getElementById('navLinks').classList.toggle('open');
+    });
+
+      const ro = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); ro.unobserve(e.target); } });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.reveal').forEach(el => {
+      if (el.closest('#hero')) { el.classList.add('visible'); }
+      else { ro.observe(el); }
+    });
+
+      document.querySelectorAll('.faq-item').forEach(item => {
+      item.querySelector('.faq-q').addEventListener('click', () => {
+        const open = item.classList.contains('open');
+        document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+        if (!open) item.classList.add('open');
+      });
+    });
+
+      const track = document.getElementById('ssTrack');
+    document.getElementById('ssLeft').addEventListener('click',  () => track.scrollBy({ left: -220, behavior: 'smooth' }));
+    document.getElementById('ssRight').addEventListener('click', () => track.scrollBy({ left: 220,  behavior: 'smooth' }));
+
+      let drag = false, sx, sl;
+    track.addEventListener('mousedown',  e => { drag = true; sx = e.pageX - track.offsetLeft; sl = track.scrollLeft; track.classList.add('grabbing'); });
+    track.addEventListener('mouseleave', () => { drag = false; track.classList.remove('grabbing'); });
+    track.addEventListener('mouseup',    () => { drag = false; track.classList.remove('grabbing'); });
+    track.addEventListener('mousemove',  e => { if (!drag) return; e.preventDefault(); track.scrollLeft = sl - (e.pageX - track.offsetLeft - sx) * 1.4; });
+
+      function animNum(el, raw) {
+      if (typeof raw === 'string' && isNaN(parseFloat(raw))) { el.textContent = raw; return; }
+      const val = parseFloat(raw);
+      const suf = raw.toString().replace(/[\d.]/g, '');
+      const dec = suf === 'k' ? 1 : 0;
+      const dur = 1000, start = performance.now();
+      const step = now => {
+        const t = Math.min((now - start) / dur, 1);
+        const ease = 1 - Math.pow(1 - t, 3);
+        el.textContent = (val * ease).toFixed(dec) + suf;
+        if (t < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }
+
+    function fmt(n) {
+      if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+      return String(n);
+    }
+
+      async function loadGitHub() {
+      try {
+        const [rr, lr] = await Promise.all([
+          fetch('https://api.github.com/repos/CodeLab-SK/LitePipe'),
+          fetch('https://api.github.com/repos/CodeLab-SK/LitePipe/releases')
+        ]);
+        if (!rr.ok || !lr.ok) return;
+        const [repo, releases] = await Promise.all([rr.json(), lr.json()]);
+
+              document.getElementById('statStars').textContent    = fmt(repo.stargazers_count);
+        document.getElementById('statForks').textContent    = fmt(repo.forks_count);
+        document.getElementById('statVersion').textContent  = releases[0]?.tag_name ?? '—';
+
+        const totalDl = releases.reduce((s, r) => s + r.assets.reduce((a, x) => a + x.download_count, 0), 0);
+        document.getElementById('statDownloads').textContent = fmt(totalDl);
+
+              const statEls = [
+          { el: document.getElementById('statStars'),     val: fmt(repo.stargazers_count) },
+          { el: document.getElementById('statForks'),     val: fmt(repo.forks_count) },
+          { el: document.getElementById('statDownloads'), val: fmt(totalDl) },
+          { el: document.getElementById('statVersion'),   val: releases[0]?.tag_name ?? '—' }
+        ];
+        const so = new IntersectionObserver(en => {
+          en.forEach(e => { if (e.isIntersecting) { statEls.forEach(({ el, val }) => animNum(el, val)); so.disconnect(); } });
+        }, { threshold: 0.3 });
+        so.observe(document.getElementById('stats'));
+
+              if (releases.length) {
+          const latest = releases[0];
+          document.getElementById('relVer').textContent = latest.tag_name;
+          const pub = new Date(latest.published_at);
+          document.getElementById('relDate').textContent = 'Released ' +
+            pub.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+                  const days = Math.floor((Date.now() - pub) / 86400000);
+          document.getElementById('relAge').textContent = days === 0 ? 'Released today'
+            : days === 1 ? 'Released yesterday'
+            : `Released ${days} days ago`;
+
+                  const apk = latest.assets.find(a => a.name.endsWith('.apk'));
+          if (apk) {
+            const mb = (apk.size / 1048576).toFixed(1);
+            document.getElementById('relApkSize').style.display = 'flex';
+            document.getElementById('relSize').textContent = mb + ' MB APK';
+            const dlUrl = apk.browser_download_url;
+            ['heroDownload','navDownload','relDownload','ctaDownload'].forEach(id => {
+              const el = document.getElementById(id);
+              if (el) el.href = dlUrl;
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('GitHub API unavailable');
+      }
+    }
+
+    loadGitHub();
+  })();
+</script>
+</body>
+</html>
