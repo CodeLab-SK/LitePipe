@@ -1,56 +1,79 @@
 <div align="center">
+<img width="150" height="150" alt="LitePipe" src="https://github.com/user-attachments/assets/143932c4-5d9b-4846-b7cc-9c2855d65758" />
 
 # LitePipe
 
-**An advanced, performance-focused YouTube client for Android**  
-*Ad-free • SponsorBlock • Powerful Downloader • Custom Player • Lightweight WebView Wrapper*
+**A fast, feature-rich YouTube client for Android**
 
-![GitHub stars](https://img.shields.io/github/stars/CodeLab-SK/LitePipe?style=flat-square)
-![GitHub forks](https://img.shields.io/github/forks/CodeLab-SK/LitePipe?style=flat-square)
-![License](https://img.shields.io/github/license/CodeLab-SK/LitePipe?style=flat-square)
-![Latest Release](https://img.shields.io/github/v/release/CodeLab-SK/LitePipe?style=flat-square)
+*Ad-free • SponsorBlock • Powerful Downloader • Custom Player • YouTube Music*
 
+<br>
+
+<img src="https://img.shields.io/badge/Status-Active%20Development-success?style=for-the-badge">
+
+<br>
+
+<img src="https://img.shields.io/github/v/release/CodeLab-SK/LitePipe?style=for-the-badge&label=Latest%20Version">
+<img src="https://img.shields.io/github/downloads/CodeLab-SK/LitePipe/total?style=for-the-badge&label=Downloads">
+
+<br>
+
+<img src="https://img.shields.io/badge/Android-9%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white">
+<img src="https://img.shields.io/github/license/CodeLab-SK/LitePipe?style=for-the-badge&label=License">
+<img src="https://img.shields.io/github/last-commit/CodeLab-SK/LitePipe?style=for-the-badge&label=Last%20Commit">
+
+<br>
+
+<img src="https://img.shields.io/github/stars/CodeLab-SK/LitePipe?style=for-the-badge">
+<img src="https://img.shields.io/github/forks/CodeLab-SK/LitePipe?style=for-the-badge">
+<img src="https://img.shields.io/badge/Material%203-UI-6750A4?style=for-the-badge">
 </div>
 
 ## ✨ Features
 
 -  **Ad-free:** Completely ad-free YouTube experience.
+-  **YouTube Music:** Listen to Music ad-free with background playback.
 -  **SponsorBlock:** Automatically skip sponsors, intros, outros, and reminders.
 -  **Return YouTube Dislike:** See dislikes again.
--  **Powerful Downloader:** Built-in video, audio, caption, playlist and thumbnail downloader.
 -  **Advanced Player:** Custom player supporting subtitles, multiple audio tracks, and gesture controls.
 -  **Background Play:** Listen to videos while using other apps or with the screen off.
-- ️ **Picture-in-Picture (PiP):** Multitask with a floating video window.
+- ️ **Picture-in-Picture (PiP):** Continue watching in a floating popup window.
+-  **Playback Queue:** Add videos to a queue to keep watching.
 -  **Live Chat:** Full support for live chat during streams.
--  **Modern UI:** Clean Material 3 interface that is fast and responsive.
+-  **Powerful YouTube Downloader:** Built-in video, audio, captions, playlists, and thumbnails downloader.
+-  **Local Video Player:** Play local device videos using our advanced player.
 -  **Incognito Mode:** Watch videos without saving history.
--  **Playback Queue:** Add videos in a queue to keep watching.
+-  **Modern UI:** Clean Material 3 interface that is fast and responsive.
+-  **Lightweight:** Full APK size is just *6 MB*.
 
 ## 📸 Screenshots
 
 <p align="center">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/S1.png" width="30%" />
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/S2.png" width="30%" />
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/S3.jpg" width="30%" />
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/S1.png" width="30%" alt="LitePipe - YouTube client screenshot" />
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/S2.png" width="30%" alt="LitePipe YT client interface" />
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/S3.jpg" width="30%" alt="LitePipe APK YouTube player" />
   <br>
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/s4.png" width="30%" />
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/s5.png" width="30%" />
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/s4.png" width="30%" alt="LitePipe client Material 3 UI" />
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/s5.png" width="30%" alt="LitePipe Android YouTube client" />
 </p>
 
 <details>
   <summary><b>Show More Screenshots</b></summary>
   <p align="center">
-    <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/hold to download.png" width="30%" />
-    <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/more options.jpg" width="30%" />
-    <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/player 2.jpg" width="100%" />
-    </p>
+    <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/hold to download.png" width="30%" alt="LitePipe APK hold to download menu" />
+    <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/more options.jpg" width="30%" alt="LitePipe YouTube client more options menu" />
+    <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/player 2.jpg" width="100%" alt="LitePipe advanced video player with subtitles and playback controls" />
+  </p>
 </details>
 
 
 ## 📥 Installation
-
 ### Option 1: Download APK (Recommended)
-Download the latest stable APK from the [Releases page](https://github.com/CodeLab-SK/LitePipe/releases).
+<p>
+<a href="https://github.com/CodeLab-SK/LitePipe/releases/latest">
+<img src="https://img.shields.io/badge/⬇️-Download_Latest_APK-red?style=for-the-badge"/>
+</a>
+</p>
 
 ### Option 2: Build from Source
 If you prefer to build it yourself:
@@ -67,12 +90,20 @@ cd LitePipe
 The APK will be available in `app/build/outputs/apk/debug/`.
 
 ## 🤝 Contributing
-Whether you have ideas, bug reports, translations, design improvements, code cleanups, or major feature changes — **all help is welcome**!
 
-### How to Contribute
-- **Found a bug?** → Open an [Issue](https://github.com/CodeLab-SK/LitePipe/issues)
-- **Have an idea or feature request?** → Open a new issue
-- **Want to contribute code?** → Fork the repo and submit a Pull Request
+Whether you have ideas, bug reports, translations, design improvements, code cleanups, or major feature changes — **all help is welcome!**
+
+<p align="center">
+
+<a href="https://github.com/CodeLab-SK/LitePipe/issues">
+<img src="https://img.shields.io/badge/🐞-Report_Bug-blue?style=for-the-badge"/>
+</a>
+
+<a href="https://github.com/CodeLab-SK/LitePipe/issues/new">
+<img src="https://img.shields.io/badge/💡-Request_Feature-success?style=for-the-badge"/>
+</a>
+
+</p>
 
 ## ❓ FAQ
 **Q: Is this app safe?**  
@@ -93,15 +124,15 @@ Whether you have ideas, bug reports, translations, design improvements, code cle
 **Q: Can I download a video using a link?**                                                                       
 **A:** Yes, copy a link and you will get a popup to play/download that video.
 
-**Q: Can I download videos from Youtube app?**                                                                            
-**A:** Yes. Simply share a video from the Youtube app and select **"LitePipe Download"** from the share menu to start downloading without opening LitePipe.
+**Q: Can I download videos from YouTube app?**                                                                            
+**A:** Yes. Simply share a video from the YouTube app and select **"LitePipe Download"** from the share menu to start downloading without opening LitePipe.
 
-**Q: Can I set it as default app for Youtube videos?**                                                     
-**A:** Yes. Litepipe supoprts all youtube links and you can set it as a default app in the android settings.
+**Q: Can I set it as default app for YouTube videos?**                                                     
+**A:** Yes. LitePipe supports all YouTube links and you can set it as a default app in the Android settings.
 
 **Q: Can I upload videos to Youtube?**                                                         
-**A:** Unfortunately, Litepipe doesn't support uploading videos or notifications yet.
+**A:** No. Unfortunately, LitePipe doesn't support uploading videos or notifications yet.
 
 <div align="center">
-Made with ❤️ by <a href="https://github.com/CodeLab-SK">Sahil Kumar.</a>
+Made with ❤️ by <a href="https://github.com/CodeLab-SK">Sahil Kumar</a>
 </div>
