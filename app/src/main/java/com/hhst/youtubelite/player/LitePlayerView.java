@@ -7,8 +7,6 @@ import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.Outline;
 import android.graphics.Rect;
-import android.transition.AutoTransition;
-import android.transition.TransitionManager;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.util.Rational;
@@ -18,7 +16,6 @@ import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
 import android.view.ViewTreeObserver;
-import android.view.animation.AccelerateInterpolator;
 import android.view.animation.OvershootInterpolator;
 import android.widget.ImageButton;
 import android.widget.TextView;
@@ -88,7 +85,6 @@ public class LitePlayerView extends PlayerView {
 	private int normalHeight = 0;
 	@Getter
 	private boolean inAppMiniPlayer = false;
-	private boolean isFadingOut = false;
 	@Nullable
 	private Runnable onMiniPlayerRestore;
 	@Nullable
@@ -200,10 +196,6 @@ public class LitePlayerView extends PlayerView {
 				return;
 			}
 
-			if (isAttachedToWindow() && getParent() instanceof ViewGroup parent) {
-				TransitionManager.beginDelayedTransition(parent, new AutoTransition().setDuration(250));
-			}
-
 			if (fullscreen && inAppMiniPlayer) {
 				if (!miniPlayerTranslationStashedForFullscreen) {
 					saveCurrentMiniPlayerTranslation();
@@ -288,39 +280,10 @@ public class LitePlayerView extends PlayerView {
 		resetMiniPlayerTouchTracking();
 		miniPlayerWidthOverrideDp = MiniPlayerLayout.NO_WIDTH_OVER_DP;
 		resetMiniPlayerTranslation();
-		setAlpha(1.0f);
 		updatePlayerLayout(miniPlayerRestoreFullscreen);
 		setResizeMode(miniPlayerRestoreResizeMode);
 		updateMiniPlayerInteractionHandlers();
 		animateMiniTransition(startX, startY, startWidth, startHeight);
-		post(() -> {
-			requestLayout();
-			invalidate();
-		});
-	}
-
-	public void closeInAppMiniPlayerWithFade(@Nullable Runnable onClosed) {
-		if (!inAppMiniPlayer) {
-			if (onClosed != null) onClosed.run();
-			return;
-		}
-
-		stopMiniTransition();
-		isFadingOut = true;
-		animate()
-						.alpha(0f)
-						.translationY(getTranslationY() + getHeight() * 0.5f)
-						.setDuration(200)
-						.setInterpolator(new AccelerateInterpolator())
-						.withLayer()
-						.withEndAction(() -> {
-							isFadingOut = false;
-							setAlpha(1.0f);
-							exitInAppMiniPlayer();
-							setVisibility(View.GONE);
-							if (onClosed != null) onClosed.run();
-						})
-						.start();
 	}
 
 	public void setMiniPlayerCallbacks(@Nullable Runnable onRestore, @Nullable Runnable onClose,
@@ -440,7 +403,7 @@ public class LitePlayerView extends PlayerView {
 		if (miniAnimating) {
 			return true;
 		}
-		if (inAppMiniPlayer && !isFadingOut && handleMiniPlayerTouch(event)) {
+		if (inAppMiniPlayer && handleMiniPlayerTouch(event)) {
 			return true;
 		}
 		if (touchInterceptListener != null && touchInterceptListener.onInterceptTouch(event)) {
@@ -499,7 +462,6 @@ public class LitePlayerView extends PlayerView {
 		animate().cancel();
 		setScaleX(1.0f);
 		setScaleY(1.0f);
-		isFadingOut = false;
 	}
 
 	private void finishMiniTransition(int token) {
@@ -688,15 +650,7 @@ public class LitePlayerView extends PlayerView {
 		int top = parent.getHeight() - params.bottomMargin - height;
 
 		miniPlayerSavedTranslationX = MiniPlayerLayout.clampTranslation(x, left, width, parent.getWidth(), 0, parent.getWidth());
-		float minTranslationY = topInsetPx - top;
-
-		if (y > 0) {
-			miniPlayerSavedTranslationY = y;
-			setAlpha(Math.max(0f, 1f - (y / (height * 0.7f))));
-		} else {
-			miniPlayerSavedTranslationY = Math.max(y, minTranslationY);
-			setAlpha(1.0f);
-		}
+		miniPlayerSavedTranslationY = MiniPlayerLayout.clampTranslation(y, top, height, parent.getHeight(), topInsetPx, parent.getHeight() - bottomOffsetPx);
 
 		setTranslationX(miniPlayerSavedTranslationX);
 		setTranslationY(miniPlayerSavedTranslationY);
@@ -714,28 +668,20 @@ public class LitePlayerView extends PlayerView {
 		int top = parent.getHeight() - params.bottomMargin - height;
 		int left = parent.getWidth() - params.rightMargin - width;
 
-		if (getTranslationY() > height * 0.2f && onMiniPlayerClose != null) {
-			onMiniPlayerClose.run();
-			return;
-		}
-
 		float x = MiniPlayerLayout.snapX(getTranslationX(), left, width, parent.getWidth(), 0, parent.getWidth());
-		float y = Math.min(Math.max(getTranslationY(), topInsetPx - top), 0);
+		float y = MiniPlayerLayout.clampTranslation(getTranslationY(), top, height, parent.getHeight(), topInsetPx, parent.getHeight() - bottomOffsetPx);
 
 		miniPlayerSavedTranslationX = x;
 		miniPlayerSavedTranslationY = y;
 		animate().cancel();
-		if (Math.abs(getTranslationX() - x) < 0.5f && Math.abs(getTranslationY() - y) < 0.5f && Math.abs(getAlpha() - 1.0f) < 0.01f) {
+		setTranslationY(y);
+		if (Math.abs(getTranslationX() - x) < 0.5f && Math.abs(getTranslationY() - y) < 0.5f) {
 			setTranslationX(x);
-			setTranslationY(y);
-			setAlpha(1.0f);
 			persistMiniPlayerLayoutState();
 			return;
 		}
 		animate()
 						.translationX(x)
-						.translationY(y)
-						.alpha(1.0f)
 						.setDuration(MINI_TRANSITION_MS)
 						.setInterpolator(new OvershootInterpolator(0.7f))
 						.withLayer()
@@ -942,14 +888,12 @@ public class LitePlayerView extends PlayerView {
 
 	public void show() {
 		setVisibility(View.VISIBLE);
-		setAlpha(1.0f);
 		setClickable(true);
 		setFocusable(true);
 	}
 
 	public void hide() {
 		setVisibility(View.GONE);
-		setAlpha(1.0f);
 	}
 
 	public void setTitle(@Nullable String title) {
