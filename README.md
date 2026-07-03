@@ -24,9 +24,6 @@
 
 <br>
 
-<img src="https://img.shields.io/github/stars/CodeLab-SK/LitePipe?style=for-the-badge">
-<img src="https://img.shields.io/github/forks/CodeLab-SK/LitePipe?style=for-the-badge">
-<img src="https://img.shields.io/badge/Material%203-UI-6750A4?style=for-the-badge">
 </div>
 
 ## ✨ Features
@@ -122,15 +119,15 @@ Whether you have ideas, bug reports, translations, design improvements, code cle
 **A:** Yes. LitePipe is completely separate from the official YouTube application and can be installed and used at the same time.
 
 **Q: Can I download a video using a link?**                                                                       
-**A:** Yes, copy a link and you will get a popup to play/download that video.
+**A:** Yes, copy a link, and you will get a popup to play/download that video.
 
 **Q: Can I download videos from YouTube app?**                                                                            
 **A:** Yes. Simply share a video from the YouTube app and select **"LitePipe Download"** from the share menu to start downloading without opening LitePipe.
 
 **Q: Can I set it as default app for YouTube videos?**                                                     
-**A:** Yes. LitePipe supports all YouTube links and you can set it as a default app in the Android settings.
+**A:** Yes. LitePipe supports all YouTube links, and you can set it as a default app in the Android settings.
 
-**Q: Can I upload videos to Youtube?**                                                         
+**Q: Can I upload videos to YouTube?**                                                         
 **A:** No. Unfortunately, LitePipe doesn't support uploading videos or notifications yet.
 
 <div align="center">

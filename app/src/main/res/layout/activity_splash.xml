@@ -113,7 +113,7 @@
             android:alpha="0"
             android:fontFamily="sans-serif-medium"
             android:letterSpacing="0.28"
-            android:text="@string/splash_tagline_minimal"
+            android:text="@string/splash_tagline_modern"
             android:textAllCaps="true"
             android:textColor="@color/splash_secondary_text"
             android:textSize="12sp" />
