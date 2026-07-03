@@ -18,5 +18,5 @@ public class Constants {
 	public static final String PAGE_MUSIC = "music";
 	public static final String PAGE_MUSIC_WATCH = "music_watch";
 
-	public static String USER_AGENT = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36";
+	public static volatile String USER_AGENT = "Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Mobile Safari/537.36";
 }

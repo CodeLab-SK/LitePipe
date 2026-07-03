@@ -2,12 +2,9 @@ package com.hhst.youtubelite;
 
 import android.app.Application;
 import android.os.Build;
-import android.webkit.WebSettings;
 import android.webkit.WebView;
 
 import com.tencent.mmkv.MMKV;
-
-import java.util.concurrent.Executors;
 
 import dagger.hilt.android.HiltAndroidApp;
 
@@ -24,13 +21,6 @@ public class App extends Application {
 				WebView.setDataDirectorySuffix(processName);
 			}
 		}
-
-		Executors.newSingleThreadExecutor().execute(() -> {
-			try {
-				Constants.USER_AGENT = WebSettings.getDefaultUserAgent(this);
-			} catch (Exception ignored) {
-			}
-		});
 	}
 
 }
