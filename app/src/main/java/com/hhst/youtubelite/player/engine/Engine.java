@@ -89,6 +89,7 @@ public class Engine {
 	static final String NO_PLAYABLE_SOURCE_MESSAGE = "No playable stream found";
 	private static final int SAFE_ZONE_MS = 5000;
 	private static final long SYNC_INTERVAL_MS = 2000;
+	private static final long SYNC_INTERVAL_BG_MS = 5000;
 
 	@NonNull
 	private final ExoPlayer player;
@@ -119,6 +120,7 @@ public class Engine {
 			if (!player.isPlaying()) return;
 			long pos = player.getCurrentPosition();
 			long duration = player.getDuration();
+			boolean isVisible = playerView.isShown();
 
 			if (videoId != null && duration > 0
 					&& prefs.getExtensionManager().isEnabled(Constant.REMEMBER_LAST_POSITION)
@@ -130,12 +132,13 @@ public class Engine {
 
 			if (videoId != null && !IncognitoManager.getInstance().isIncognito()) {
 				long now = System.currentTimeMillis();
-				if (now - lastSyncTime >= SYNC_INTERVAL_MS) {
+				long interval = isVisible ? SYNC_INTERVAL_MS : SYNC_INTERVAL_BG_MS;
+				if (now - lastSyncTime >= interval) {
 					triggerSync(pos);
 				}
 			}
 
-			if (duration > 0) {
+			if (isVisible && duration > 0) {
 				playerView.updateSkipMarkers(duration, TimeUnit.MILLISECONDS);
 				playerView.updateRemainingTime(pos, duration, player.getPlaybackParameters().speed);
 			}
@@ -151,7 +154,7 @@ public class Engine {
 					break;
 				}
 			}
-			handler.postDelayed(this, 1000);
+			handler.postDelayed(this, isVisible ? 1000 : 2000);
 		}
 	};
 	@Nullable
@@ -225,7 +228,7 @@ public class Engine {
 					}
 				} else if (state == Player.STATE_READY) {
 					long duration = player.getDuration();
-					if (duration > 0) {
+					if (playerView.isShown() && duration > 0) {
 						playerView.updateSkipMarkers(duration, TimeUnit.MILLISECONDS);
 						playerView.updateRemainingTime(player.getCurrentPosition(), duration, player.getPlaybackParameters().speed);
 					}
@@ -257,7 +260,9 @@ public class Engine {
 
 			@Override
 			public void onCues(@NonNull CueGroup cueGroup) {
-				playerView.cueing(cueGroup);
+				if (playerView.isShown()) {
+					playerView.cueing(cueGroup);
+				}
 			}
 
 			@Override
@@ -268,7 +273,7 @@ public class Engine {
 			@Override
 			public void onPositionDiscontinuity(@NonNull Player.PositionInfo oldPosition, @NonNull Player.PositionInfo newPosition, int reason) {
 				long duration = player.getDuration();
-				if (duration > 0) {
+				if (playerView.isShown() && duration > 0) {
 					playerView.updateRemainingTime(newPosition.positionMs, duration, player.getPlaybackParameters().speed);
 				}
 				if (reason == Player.DISCONTINUITY_REASON_SEEK) {
@@ -283,7 +288,7 @@ public class Engine {
 			@Override
 			public void onPlaybackParametersChanged(@NonNull PlaybackParameters playbackParameters) {
 				long duration = player.getDuration();
-				if (duration > 0) {
+				if (playerView.isShown() && duration > 0) {
 					playerView.updateRemainingTime(player.getCurrentPosition(), duration, playbackParameters.speed);
 				}
 			}

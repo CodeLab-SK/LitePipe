@@ -544,13 +544,41 @@ public class YoutubeWebview extends WebView {
 
 	private void enableBackgroundPlayback() {
 		if (!UrlUtils.isMusicUrl(getUrl())) return;
-		evaluateJavascript("if(!window._bgInjected){" +
-				"window._bgInjected=true;" +
-				"Object.defineProperty(document,'hidden',{value:false,writable:false});" +
-				"Object.defineProperty(document,'visibilityState',{value:'visible',writable:false});" +
-				"window.addEventListener('visibilitychange',e=>e.stopImmediatePropagation(),true);" +
-				"window.addEventListener('webkitvisibilitychange',e=>e.stopImmediatePropagation(),true);" +
-				"}", null);
+		evaluateJavascript("""
+                (function(){
+                    if(window._lp_bg_injected) return;
+                    window._lp_bg_injected = true;
+                    window._lp_bg_active = false;
+                    
+                    const docProto = Object.getPrototypeOf(document);
+                    const descHidden = Object.getOwnPropertyDescriptor(docProto, 'hidden') || Object.getOwnPropertyDescriptor(document, 'hidden');
+                    const descVis = Object.getOwnPropertyDescriptor(docProto, 'visibilityState') || Object.getOwnPropertyDescriptor(document, 'visibilityState');
+                    
+                    Object.defineProperty(document, 'hidden', {
+                        get: function() {
+                            return window._lp_bg_active ? false : (descHidden && descHidden.get ? descHidden.get.call(document) : false);
+                        },
+                        configurable: true
+                    });
+                    
+                    Object.defineProperty(document, 'visibilityState', {
+                        get: function() {
+                            return window._lp_bg_active ? 'visible' : (descVis && descVis.get ? descVis.get.call(document) : 'visible');
+                        },
+                        configurable: true
+                    });
+                    
+                    const block = e => { if(window._lp_bg_active) e.stopImmediatePropagation(); };
+                    window.addEventListener('visibilitychange', block, true);
+                    window.addEventListener('webkitvisibilitychange', block, true);
+                })();
+                """, null);
+	}
+
+	public void setMusicBackgroundActive(boolean active) {
+		if (initialized && !isDestroyed && UrlUtils.isMusicUrl(getUrl())) {
+			evaluateJavascript("window._lp_bg_active = " + active + ";", null);
+		}
 	}
 
 	public void refreshPoTokenContext() {

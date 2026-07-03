@@ -610,6 +610,10 @@
 				controller.setLoopMode(mode);
 			}
 
+			public boolean isMusic() {
+				return currentUrl != null && UrlUtils.isMusicUrl(currentUrl);
+			}
+
 			public void release() {
 				cancelCurrentExtraction();
 				loadedVideoId = null;

@@ -267,7 +267,7 @@ public class TabManager {
 			cachedCssScript = cssBlock.toString();
 
 			String[] scripts = assetManager.list("script");
-			if (scripts != null) {
+			if (styles != null) {
 				List<String> list = new ArrayList<>(Arrays.asList(scripts));
 				String initScript = list.contains(SCRIPT_INIT) ? SCRIPT_INIT : list.contains(SCRIPT_INIT_MIN) ? SCRIPT_INIT_MIN : null;
 				if (initScript != null) {

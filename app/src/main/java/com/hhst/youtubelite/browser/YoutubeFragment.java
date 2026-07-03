@@ -22,6 +22,7 @@ import com.hhst.youtubelite.player.LitePlayer;
 import com.hhst.youtubelite.player.controller.Controller;
 import com.hhst.youtubelite.player.queue.QueueRepository;
 import com.hhst.youtubelite.player.queue.QueueWarmer;
+import com.hhst.youtubelite.util.UrlUtils;
 
 import java.util.Objects;
 import java.util.concurrent.Executor;
@@ -164,6 +165,7 @@ public final class YoutubeFragment extends Fragment {
 		super.onResume();
 		if (webview != null && !isHidden()) {
 			webview.syncPreferences();
+			webview.setMusicBackgroundActive(false);
 			webview.onResume();
 			webview.evaluateJavascript("window.dispatchEvent(new Event('onTabShow'));", null);
 		}
@@ -174,7 +176,11 @@ public final class YoutubeFragment extends Fragment {
 		super.onPause();
 		if (webview != null && !isHidden()) {
 			if (getActivity() != null && getActivity().isInPictureInPictureMode()) return;
-			webview.onPause();
+			if (UrlUtils.isMusicUrl(webview.getUrl())) {
+				webview.setMusicBackgroundActive(true);
+			} else {
+				webview.onPause();
+			}
 		}
 	}
 
@@ -183,9 +189,14 @@ public final class YoutubeFragment extends Fragment {
 		super.onHiddenChanged(hidden);
 		if (webview != null) {
 			if (hidden) {
-				webview.onPause();
+				if (UrlUtils.isMusicUrl(webview.getUrl())) {
+					webview.setMusicBackgroundActive(true);
+				} else {
+					webview.onPause();
+				}
 			} else {
 				webview.syncPreferences();
+				webview.setMusicBackgroundActive(false);
 				webview.onResume();
 				if (pendingRestoreState != null) {
 					webview.restoreState(pendingRestoreState);
