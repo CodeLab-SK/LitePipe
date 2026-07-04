@@ -202,13 +202,18 @@ public class PlayerGestureListener extends GestureDetector.SimpleOnGestureListen
 		float y = e1.getY(), height = playerView.getHeight();
 
 		if (gestureMode == 0) {
+			if (y < height * GESTURE_VERTICAL_LIMIT_TOP || y > height * GESTURE_VERTICAL_LIMIT_BOTTOM) {
+				return false;
+			}
+
 			if (Math.abs(dy) > Math.abs(dx)) {
-				if ((x < width * 0.35f || x > width * 0.65f) && (y < height * GESTURE_VERTICAL_LIMIT_TOP || y > height * GESTURE_VERTICAL_LIMIT_BOTTOM)) {
-					return false;
-				}
 				gestureMode = 1;
 			} else if (Math.abs(dx) > Math.abs(dy)) {
-				gestureMode = 2;
+				if (x >= width * 0.1f && x <= width * 0.9f) {
+					gestureMode = 2;
+				} else {
+					return false;
+				}
 			}
 		}
 		

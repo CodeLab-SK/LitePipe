@@ -208,7 +208,6 @@ public final class OfflinePlayerActivity extends AppCompatActivity {
     public void onConfigurationChanged(@NonNull Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
         player.get().syncRotation(DeviceUtils.isRotateOn(this), newConfig.orientation);
-        player.get().enterFullscreen();
     }
 
     @Override
