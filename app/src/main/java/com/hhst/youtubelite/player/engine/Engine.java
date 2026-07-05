@@ -90,6 +90,7 @@ public class Engine {
 	private static final int SAFE_ZONE_MS = 5000;
 	private static final long SYNC_INTERVAL_MS = 2000;
 	private static final long SYNC_INTERVAL_BG_MS = 5000;
+	private static final long SYNC_INTERVAL_WATCH_MS = 30000;
 
 	@NonNull
 	private final ExoPlayer player;
@@ -132,7 +133,12 @@ public class Engine {
 
 			if (videoId != null && !IncognitoManager.getInstance().isIncognito()) {
 				long now = System.currentTimeMillis();
-				long interval = isVisible ? SYNC_INTERVAL_MS : SYNC_INTERVAL_BG_MS;
+				long interval;
+				if (UrlUtils.isMusicUrl(tabManager.getWatchUrl())) {
+					interval = isVisible ? SYNC_INTERVAL_MS : SYNC_INTERVAL_BG_MS;
+				} else {
+					interval = SYNC_INTERVAL_WATCH_MS;
+				}
 				if (now - lastSyncTime >= interval) {
 					triggerSync(pos);
 				}
