@@ -1184,8 +1184,15 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 
 	@Override protected void onStop() {
 		linkDetection.setAppVisible(false, null);
-		if (player != null && shouldSuspendMiniPlayerOnStop(player.isInAppMiniPlayer(), isChangingConfigurations(), DeviceUtils.isInPictureInPictureMode(this))) {
-			player.suspendInAppMiniPlayerUiIfNeeded();
+		if (player != null) {
+			if (!player.isMusic() && !extensionManager.isEnabled(Constant.ENABLE_BACKGROUND_PLAY)) {
+				if (!isChangingConfigurations() && !DeviceUtils.isInPictureInPictureMode(this)) {
+					player.pause();
+				}
+			}
+			if (shouldSuspendMiniPlayerOnStop(player.isInAppMiniPlayer(), isChangingConfigurations(), DeviceUtils.isInPictureInPictureMode(this))) {
+				player.suspendInAppMiniPlayerUiIfNeeded();
+			}
 		}
 		super.onStop();
 	}
