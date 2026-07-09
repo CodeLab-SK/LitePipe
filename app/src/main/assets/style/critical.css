@@ -1,0 +1,8 @@
+html[page-class="watch"] #player,
+html[page-class="watch"] #player-container-id,
+html[page-class="watch"] #movie_player,
+html[page-class="watch"] .player-size,
+html[page-class="watch"] .player-placeholder-wrapper {
+    visibility: hidden !important;
+    opacity: 0 !important;
+}

@@ -236,22 +236,4 @@
 
     </LinearLayout>
 
-    <FrameLayout
-        android:id="@+id/watch_loading_overlay"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="?attr/colorSurface"
-        android:clickable="true"
-        android:focusable="true"
-        android:visibility="gone"
-        android:elevation="50dp">
-
-        <ProgressBar
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:indeterminateTint="@color/yt_red" />
-
-    </FrameLayout>
-
 </androidx.constraintlayout.widget.ConstraintLayout>

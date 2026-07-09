@@ -30,6 +30,8 @@ import androidx.annotation.Nullable;
 import androidx.media3.common.util.Consumer;
 import androidx.media3.common.util.UnstableApi;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+import androidx.webkit.WebViewCompat;
+import androidx.webkit.WebViewFeature;
 
 import com.hhst.youtubelite.Constants;
 import com.hhst.youtubelite.IncognitoManager;
@@ -330,6 +332,27 @@ public class YoutubeWebview extends WebView {
 		addJavascriptInterface(jsInterface, "lite");
 		setTag(jsInterface);
 
+		if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+			String criticalCss = readCriticalCssFromAssets();
+			if (criticalCss != null && !criticalCss.isEmpty()) {
+				String encoded = Base64.getEncoder().encodeToString(criticalCss.getBytes(StandardCharsets.UTF_8));
+				String js = String.format("""
+						(function(){
+						try {
+							var path = location.pathname;
+							var pc = path.indexOf('/watch') === 0 ? 'watch' : (path === '/' ? 'home' : '');
+							if (pc) document.documentElement.setAttribute('page-class', pc);
+						} catch(e) {}
+
+						let style = document.createElement('style');
+						style.textContent = window.atob('%s');
+						(document.head || document.documentElement).appendChild(style);
+						})();
+						""", encoded);
+				WebViewCompat.addDocumentStartJavaScript(this, js, Collections.singleton("*"));
+			}
+		}
+
 		setWebViewClient(new WebViewClient() {
 			@Override
 			public boolean shouldOverrideUrlLoading(@NonNull final WebView view, @NonNull final WebResourceRequest request) {
@@ -542,39 +565,26 @@ public class YoutubeWebview extends WebView {
 		});
 	}
 
-	private void enableBackgroundPlayback() {
+	 private void enableBackgroundPlayback() {
 		if (!UrlUtils.isMusicUrl(getUrl())) return;
 		evaluateJavascript("""
-                (function(){
-                    if(window._lp_bg_injected) return;
-                    window._lp_bg_injected = true;
-                    window._lp_bg_active = false;
-                    
-                    const docProto = Object.getPrototypeOf(document);
-                    const descHidden = Object.getOwnPropertyDescriptor(docProto, 'hidden') || Object.getOwnPropertyDescriptor(document, 'hidden');
-                    const descVis = Object.getOwnPropertyDescriptor(docProto, 'visibilityState') || Object.getOwnPropertyDescriptor(document, 'visibilityState');
-                    
-                    Object.defineProperty(document, 'hidden', {
-                        get: function() {
-                            return window._lp_bg_active ? false : (descHidden && descHidden.get ? descHidden.get.call(document) : false);
-                        },
-                        configurable: true
-                    });
-                    
-                    Object.defineProperty(document, 'visibilityState', {
-                        get: function() {
-                            return window._lp_bg_active ? 'visible' : (descVis && descVis.get ? descVis.get.call(document) : 'visible');
-                        },
-                        configurable: true
-                    });
-                    
-                    const block = e => { if(window._lp_bg_active) e.stopImmediatePropagation(); };
-                    window.addEventListener('visibilitychange', block, true);
-                    window.addEventListener('webkitvisibilitychange', block, true);
-                })();
-                """, null);
+        (function(){
+            if(window._lp_bg_injected) return;
+            window._lp_bg_injected = true;
+            window._lp_bg_active = false;
+            
+            const block = e => { 
+                if(window._lp_bg_active) {
+                    if (e.type === 'visibilitychange' || e.type === 'webkitvisibilitychange') {
+                        e.stopImmediatePropagation();
+                    }
+                }
+            };
+            window.addEventListener('visibilitychange', block, true);
+            window.addEventListener('webkitvisibilitychange', block, true);
+        })();
+        """, null);
 	}
-
 	public void setMusicBackgroundActive(boolean active) {
 		if (initialized && !isDestroyed && UrlUtils.isMusicUrl(getUrl())) {
 			evaluateJavascript("window._lp_bg_active = " + active + ";", null);
@@ -603,6 +613,18 @@ public class YoutubeWebview extends WebView {
 			}
 			poTokenInflightKey = null;
 		});
+	}
+
+	@Nullable
+	private String readCriticalCssFromAssets() {
+		try (InputStream is = getContext().getAssets().open("style/critical.css")) {
+			byte[] buffer = new byte[is.available()];
+			int read = is.read(buffer);
+			return read > 0 ? new String(buffer, StandardCharsets.UTF_8) : null;
+		} catch (Exception e) {
+			Log.e("YoutubeWebview", "Failed to read critical.css", e);
+			return null;
+		}
 	}
 
 	private void injectJavaScript(@Nullable String url) {

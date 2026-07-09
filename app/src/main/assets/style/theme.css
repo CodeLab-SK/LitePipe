@@ -131,14 +131,20 @@ html[page-class="@"] .media-item-metadata {
 }
 
 html[page-class="watch"] body {
-    transform: translateY(-48px) !important;
-    margin-bottom: -48px !important;
+    margin-top: -48px !important;
 }
 
-html[page-class="watch"] ytm-related-chip-cloud-renderer.chips-fixed-positioning {
-    position: sticky !important;
-    top: 0 !important;
-    transform: none !important;
+html[page-class="watch"] ytm-engagement-panel {
+    top: 56.25vw !important;
+    inset: 56.25vw 0px 0px !important;
+}
+
+html[page-class="watch"] ytm-related-chip-cloud-renderer {
+    margin-top: -48px !important
+}
+
+.slim-video-action-bar-actions.simplified .slim-subscribe-button {
+  order: 999;
 }
 
 yt-flexible-actions-view-model {

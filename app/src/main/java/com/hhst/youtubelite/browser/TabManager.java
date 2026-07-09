@@ -116,12 +116,6 @@ public class TabManager {
 	}
 
 	public void onPageFinished(@NonNull final YoutubeFragment fragment, @NonNull final String url) {
-		String pageClass = UrlUtils.getPageClass(url);
-		if (Constants.PAGE_WATCH.equals(pageClass) || Constants.PAGE_MUSIC_WATCH.equals(pageClass)) {
-			if (activity instanceof MainActivity mainActivity) {
-				mainActivity.hideWatchLoadingOverlay();
-			}
-		}
 		if (fragment == tab && onPageFinishedListener != null) {
 			onPageFinishedListener.accept(url);
 		}
@@ -156,12 +150,6 @@ public class TabManager {
 	public void openTab(@NonNull final String url, @Nullable String tag) {
 		if (tag == null) tag = UrlUtils.getPageClass(url);
 		final String targetTag = tag;
-
-		if (Constants.PAGE_WATCH.equals(targetTag) || Constants.PAGE_MUSIC_WATCH.equals(targetTag)) {
-			if (activity instanceof MainActivity mainActivity) {
-				mainActivity.showWatchLoadingOverlay();
-			}
-		}
 
 		final YoutubeFragment currentTab = this.tab;
 
@@ -319,10 +307,6 @@ public class TabManager {
 	}
 
 	public void playInWatch(@NonNull final String url) {
-		if (activity instanceof MainActivity mainActivity) {
-			mainActivity.showWatchLoadingOverlay();
-		}
-
 		queueWarmer.prioritizeUrl(url);
 		litePlayer().play(url);
 		openTab(url, UrlUtils.getPageClass(url));
@@ -358,12 +342,6 @@ public class TabManager {
 	public void loadUrl(@NonNull final String url) {
 		final YoutubeWebview webview = getWebview();
 		if (webview != null) {
-			String pageClass = UrlUtils.getPageClass(url);
-			if (Constants.PAGE_WATCH.equals(pageClass) || Constants.PAGE_MUSIC_WATCH.equals(pageClass)) {
-				if (activity instanceof MainActivity mainActivity) {
-					mainActivity.showWatchLoadingOverlay();
-				}
-			}
 			webview.loadUrl(url);
 		}
 	}

@@ -309,14 +309,14 @@ try {
                 const actionsContainer = actionBar.querySelector('.slim-video-action-bar-actions');
                 if (actionsContainer) {
                     liveSource = actionsContainer.querySelector(':scope > ytm-button-renderer:not([data-lp-custom])') ||
-                                actionsContainer.querySelector(':scope > button-view-model:not([data-lp-custom])') ||
-                                actionsContainer.querySelector(':scope > .slim_video_action_bar_renderer_button:not([data-lp-custom])') ||
-                                actionsContainer.querySelector(':scope > :not(ytm-segmented-like-dislike-button-renderer):not(segmented-like-dislike-button-view-model):not([data-lp-custom])');
+                                actionsContainer.querySelector(':scope > button-view-model:not([data-lp-custom]):not(.slim-action-more-button)') ||
+                                actionsContainer.querySelector(':scope > .slim_video_action_bar_renderer_button:not([data-lp-custom]):not(.slim-action-more-button)') ||
+                                actionsContainer.querySelector(':scope > :not(ytm-segmented-like-dislike-button-renderer):not(segmented-like-dislike-button-view-model):not(like-button-view-model):not(dislike-button-view-model):not(a):not(.slim-subscribe-button):not(.slim-action-more-button):not(.slim-video-owner-icon):not([data-lp-custom])');
                 }
                 if (!liveSource) {
                     liveSource = actionBar.querySelector('ytm-button-renderer:not([data-lp-custom])') ||
-                                 actionBar.querySelector('button-view-model:not([data-lp-custom])') ||
-                                 actionBar.querySelector('.slim_video_action_bar_renderer_button:not([data-lp-custom])');
+                                 actionBar.querySelector('button-view-model:not([data-lp-custom]):not(.slim-action-more-button)') ||
+                                 actionBar.querySelector('.slim_video_action_bar_renderer_button:not([data-lp-custom]):not(.slim-action-more-button)');
                 }
             }
             if (!liveSource) {
@@ -621,6 +621,15 @@ try {
         };
 
         const applyActionBarVisibility = (actionBar, prefs) => {
+            const getLabel = (el) => {
+                if (!el) return '';
+                const direct = el.getAttribute('aria-label') || '';
+                if (direct) return direct;
+                const innerBtn = el.querySelector('button[aria-label]');
+                if (innerBtn) return innerBtn.getAttribute('aria-label') || '';
+                return el.textContent || '';
+            };
+
             actionBar.querySelectorAll([
                 '.ytSpecButtonViewModelHost',
                 'ytm-toggle-button-renderer',
@@ -629,26 +638,33 @@ try {
                 'ytm-segmented-like-dislike-button-renderer',
                 'segmented-like-dislike-button-view-model',
                 'button-view-model',
+                'like-button-view-model',
+                'dislike-button-view-model',
             ].join(',')).forEach((btn) => {
-                const label = (btn.getAttribute('aria-label') || btn.textContent || '').toLowerCase().trim();
+                const label = getLabel(btn).toLowerCase().trim();
                 const id = btn.id || '';
                 const tag = btn.tagName.toLowerCase();
                 const isLikeDislike = (
                     tag === 'ytm-segmented-like-dislike-button-renderer' ||
                     tag === 'segmented-like-dislike-button-view-model' ||
+                    tag === 'like-button-view-model' ||
+                    tag === 'dislike-button-view-model' ||
                     btn.classList.contains('ytSegmentedLikeDislikeButtonViewModelHost') ||
-                    btn.closest?.('ytm-segmented-like-dislike-button-renderer, segmented-like-dislike-button-view-model') !== null ||
-                    (label.includes('like') && !label.includes('dislike') && tag !== 'div') ||
+                    btn.classList.contains('ytLikeButtonViewModelHost') ||
+                    btn.classList.contains('ytDislikeButtonViewModelHost') ||
+                    btn.closest?.('ytm-segmented-like-dislike-button-renderer, segmented-like-dislike-button-view-model, like-button-view-model, dislike-button-view-model') !== null ||
+                    (label.includes('like') && !label.includes('dislike') && !label.includes('playlist') && tag !== 'div') ||
                     label === 'like' || label === 'dislike' ||
                     label.includes('like this video') || label.includes('dislike this video')
                 );
+                const isMoreButton = btn.classList.contains('slim-action-more-button') || label === 'more';
                 let hide = false;
                 if (prefs.action_bar_show_like_dislike === false && isLikeDislike) hide = true;
                 if (prefs.action_bar_show_download === false && (label.includes('download') || id === 'downloadButton')) hide = true;
                 if (prefs.action_bar_show_queue === false && (label.includes('add to queue') || id === 'queueButton')) hide = true;
                 if (prefs.enable_pip === false && id === 'pipButton') hide = true;
                 if (prefs.action_bar_show_chat === false && (label.includes('chat') || id === 'chatButton')) hide = true;
-                if (prefs.action_bar_show_share === false && label.includes('share')) hide = true;
+                if (prefs.action_bar_show_share === false && label.includes('share') && !isMoreButton) hide = true;
                 if (prefs.action_bar_show_remix === false && label.includes('remix')) hide = true;
                 if (prefs.action_bar_show_thanks === false && label.includes('thanks')) hide = true;
                 if (prefs.action_bar_show_clip === false && label.includes('clip')) hide = true;
@@ -660,11 +676,21 @@ try {
             });
 
             if (prefs.action_bar_show_like_dislike === false) {
-                actionBar.querySelectorAll('ytm-segmented-like-dislike-button-renderer, segmented-like-dislike-button-view-model').forEach(el => {
+                actionBar.querySelectorAll([
+                    'ytm-segmented-like-dislike-button-renderer',
+                    'segmented-like-dislike-button-view-model',
+                    'like-button-view-model',
+                    'dislike-button-view-model',
+                ].join(',')).forEach(el => {
                     el.style.setProperty('display', 'none', 'important');
                 });
             } else {
-                actionBar.querySelectorAll('ytm-segmented-like-dislike-button-renderer, segmented-like-dislike-button-view-model').forEach(el => {
+                actionBar.querySelectorAll([
+                    'ytm-segmented-like-dislike-button-renderer',
+                    'segmented-like-dislike-button-view-model',
+                    'like-button-view-model',
+                    'dislike-button-view-model',
+                ].join(',')).forEach(el => {
                     el.style.removeProperty('display');
                 });
             }
@@ -1104,8 +1130,6 @@ try {
                         container.insertBefore(qItem, container.firstElementChild);
                     }
 
-                    const cw = sheet.querySelector('.ytSpecBottomSheetLayoutContentWrapper');
-                    if (cw) cw.style.maxHeight = '80vh';
                     return true;
                 };
 
@@ -1386,9 +1410,6 @@ try {
 
             if (pc === 'watch') {
                 ensureWatchButtons();
-                if (!cachedHeaderElement) cachedHeaderElement = document.querySelector('ytm-header-bar-renderer');
-                if (cachedHeaderElement) cachedHeaderElement.style.setProperty('display', 'none', 'important');
-                document.body.style.setProperty('padding-top', '0', 'important');
                 const ad = document.querySelector('.ad-showing video');
                 if (ad) ad.currentTime = ad.duration;
                 const mp = document.querySelector('#movie_player');

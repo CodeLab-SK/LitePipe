@@ -26,12 +26,6 @@ ytmusic-guide-entry-renderer:has(path[d="M19 5H8a1 1 0 000 2h7.586L5.293 17.293a
 {
     display: none !important;
 }
-html[page-class="watch"] #player,
-html[page-class="watch"] #player-container-id {
-    visibility: hidden !important;
-    opacity: 0 !important;
-}
-
 html[page-class="music_watch"] #song-video {
     display: none !important;
 }
