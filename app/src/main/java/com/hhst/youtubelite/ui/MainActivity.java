@@ -1127,6 +1127,7 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 
 		if (!alreadyVerified) {
 			new LinkTutorialDialog(this).show();
+			kv.putBoolean("asked_open_by_default", true);
 		}
 	}
 
