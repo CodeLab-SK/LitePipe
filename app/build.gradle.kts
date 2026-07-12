@@ -21,8 +21,8 @@ android {
         applicationId = "com.google.LitePipe"
         minSdk = 26
         targetSdk = 36
-        versionCode = 120
-        versionName = "1.2.0"
+        versionCode = 121
+        versionName = "1.2.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

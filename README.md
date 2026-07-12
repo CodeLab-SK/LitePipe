@@ -18,7 +18,7 @@
 
 <br>
 
-<img src="https://img.shields.io/badge/Android-9%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white">
+<img src="https://img.shields.io/badge/Android-8%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white">
 <img src="https://img.shields.io/github/license/CodeLab-SK/LitePipe?style=for-the-badge&label=License">
 <img src="https://img.shields.io/github/last-commit/CodeLab-SK/LitePipe?style=for-the-badge&label=Last%20Commit">
 
@@ -101,6 +101,9 @@ Whether you have ideas, bug reports, translations, design improvements, code cle
 </a>
 
 </p>
+
+## 📝 Note
+If you use YouTube Morphe and want to use LitePipe as an external downloader only, you can put com.google.LitePipe in the external downloader input box to download via LitePipe.
 
 ## ❓ FAQ
 **Q: Is this app safe?**  
