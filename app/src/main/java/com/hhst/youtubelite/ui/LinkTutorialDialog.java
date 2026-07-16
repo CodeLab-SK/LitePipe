@@ -30,7 +30,7 @@ import java.util.List;
 
 public class LinkTutorialDialog {
 
-    private static final boolean FORCE_LEGACY_TEST = true;
+    private static final boolean FORCE_LEGACY_TEST = false;
 
     private final Context context;
     private AlertDialog dialog;
