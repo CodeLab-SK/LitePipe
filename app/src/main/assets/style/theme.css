@@ -16,24 +16,15 @@ html:not([page-class="channel"]):not([page-class="@"]) .cairo-settings-topbar-ti
     margin-top: -10px !important;
 }
 
-html[page-class="channel"] .cairo-settings-topbar-title,
-html[page-class="@"] .cairo-settings-topbar-title {
+:is(html[page-class="channel"], html[page-class="@"]) .cairo-settings-topbar-title {
     margin-top: 0 !important;
 }
 
-header.mobile-topbar-header.cairo-settings-topbar,
-.mobile-topbar-header-content {
+:is(header.mobile-topbar-header.cairo-settings-topbar, .mobile-topbar-header-content) {
     overflow: visible !important;
 }
 
-.ytLockupMetadataViewModelTitle,
-.media-item-headline,
-.video-card-title,
-.playlist-card-title,
-.ytm-slim-video-metadata-renderer-title,
-.ytm-media-item-metadata > .title,
-.ytm-shorts-lockup-view-model-headline,
-.shortsLockupViewModelHostMetadataTitle {
+:is(.ytLockupMetadataViewModelTitle, .media-item-headline, .video-card-title, .playlist-card-title, .ytm-slim-video-metadata-renderer-title, .ytm-media-item-metadata > .title, .ytm-shorts-lockup-view-model-headline, .shortsLockupViewModelHostMetadataTitle) {
     display: -webkit-box !important;
     -webkit-line-clamp: 2 !important;
     -webkit-box-orient: vertical !important;
@@ -44,13 +35,11 @@ header.mobile-topbar-header.cairo-settings-topbar,
     white-space: normal !important;
 }
 
-.ytm-shorts-lockup-view-model-headline,
-.shortsLockupViewModelHostMetadataTitle {
+:is(.ytm-shorts-lockup-view-model-headline, .shortsLockupViewModelHostMetadataTitle) {
     transform: translateY(-10px) !important;
 }
 
-.ytPageHeaderViewModelTitle,
-.ytPageHeaderViewModelTitle span {
+:is(.ytPageHeaderViewModelTitle, .ytPageHeaderViewModelTitle span) {
     height: auto !important;
     max-height: none !important;
     overflow: visible !important;
@@ -58,10 +47,7 @@ header.mobile-topbar-header.cairo-settings-topbar,
     line-height: 1.4 !important;
 }
 
-.ytm-header-bar-renderer .title,
-.header-bar-title,
-.ytm-identity-section-renderer-name,
-.ytm-identity-section-renderer-header {
+:is(.ytm-header-bar-renderer .title, .header-bar-title, .ytm-identity-section-renderer-name, .ytm-identity-section-renderer-header) {
     height: auto !important;
     max-height: none !important;
     overflow: visible !important;
@@ -71,15 +57,12 @@ header.mobile-topbar-header.cairo-settings-topbar,
     text-overflow: ellipsis !important;
 }
 
-.ytAttributedStringHost,
-.yt-core-attributed-string,
-.yt-spec-button-shape-next__button-text-content {
+:is(.ytAttributedStringHost, .yt-core-attributed-string, .yt-spec-button-shape-next__button-text-content) {
     height: auto !important;
     overflow: visible !important;
 }
 
-.ytContentMetadataViewModelMetadataRow,
-.YtmBadgeAndBylineRendererHost {
+:is(.ytContentMetadataViewModelMetadataRow, .YtmBadgeAndBylineRendererHost, .video-card-subhead) {
     display: flex !important;
     flex-wrap: wrap !important;
     height: auto !important;
@@ -99,17 +82,7 @@ header.mobile-topbar-header.cairo-settings-topbar,
     min-width: 0 !important;
 }
 
-.video-card-subhead {
-    display: flex !important;
-    flex-wrap: wrap !important;
-    height: auto !important;
-    overflow: visible !important;
-}
-
-.ytContentMetadataViewModelMetadataText,
-.YtmBadgeAndBylineRendererItemByline,
-.video-card-subhead-item,
-.YtmBadgeAndBylineRendererSeparator {
+:is(.ytContentMetadataViewModelMetadataText, .YtmBadgeAndBylineRendererItemByline, .video-card-subhead-item, .YtmBadgeAndBylineRendererSeparator) {
     display: inline !important;
     height: auto !important;
     overflow: visible !important;
@@ -120,10 +93,7 @@ header.mobile-topbar-header.cairo-settings-topbar,
     -webkit-line-clamp: unset !important;
 }
 
-html[page-class="channel"] .media-item-headline,
-html[page-class="@"] .media-item-headline,
-html[page-class="channel"] .media-item-metadata,
-html[page-class="@"] .media-item-metadata {
+:is(html[page-class="channel"] .media-item-headline, html[page-class="@"] .media-item-headline, html[page-class="channel"] .media-item-metadata, html[page-class="@"] .media-item-metadata) {
     -webkit-line-clamp: 2 !important;
     max-height: none !important;
     height: auto !important;
