@@ -435,6 +435,10 @@ public class Engine {
 		return this.player.isPlaying();
 	}
 
+	public boolean isBuffering() {
+		return player.getPlaybackState() == Player.STATE_BUFFERING;
+	}
+
 	public void play(@NonNull PlaybackDetails details) {
 		VideoDetails video = details.video();
 		PlaybackPlan plan = details.plan();
@@ -652,6 +656,9 @@ public class Engine {
 	}
 
 	public void seekTo(long pos) {
+		if (UrlUtils.isMusicUrl(tabManager.getWatchUrl())) {
+			tabManager.evalWatchJs("if(window.__syncNativeLoading) window.__syncNativeLoading();", null);
+		}
 		this.player.seekTo(Math.min(this.player.getDuration(), pos));
 	}
 
@@ -731,6 +738,10 @@ public class Engine {
 	}
 
 	public void skipToNext() {
+		if (UrlUtils.isMusicUrl(tabManager.getWatchUrl())) {
+			tabManager.evalWatchJs("(function(){var b=document.querySelector('.next-button, ytmusic-player-bar .next-button, #next-button');if(b){b.click();return true;}return false;})();", null);
+			return;
+		}
 		boolean queueEnabled = queueRepository.isEnabled();
 		boolean hasQueueItems = queueRepository.hasItems();
 		String watchId = watchVideoId();
@@ -752,6 +763,10 @@ public class Engine {
 	}
 
 	public void skipToPrevious() {
+		if (UrlUtils.isMusicUrl(tabManager.getWatchUrl())) {
+			tabManager.evalWatchJs("(function(){var b=document.querySelector('.previous-button, ytmusic-player-bar .previous-button, #previous-button');if(b){b.click();return true;}return false;})();", null);
+			return;
+		}
 		boolean queueEnabled = queueRepository.isEnabled();
 		boolean hasQueueItems = queueRepository.hasItems(); String watchId = watchVideoId();
 		boolean inQueue = queueRepository.containsVideo(watchId);
@@ -1190,6 +1205,13 @@ public class Engine {
 		if (videoId == null || IncognitoManager.getInstance().isIncognito()) return;
 		lastSyncTime = System.currentTimeMillis();
 		tabManager.evalWatchJs(String.format(Locale.US, "if(window.__syncNativeProgress) window.__syncNativeProgress(%d);", positionMs / 1000), null);
+	}
+
+	public void resyncMusicUi() {
+		if (!UrlUtils.isMusicUrl(tabManager.getWatchUrl())) return;
+		long pos = player.getCurrentPosition() / 1000;
+		boolean playing = player.isPlaying();
+		tabManager.evalWatchJs(String.format(Locale.US, "if(window.__syncNativeFull) window.__syncNativeFull(%d, %b);", pos, playing), null);
 	}
 
 	public void clear() {

@@ -145,6 +145,7 @@ public class YoutubeWebview extends WebView {
 	private volatile String poTokenDoneKey;
 	private boolean isDestroyed = false;
 	private volatile long prefVersion = -1L;
+	private volatile boolean musicBackgroundActive = false;
 
 	public YoutubeWebview(@NonNull final Context context) { this(context, null); }
 	public YoutubeWebview(@NonNull final Context context, @Nullable final AttributeSet attrs) { this(context, attrs, 0); }
@@ -303,6 +304,9 @@ public class YoutubeWebview extends WebView {
 
 		setFocusable(true);
 		setFocusableInTouchMode(true);
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+			setRendererPriorityPolicy(RENDERER_PRIORITY_IMPORTANT, false);
+		}
 		setOnLongClickListener(v -> true);
 
 		CookieManager.getInstance().setAcceptCookie(true);
@@ -572,8 +576,8 @@ public class YoutubeWebview extends WebView {
             if(window._lp_bg_injected) return;
             window._lp_bg_injected = true;
             window._lp_bg_active = false;
-            
-            const block = e => { 
+        
+            const block = e => {
                 if(window._lp_bg_active) {
                     if (e.type === 'visibilitychange' || e.type === 'webkitvisibilitychange') {
                         e.stopImmediatePropagation();
@@ -585,9 +589,18 @@ public class YoutubeWebview extends WebView {
         })();
         """, null);
 	}
+
+	public boolean isMusicBackgroundActive() {
+		return musicBackgroundActive;
+	}
+
 	public void setMusicBackgroundActive(boolean active) {
 		if (initialized && !isDestroyed && UrlUtils.isMusicUrl(getUrl())) {
+			musicBackgroundActive = active;
 			evaluateJavascript("window._lp_bg_active = " + active + ";", null);
+			if (!active && player != null) {
+				player.resyncMusicUi();
+			}
 		}
 	}
 

@@ -168,6 +168,12 @@ public final class YoutubeFragment extends Fragment {
 			webview.setMusicBackgroundActive(false);
 			webview.onResume();
 			webview.evaluateJavascript("window.dispatchEvent(new Event('onTabShow'));", null);
+			webview.post(() -> {
+				webview.setVisibility(View.INVISIBLE);
+				webview.setVisibility(View.VISIBLE);
+				webview.requestLayout();
+				webview.invalidate();
+			});
 		}
 	}
 

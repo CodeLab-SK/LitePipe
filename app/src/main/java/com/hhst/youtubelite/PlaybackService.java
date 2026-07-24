@@ -68,6 +68,7 @@ public class PlaybackService extends Service {
 	private boolean isSeeking = false;
 	private final Runnable resetSeekFlagRunnable = () -> isSeeking = false;
 	private boolean lastIsPlayingState = false;
+	private boolean lastIsBufferingState = false;
 	private volatile boolean destroyed = false;
 
 	public static void start(@NonNull Context context) {
@@ -183,7 +184,7 @@ public class PlaybackService extends Service {
 	}
 
 	@Nullable
-	private Notification buildNotification(final boolean isPlaying) {
+	private Notification buildNotification(final boolean isPlaying, final boolean isBuffering) {
 		MediaSessionCompat session = mediaSession;
 		if (shouldAbort() || session == null) return null;
 		final MediaMetadataCompat metadata = session.getController().getMetadata();
@@ -191,13 +192,13 @@ public class PlaybackService extends Service {
 		final String title = metadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE);
 		final String artist = metadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST);
 		final Bitmap largeIcon = metadata.getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART);
-		final int playPauseIcon = isPlaying ? R.drawable.ic_pause : R.drawable.ic_play;
+		final int playPauseIcon = isBuffering ? R.drawable.ic_refresh : (isPlaying ? R.drawable.ic_pause : R.drawable.ic_play);
 		final String playPauseTitle = isPlaying ? getString(R.string.action_pause) : getString(R.string.action_play);
 		final PendingIntent playPauseIntent = MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_PLAY_PAUSE);
 		final PendingIntent prevIntent = MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS);
 		final PendingIntent nextIntent = MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_SKIP_TO_NEXT);
-		Intent launchIntent = getPackageManager().getLaunchIntentForPackage(getPackageName());
-		if (launchIntent == null) launchIntent = new Intent(this, MainActivity.class);
+		
+		Intent launchIntent = new Intent(this, MainActivity.class);
 		launchIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
 		final PendingIntent contentIntent = PendingIntent.getActivity(this, 101, launchIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
@@ -209,7 +210,7 @@ public class PlaybackService extends Service {
 				.setContentIntent(contentIntent)
 				.setDeleteIntent(MediaButtonReceiver.buildMediaButtonPendingIntent(this, PlaybackStateCompat.ACTION_STOP))
 				.setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-				.setOngoing(isPlaying)
+				.setOngoing(isPlaying || isBuffering)
 				.setSilent(true)
 				.setGroup("playback_notification")
 				.setGroupAlertBehavior(NotificationCompat.GROUP_ALERT_SUMMARY);
@@ -262,7 +263,7 @@ public class PlaybackService extends Service {
 						queueNavigationAvailability);
 				if (shouldAbort()) return;
 				session.setPlaybackState(initialState);
-				final Notification notification = buildNotification(false);
+				final Notification notification = buildNotification(false, false);
 				if (notification != null && !shouldAbort()) {
 					try {
 						if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -285,21 +286,25 @@ public class PlaybackService extends Service {
 		stopSelf();
 	}
 
-	public void updateProgress(final long pos, final float speed, final boolean isPlaying) {
+	public void updateProgress(final long pos, final float speed, final boolean isPlaying, final boolean isBuffering) {
 		if (isSeeking) return;
 		MediaSessionCompat session = mediaSession;
 		NotificationManager manager = notificationManager;
 		if (shouldAbort() || session == null) return;
-		final int stateCompat = isPlaying ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED;
+		final int stateCompat = isBuffering
+				? PlaybackStateCompat.STATE_BUFFERING
+				: (isPlaying ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED);
 		final PlaybackStateCompat playbackState = buildPlaybackState(stateCompat, pos, speed, queueNavigationAvailability);
 		if (shouldAbort()) return;
 		session.setPlaybackState(playbackState);
-		if (isPlaying != lastIsPlayingState) {
-			final Notification updatedNotification = buildNotification(isPlaying);
+		
+		if (isPlaying != lastIsPlayingState || isBuffering != lastIsBufferingState) {
+			final Notification updatedNotification = buildNotification(isPlaying, isBuffering);
 			if (updatedNotification != null && manager != null && !shouldAbort())
 				manager.notify(NOTIFICATION_ID, updatedNotification);
 		}
 		lastIsPlayingState = isPlaying;
+		lastIsBufferingState = isBuffering;
 	}
 
 	public void updateQueueNavigationAvailability(@NonNull final QueueNav availability) {
@@ -313,7 +318,7 @@ public class PlaybackService extends Service {
 		final float speed = currentState != null ? currentState.getPlaybackSpeed() : 1.0f;
 		if (shouldAbort()) return;
 		session.setPlaybackState(buildPlaybackState(state, position, speed, queueNavigationAvailability));
-		final Notification updatedNotification = buildNotification(state == PlaybackStateCompat.STATE_PLAYING);
+		final Notification updatedNotification = buildNotification(lastIsPlayingState, state == PlaybackStateCompat.STATE_BUFFERING);
 		if (updatedNotification != null && manager != null && !shouldAbort()) {
 			manager.notify(NOTIFICATION_ID, updatedNotification);
 		}

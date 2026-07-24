@@ -161,6 +161,8 @@
 						if (playbackState == Player.STATE_READY) {
 							updateServiceProgress(engine.isPlaying());
 							applySubtitleStyle();
+						} else if (playbackState == Player.STATE_BUFFERING) {
+							updateServiceProgress(engine.isPlaying());
 						} else if (playbackState == Player.STATE_ENDED) {
 							skipToNext();
 						}
@@ -326,7 +328,7 @@
 
 			private void updateServiceProgress(boolean isPlaying) {
 				if (playbackService != null)
-					playbackService.updateProgress(engine.position(), engine.getPlaybackRate(), isPlaying);
+					playbackService.updateProgress(engine.position(), engine.getPlaybackRate(), isPlaying, engine.isBuffering());
 			}
 
 			public void attachPlaybackService(@Nullable PlaybackService service) {
@@ -608,6 +610,10 @@
 
 			public void setLoopMode(@NonNull final PlayerLoopMode mode) {
 				controller.setLoopMode(mode);
+			}
+
+			public void resyncMusicUi() {
+				engine.resyncMusicUi();
 			}
 
 			public boolean isMusic() {

@@ -895,25 +895,44 @@ try {
                 }, true);
             };
 
-            if (type === 'music') {
-                const item = document.createElement('ytmusic-menu-service-item-renderer');
-                item.setAttribute('role', 'menuitem');
-                item.setAttribute('tabindex', '-1');
-                item.setAttribute('aria-disabled', 'false');
-                item.dataset.lpCustom = 'true';
-                item.innerHTML = `
-                    <yt-icon class="icon style-scope ytmusic-menu-service-item-renderer" style="width: 18px; height: 18px;">
-                        <span class="yt-icon-shape style-scope yt-icon ytSpecIconShapeHost">
-                            <div style="width: 100%; height: 100%; display: block; fill: currentcolor;">
-                                <svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 24 24" width="18" focusable="false" aria-hidden="true" style="pointer-events: none; display: inherit; width: 100%; height: 100%;"><path d="${iconPath}"></path></svg>
-                            </div>
-                        </span>
-                    </yt-icon>
-                    <yt-formatted-string class="text style-scope ytmusic-menu-service-item-renderer">${label}</yt-formatted-string>
-                `;
-                bindClick(item, () => { onClick(); closeBottomSheet(); });
-                return item;
-            }
+      if (type === 'music') {
+                      const item = document.createElement('ytmusic-menu-service-item-renderer');
+                      item.setAttribute('role', 'menuitem');
+                      item.setAttribute('tabindex', '-1');
+                      item.setAttribute('aria-disabled', 'false');
+                      item.dataset.lpCustom = 'true';
+
+                      const icon = document.createElement('yt-icon');
+                      icon.className = 'icon style-scope ytmusic-menu-service-item-renderer';
+                      icon.style.cssText = 'width: 18px; height: 18px;';
+                      const iconSpan = document.createElement('span');
+                      iconSpan.className = 'yt-icon-shape style-scope yt-icon ytSpecIconShapeHost';
+                      const iconDiv = document.createElement('div');
+                      iconDiv.style.cssText = 'width: 100%; height: 100%; display: block; fill: currentcolor;';
+                      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                      svg.setAttribute('height', '18');
+                      svg.setAttribute('viewBox', '0 0 24 24');
+                      svg.setAttribute('width', '18');
+                      svg.setAttribute('focusable', 'false');
+                      svg.setAttribute('aria-hidden', 'true');
+                      svg.style.cssText = 'pointer-events: none; display: inherit; width: 100%; height: 100%;';
+                      const svgPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                      svgPath.setAttribute('d', iconPath);
+                      svg.appendChild(svgPath);
+                      iconDiv.appendChild(svg);
+                      iconSpan.appendChild(iconDiv);
+                      icon.appendChild(iconSpan);
+
+                      const textEl = document.createElement('yt-formatted-string');
+                      textEl.className = 'text style-scope ytmusic-menu-service-item-renderer';
+                      textEl.textContent = label;
+
+                      item.appendChild(icon);
+                      item.appendChild(textEl);
+
+                      bindClick(item, () => { onClick(); closeBottomSheet(); });
+                      return item;
+                  }
 
             if (type === 'list') {
                 const wrapper = document.createElement('yt-list-item-view-model');
@@ -1152,8 +1171,17 @@ try {
             btn.id = '_lp_music_dl_btn';
             btn.setAttribute('aria-label', getLocalizedText('download'));
             btn.style.cssText = 'background: transparent; border: none; color: var(--ytmusic-text-primary, #fff); cursor: pointer; padding: 4px; margin-left: 8px; display: inline-flex; align-items: center; border-radius: 50%; -webkit-tap-highlight-color: transparent;';
-            btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" height="20" viewBox="0 0 24 24" width="20" fill="currentColor" style="pointer-events: none;"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"></path></svg>';
-
+            const dlSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            dlSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            dlSvg.setAttribute('height', '20');
+            dlSvg.setAttribute('viewBox', '0 0 24 24');
+            dlSvg.setAttribute('width', '20');
+            dlSvg.setAttribute('fill', 'currentColor');
+            dlSvg.style.pointerEvents = 'none';
+            const dlPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            dlPath.setAttribute('d', 'M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z');
+            dlSvg.appendChild(dlPath);
+            btn.appendChild(dlSvg);
             bylineWrapper.appendChild(btn);
             bindListener(btn, 'click', (e) => {
                 e.preventDefault(); e.stopPropagation();
@@ -1161,9 +1189,18 @@ try {
             }, true);
         };
 
-        Sheet.init();
-        startLibraryObserver();
-        startWatchObserver();
+    const whenBodyReady = (fn) => {
+                if (document.body) { fn(); return; }
+                const bodyWaiter = new MutationObserver(() => {
+                    if (document.body) { bodyWaiter.disconnect(); fn(); }
+                });
+                bodyWaiter.observe(document.documentElement, { childList: true });
+            };
+            whenBodyReady(() => {
+                Sheet.init();
+                startLibraryObserver();
+                startWatchObserver();
+            });
 
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) { const pc = getCachedPageClass(location.href); if (pc === 'you' || pc === 'library') ensureLibraryButton(); }
@@ -1193,6 +1230,7 @@ try {
             updatePageClass(url);
             const pc = getCachedPageClass(url);
             if (pc === 'watch' && window.android?.play) android.play(url);
+            if (pc === 'music_watch' && window.android?.play) android.play(url);
             if (pc === 'shorts') st(() => { if (!document.querySelector('ytm-shorts, shorts-video, #shorts-container, ytm-reel-watch-sequence')) location.href = url; }, 1200);
             if (pc === 'you' || pc === 'library') {
                 document.documentElement.classList.add('lp-library-loading');
@@ -1226,25 +1264,6 @@ try {
 
         const getMusicPlayer = () => document.querySelector('#movie_player') || document.querySelector('ytmusic-player')?.player_;
         const getMusicVideo = () => document.querySelector('ytmusic-player video') || document.querySelector('#movie_player video');
-
-        const forceLowestQuality = (player) => {
-            if (!player) return;
-            try {
-                const levels = player.getAvailableQualityLevels?.();
-                if (levels && levels.length > 0) {
-                    const qualityOrder = ['tiny', 'small', 'medium', 'large', 'hd720', 'hd1080', 'hd1440', 'hd2160', 'highres'];
-                    for (const q of qualityOrder) {
-                        const found = levels.find(l => (typeof l === 'string' ? l : l.quality) === q);
-                        if (found) {
-                            player.setPlaybackQuality?.(q);
-                            if (typeof player.setPlaybackQualityRange === 'function') player.setPlaybackQualityRange(q, q);
-                            return;
-                        }
-                    }
-                }
-                player.setPlaybackQuality?.('tiny');
-            } catch (e) {}
-        };
 
         window.__syncNativeLoading = function() {
             if (getCachedPageClass(location.href) !== 'music_watch') return;
@@ -1344,21 +1363,22 @@ try {
             return false;
         };
 
-        const setupMusicVideoListeners = () => {
-            const v = getMusicVideo();
-            if (!v || v.dataset.lpSyncBound === 'true') return;
-            v.dataset.lpSyncBound = 'true';
-
-            v.addEventListener('play', () => {
-                if (!window.__liteSyncInFlight) window.android?.musicPlay?.();
-            });
-            v.addEventListener('pause', () => {
-                if (!window.__liteSyncInFlight) window.android?.musicPause?.();
-            });
-            v.addEventListener('seeked', () => {
-                if (!window.__liteSyncInFlight) window.android?.musicSeek?.(Math.floor(v.currentTime * 1000));
-            });
-        };
+  const setupMusicVideoListeners = () => {
+      const v = getMusicVideo();
+      if (!v || v.dataset.lpSyncBound === 'true') return;
+      v.dataset.lpSyncBound = 'true';
+      v.muted = true;
+      v.pause();
+      v.addEventListener('play', () => {
+          if (!window.__liteSyncInFlight && !document.hidden) window.android?.musicPlay?.();
+      });
+      v.addEventListener('pause', () => {
+          if (!window.__liteSyncInFlight && !document.hidden) window.android?.musicPause?.();
+      });
+      v.addEventListener('seeked', () => {
+          if (!window.__liteSyncInFlight && !document.hidden) window.android?.musicSeek?.(Math.floor(v.currentTime * 1000));
+      });
+  };
 
         document.addEventListener('animationstart', (e) => {
             if (e.animationName !== 'nodeInserted') return;
@@ -1366,20 +1386,16 @@ try {
             if (pc === 'music_watch' && (node.id === 'movie_player' || node.tagName.toLowerCase() === 'ytmusic-player')) {
                 setTimeout(() => {
                     setupMusicVideoListeners();
-                    forceLowestQuality(getMusicPlayer());
-                }, 500);
+                   }, 500);
             }
             if (node.id === 'movie_player') {
                 if (pc === 'watch') {
                     node.mute?.();
                     const resumePos = (window.android?.getResumePosition ? android.getResumePosition(getVideoId(location.href)) : 0) / 1000;
-                    node.seekTo?.(resumePos || (node.getDuration() / 2));
-                    const forceQ = () => forceLowestQuality(node);
-                    st(forceQ, 1500);
-                    node.addEventListener('onStateChange', s => {
-                        if (s === 1 && !window.__liteSyncInFlight) node.pauseVideo?.();
-                        if (s === 3) st(forceQ, 300);
-                    });
+                  node.seekTo?.(resumePos || (node.getDuration() / 2));
+                  node.addEventListener('onStateChange', s => {
+                      if (s === 1 && !window.__liteSyncInFlight) node.pauseVideo?.();
+                  });
                     document.body.style.setProperty('overflow', 'auto', 'important');
                     document.documentElement.style.setProperty('overflow', 'auto', 'important');
                     document.body.style.setProperty('position', 'relative', 'important');
@@ -1419,8 +1435,7 @@ try {
                 ensureMusicPlayerDownloadButton();
                 const v = getMusicVideo();
                 if (v) v.muted = true;
-                forceLowestQuality(getMusicPlayer());
-            } else if (pc === 'shorts') {
+               } else if (pc === 'shorts') {
                 if (!cachedHeaderElement) cachedHeaderElement = document.querySelector('ytm-header-bar-renderer, .ytm-header-bar-renderer');
                 if (cachedHeaderElement) cachedHeaderElement.style.setProperty('display', 'none', 'important');
                 document.querySelectorAll('#home-icon, .logo-in-player, [aria-label*="Search"], .topbar-menu-button-avatar-button, .header-bar-search-button, .header-search-button, .search-button').forEach(el => el.style.setProperty('display', 'none', 'important'));
@@ -1483,7 +1498,36 @@ try {
             }
         }, 1500);
 
+        const skipMusicAds = () => {
+            const pc = getCachedPageClass(location.href);
+            if (pc !== 'music_watch') return;
+
+            const player = document.querySelector('#movie_player');
+            const video = document.querySelector('video');
+            const audio = document.querySelector('audio');
+
+            const isAdShowing = player?.classList.contains('ad-showing') ||
+                                document.querySelector('.ytp-ad-player-overlay') ||
+                                document.querySelector('.ad-interrupting');
+
+            if (isAdShowing) {
+                if (video) {
+                    video.muted = true;
+                    video.volume = 0;
+                    try { video.playbackRate = 16; } catch(e) {}
+                    if (video.duration && isFinite(video.duration)) video.currentTime = video.duration;
+                }
+                if (audio) {
+                    audio.muted = true;
+                    audio.volume = 0;
+                    if (audio.duration && isFinite(audio.duration)) audio.currentTime = audio.duration;
+                }
+            }
+        };
+        setInterval(skipMusicAds, 50);
+
         document.addEventListener('click', e => {
+            if (getCachedPageClass(location.href) === 'music_watch' && e.target.closest('ytmusic-player-bar, ytmusic-player, #movie_player')) return;
             handleWatchTimestampClick(e);
             const a = e.target.closest('a'), logo = e.target.closest('ytm-home-logo'), nav = e.target.closest('ytm-pivot-bar-item-renderer');
             let href = nav?.data?.navigationEndpoint?.commandMetadata?.webCommandMetadata?.url || (a?.href ? a.getAttribute('href') : (logo ? '/' : null));

@@ -241,19 +241,21 @@ public final class JavascriptInterface {
 
     @android.webkit.JavascriptInterface
     public void musicPlay() {
+        if (webview.isMusicBackgroundActive()) return;
         handler.post(player::play);
     }
 
     @android.webkit.JavascriptInterface
     public void musicPause() {
+        if (webview.isMusicBackgroundActive()) return;
         handler.post(player::pause);
     }
 
     @android.webkit.JavascriptInterface
     public void musicSeek(final long positionMs) {
+        if (webview.isMusicBackgroundActive()) return;
         handler.post(() -> player.seekToIfLoaded(positionMs));
     }
-
     @android.webkit.JavascriptInterface
     public boolean seekLoadedVideo(@Nullable final String url, final long positionMs) {
         return player.seekLoadedVideo(url, positionMs);

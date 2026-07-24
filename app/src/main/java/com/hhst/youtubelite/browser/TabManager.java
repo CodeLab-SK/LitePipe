@@ -111,6 +111,10 @@ public class TabManager {
 			return;
 		}
 
+		if (UrlUtils.isMusicUrl(url) && litePlayer.isMusic()) {
+			return;
+		}
+
 		if (suspendedWatchFragment != null || litePlayer.isInAppMiniPlayer()) return;
 		litePlayer.hide();
 	}
