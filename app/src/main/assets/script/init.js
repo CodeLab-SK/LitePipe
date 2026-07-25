@@ -895,50 +895,11 @@ try {
                 }, true);
             };
 
-      if (type === 'music') {
-                      const item = document.createElement('ytmusic-menu-service-item-renderer');
-                      item.setAttribute('role', 'menuitem');
-                      item.setAttribute('tabindex', '-1');
-                      item.setAttribute('aria-disabled', 'false');
-                      item.dataset.lpCustom = 'true';
-
-                      const icon = document.createElement('yt-icon');
-                      icon.className = 'icon style-scope ytmusic-menu-service-item-renderer';
-                      icon.style.cssText = 'width: 18px; height: 18px;';
-                      const iconSpan = document.createElement('span');
-                      iconSpan.className = 'yt-icon-shape style-scope yt-icon ytSpecIconShapeHost';
-                      const iconDiv = document.createElement('div');
-                      iconDiv.style.cssText = 'width: 100%; height: 100%; display: block; fill: currentcolor;';
-                      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                      svg.setAttribute('height', '18');
-                      svg.setAttribute('viewBox', '0 0 24 24');
-                      svg.setAttribute('width', '18');
-                      svg.setAttribute('focusable', 'false');
-                      svg.setAttribute('aria-hidden', 'true');
-                      svg.style.cssText = 'pointer-events: none; display: inherit; width: 100%; height: 100%;';
-                      const svgPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                      svgPath.setAttribute('d', iconPath);
-                      svg.appendChild(svgPath);
-                      iconDiv.appendChild(svg);
-                      iconSpan.appendChild(iconDiv);
-                      icon.appendChild(iconSpan);
-
-                      const textEl = document.createElement('yt-formatted-string');
-                      textEl.className = 'text style-scope ytmusic-menu-service-item-renderer';
-                      textEl.textContent = label;
-
-                      item.appendChild(icon);
-                      item.appendChild(textEl);
-
-                      bindClick(item, () => { onClick(); closeBottomSheet(); });
-                      return item;
-                  }
-
-            if (type === 'list') {
-                const wrapper = document.createElement('yt-list-item-view-model');
-                wrapper.className = 'ytListItemViewModelHost';
-                wrapper.setAttribute('role', 'menuitem');
-                wrapper.dataset.lpCustom = 'true';
+                 if (type === 'list') {
+                     const wrapper = document.createElement('yt-list-item-view-model');
+                     wrapper.className = 'ytListItemViewModelHost';
+                     wrapper.setAttribute('role', 'menuitem');
+                     wrapper.dataset.lpCustom = 'true';
 
                 const layoutWrapper = document.createElement('div');
                 layoutWrapper.className = 'ytListItemViewModelLayoutWrapper ytListItemViewModelContainer ytListItemViewModelTappable ytListItemViewModelInPopup ytListItemViewModelNoTrailingText';
@@ -1001,12 +962,11 @@ try {
             }
         };
 
-        let sheetObserver = null;
-        const Sheet = {
-            _metadata: null,
-            _skip: false,
-            _playlistOnly: false,
-            _root: null,
+             let sheetObserver = null;
+             const Sheet = {
+                 _metadata: null,
+                 _skip: false,
+                 _root: null,
 
             resolveMetadata(root) {
                 if (!root) return null;
@@ -1034,10 +994,10 @@ try {
                 document.addEventListener('click', Sheet.onAnyClick, true);
                 if (sheetObserver) return;
                 sheetObserver = new MutationObserver(() => {
-                    const sheet = document.querySelector('.ytSpecBottomSheetLayoutHost, bottom-sheet-layout, .ytm-bottom-sheet-renderer, ytmusic-menu-popup-renderer');
+                    const sheet = document.querySelector('.ytSpecBottomSheetLayoutHost, bottom-sheet-layout, .ytm-bottom-sheet-renderer');
                     if (!sheet || sheet.querySelector('[data-lp-custom]')) return;
 
-                    const hasItems = sheet.querySelector('.bottom-sheet-media-menu-item, yt-list-item-view-model, ytm-menu-service-item-renderer, ytm-menu-navigation-item-renderer, ytmusic-menu-service-item-renderer, ytmusic-menu-navigation-item-renderer, toggleable-list-item-view-model, ytm-menu-item');
+                    const hasItems = sheet.querySelector('.bottom-sheet-media-menu-item, yt-list-item-view-model, ytm-menu-service-item-renderer, ytm-menu-navigation-item-renderer, toggleable-list-item-view-model, ytm-menu-item');
                     if (hasItems) Sheet.inject(sheet);
                 });
                 sheetObserver.observe(document.body, { childList: true, subtree: true });
@@ -1046,11 +1006,10 @@ try {
             onAnyClick(event) {
                 Sheet._metadata = null;
                 Sheet._skip = false;
-                Sheet._playlistOnly = false;
                 Sheet._root = null;
 
                 const pc = getCachedPageClass(location.href);
-                if (pc === 'shorts') { Sheet._skip = true; return; }
+                if (pc === 'music' || pc === 'music_watch' || pc === 'shorts') { Sheet._skip = true; return; }
                 if (event.target.closest('ytm-backstage-post-renderer, ytm-post-renderer, ytm-backstage-post-thread-renderer')) {
                     Sheet._skip = true;
                     return;
@@ -1059,12 +1018,10 @@ try {
                 const root = event.target.closest('ytm-media-item, yt-lockup-view-model, ytm-rich-item-renderer, .ytLockupViewModelHost, ytm-compact-video-renderer, ytm-video-with-context-renderer, ytm-playlist-renderer, ytm-compact-playlist-renderer, ytm-history-item-renderer, ytmusic-responsive-list-item-renderer, ytmusic-two-row-item-renderer');
                 if (!root) return;
 
-                const tag = root.tagName.toLowerCase();
                 const hasShorts = !!root.querySelector('a[href*="/shorts/"]');
                 const hasWatch = !!root.querySelector('a[href*="/watch"]');
                 if (hasShorts && !hasWatch) { Sheet._skip = true; return; }
 
-                Sheet._playlistOnly = tag === 'ytm-playlist-renderer' || tag === 'ytm-compact-playlist-renderer';
                 Sheet._root = root;
 
                 const link = root.querySelector('a[href*="/watch"], a[href*="/shorts/"]');
@@ -1085,7 +1042,7 @@ try {
 
                 let metadata = Sheet.resolveMetadata(Sheet._root) || Sheet._metadata;
 
-                if (!metadata && (getCachedPageClass(location.href) === 'watch' || getCachedPageClass(location.href) === 'music_watch')) {
+                if (!metadata && getCachedPageClass(location.href) === 'watch') {
                     const videoId = getVideoId(location.href);
                     if (videoId) {
                         metadata = {
@@ -1103,10 +1060,10 @@ try {
                 const doInject = () => {
                     if (sheet.querySelector('[data-lp-custom]')) return true;
 
-                    const firstItem = sheet.querySelector('.bottom-sheet-media-menu-item, yt-list-item-view-model, ytm-menu-service-item-renderer, ytm-menu-navigation-item-renderer, ytmusic-menu-service-item-renderer, ytmusic-menu-navigation-item-renderer, toggleable-list-item-view-model');
+                    const firstItem = sheet.querySelector('.bottom-sheet-media-menu-item, yt-list-item-view-model, ytm-menu-service-item-renderer, ytm-menu-navigation-item-renderer, toggleable-list-item-view-model, ytm-menu-item');
                     if (!firstItem) return false;
 
-                    const container = firstItem.parentElement;
+                    const container = firstItem.closest('.bottom-sheet-media-menu-item, yt-list-view-model') || firstItem.parentElement;
                     if (!container) return true;
 
                     let itemType = 'menu';
@@ -1114,8 +1071,6 @@ try {
 
                     if (firstItem.tagName.toLowerCase() === 'yt-list-item-view-model') {
                         itemType = 'list';
-                    } else if (firstItem.tagName.toLowerCase() === 'ytmusic-menu-service-item-renderer' || firstItem.tagName.toLowerCase() === 'ytmusic-menu-navigation-item-renderer') {
-                        itemType = 'music';
                     } else if (firstItem.tagName.toLowerCase() === 'ytm-menu-service-item-renderer') {
                         itemType = 'menu';
                         needsWrapper = 'ytm-menu-service-item-renderer';
@@ -1135,19 +1090,15 @@ try {
                         return el;
                     };
 
-                    if (itemType !== 'music') {
-                        const dlItem = createItem('download', 'M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z', () => {
-                            if (window.android?.download) android.download(metadata.url);
-                        });
-                        container.insertBefore(dlItem, container.firstElementChild);
-                    }
+                         const dlItem = createItem('download', 'M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z', () => {
+                             if (window.android?.download) android.download(metadata.url);
+                         });
+                         container.insertBefore(dlItem, container.firstElementChild);
 
-                    if (!Sheet._playlistOnly) {
-                        const qItem = createItem('add_to_queue', 'M4 10h12v2H4zm0-4h12v2H4zm0 8h8v2H4zm10 0v6l5-3z', () => {
-                            if (window.android?.addToQueue) android.addToQueue(JSON.stringify(metadata));
-                        });
-                        container.insertBefore(qItem, container.firstElementChild);
-                    }
+                         const qItem = createItem('add_to_queue', 'M4 10h12v2H4zm0-4h12v2H4zm0 8h8v2H4zm10 0v6l5-3z', () => {
+                             if (window.android?.addToQueue) android.addToQueue(JSON.stringify(metadata));
+                         });
+                         container.insertBefore(qItem, container.firstElementChild);
 
                     return true;
                 };
