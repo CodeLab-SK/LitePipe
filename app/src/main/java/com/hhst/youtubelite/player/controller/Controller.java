@@ -573,13 +573,19 @@ public class Controller {
 				checked = available.indexOf(selected);
 			}
 
+			final int finalChecked = checked;
 			showSelectionPopup(playerView.findViewById(R.id.btn_subtitles), labels, checked, (index, label) -> {
 				if (index == available.size()) {
 					openSubtitlePicker();
 				} else {
-					engine.setSubtitlesEnabled(true);
-					engine.setSubtitleLanguage(label);
-					showHint(activity.getString(R.string.subtitles_on) + ": " + label, 1000);
+					if (index == finalChecked) {
+						engine.setSubtitlesEnabled(false);
+						showHint(activity.getString(R.string.subtitles_off), 1000);
+					} else {
+						engine.setSubtitlesEnabled(true);
+						engine.setSubtitleLanguage(label);
+						showHint(activity.getString(R.string.subtitles_on) + ": " + label, 1000);
+					}
 					updateSubtitleButtonState();
 				}
 			});
@@ -639,7 +645,8 @@ public class Controller {
 		subBtn.setImageResource(isEnabled ? R.drawable.ic_subtitles_on : R.drawable.ic_subtitles_off);
 		
 		if (engine.isLocalPlayback()) {
-			subBtn.setAlpha(1.0f);
+			boolean active = hasSubtitles && isEnabled && engine.getSelectedSubtitle() != null;
+			subBtn.setAlpha(active ? 1.0f : DISABLED_BUTTON_ALPHA);
 		} else {
 			subBtn.setAlpha(hasSubtitles ? 1.0f : DISABLED_BUTTON_ALPHA);
 		}
