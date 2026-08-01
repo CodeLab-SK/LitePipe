@@ -1,8 +1,6 @@
 package com.hhst.youtubelite.ui;
 
 import android.Manifest;
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.PendingIntent;
@@ -26,8 +24,6 @@ import android.support.v4.media.session.PlaybackStateCompat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.animation.AccelerateDecelerateInterpolator;
-import android.view.animation.OvershootInterpolator;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -1046,6 +1042,12 @@ public final class MainActivity extends AppCompatActivity implements LinkDetecti
 
 		if (recommendationsSheet != null && recommendationsSheet.getVisibility() == View.VISIBLE) {
 			recommendationsSheet.hide();
+			return;
+		}
+
+		YoutubeWebview webview = getWebview();
+		if (webview != null && webview.isInFullscreen()) {
+			webview.exitFullscreen();
 			return;
 		}
 

@@ -1010,6 +1010,19 @@ try {
 
                 const pc = getCachedPageClass(location.href);
                 if (pc === 'music' || pc === 'music_watch' || pc === 'shorts') { Sheet._skip = true; return; }
+                if (pc === 'watch') {
+                const t = event.target;
+                    if (t.closest?.(
+                   '.player-settings-icon, ' +
+                   'button[aria-label="Playback Settings"], ' +
+                   '.slim-action-more-button, ' +
+                   'button[aria-label="More"], ' +
+                   'button[aria-label="More options"]'
+                    )) {
+                   Sheet._skip = true;
+                   return;
+                    }
+                }
                 if (event.target.closest('ytm-backstage-post-renderer, ytm-post-renderer, ytm-backstage-post-thread-renderer')) {
                     Sheet._skip = true;
                     return;
@@ -1284,6 +1297,8 @@ try {
             if (window.__liteSyncInFlight) return false;
             const pc = getCachedPageClass(location.href);
 
+            if (pc === 'watch' && window.__lp_webview_player) return false;
+
             if (pc === 'music_watch') {
                 const v = getMusicVideo();
                 if (!v) return false;
@@ -1341,12 +1356,24 @@ try {
             }
             if (node.id === 'movie_player') {
                 if (pc === 'watch') {
+                  if (!window.__lp_webview_player) {
                     node.mute?.();
                     const resumePos = (window.android?.getResumePosition ? android.getResumePosition(getVideoId(location.href)) : 0) / 1000;
                   node.seekTo?.(resumePos || (node.getDuration() / 2));
                   node.addEventListener('onStateChange', s => {
                       if (s === 1 && !window.__liteSyncInFlight) node.pauseVideo?.();
                   });
+                  } else {
+                      const unmute = () => {
+                          if (typeof node.unMute === 'function') node.unMute();
+                          if (typeof node.setVolume === 'function') node.setVolume(100);
+                          const muteBtn = node.querySelector('.ytp-unmute-button, .ytp-mute-button[aria-label*="unmute"]');
+                          if (muteBtn) muteBtn.click();
+                      };
+                      unmute();
+                      st(unmute, 500);
+                      st(unmute, 2000);
+                  }
                     document.body.style.setProperty('overflow', 'auto', 'important');
                     document.documentElement.style.setProperty('overflow', 'auto', 'important');
                     document.body.style.setProperty('position', 'relative', 'important');
@@ -1377,10 +1404,19 @@ try {
 
             if (pc === 'watch') {
                 ensureWatchButtons();
+                 if (!window.__lp_webview_player) {
                 const ad = document.querySelector('.ad-showing video');
                 if (ad) ad.currentTime = ad.duration;
                 const mp = document.querySelector('#movie_player');
                 if (mp && !window.__liteSyncInFlight) { mp.mute?.(); mp.pauseVideo?.(); }
+                } else {
+                    const mp = document.querySelector('#movie_player');
+                    if (mp && mp.isMuted?.()) {
+                        mp.unMute?.();
+                        const muteBtn = mp.querySelector('.ytp-unmute-button, .ytp-mute-button[aria-label*="unmute"]');
+                        if (muteBtn) muteBtn.click();
+                    }
+                }
             } else if (pc === 'music_watch') {
                 setupMusicVideoListeners();
                 ensureMusicPlayerDownloadButton();

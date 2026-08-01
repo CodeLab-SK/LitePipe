@@ -100,19 +100,6 @@ html:not([page-class="channel"]):not([page-class="@"]) .cairo-settings-topbar-ti
     overflow: hidden !important;
 }
 
-html[page-class="watch"] body {
-    margin-top: -48px !important;
-}
-
-html[page-class="watch"] ytm-engagement-panel {
-    top: 56.25vw !important;
-    inset: 56.25vw 0px 0px !important;
-}
-
-html[page-class="watch"] ytm-related-chip-cloud-renderer {
-    margin-top: -48px !important
-}
-
 .slim-video-action-bar-actions.simplified .slim-subscribe-button {
   order: 999;
 }

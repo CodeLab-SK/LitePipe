@@ -1,8 +1,10 @@
 package com.hhst.youtubelite.browser;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
@@ -12,7 +14,6 @@ import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
-import android.view.ViewGroup;
 import android.webkit.ConsoleMessage;
 import android.webkit.CookieManager;
 import android.webkit.ValueCallback;
@@ -36,6 +37,7 @@ import androidx.webkit.WebViewFeature;
 import com.hhst.youtubelite.Constants;
 import com.hhst.youtubelite.IncognitoManager;
 import com.hhst.youtubelite.R;
+import com.hhst.youtubelite.extension.Constant;
 import com.hhst.youtubelite.extension.ExtensionManager;
 import com.hhst.youtubelite.extractor.YoutubeExtractor;
 import com.hhst.youtubelite.extractor.potoken.PoTokenContextStore;
@@ -44,10 +46,8 @@ import com.hhst.youtubelite.extractor.potoken.PoTokenWebViewContext;
 import com.hhst.youtubelite.player.LitePlayer;
 import com.hhst.youtubelite.player.queue.QueueRepository;
 import com.hhst.youtubelite.player.queue.QueueWarmer;
-import com.hhst.youtubelite.ui.MainActivity;
 import com.hhst.youtubelite.util.ToastUtils;
 import com.hhst.youtubelite.util.UrlUtils;
-import com.hhst.youtubelite.util.ViewUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -64,6 +64,7 @@ import java.util.Enumeration;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
+import lombok.Getter;
 import okhttp3.OkHttpClient;
 import okhttp3.Response;
 
@@ -145,7 +146,14 @@ public class YoutubeWebview extends WebView {
 	private volatile String poTokenDoneKey;
 	private boolean isDestroyed = false;
 	private volatile long prefVersion = -1L;
+    @Getter
 	private volatile boolean musicBackgroundActive = false;
+
+    @Nullable
+    private View customView;
+    @Nullable
+    private WebChromeClient.CustomViewCallback customViewCallback;
+    private int originalSystemUiVisibility;
 
 	public YoutubeWebview(@NonNull final Context context) { this(context, null); }
 	public YoutubeWebview(@NonNull final Context context, @Nullable final AttributeSet attrs) { this(context, attrs, 0); }
@@ -197,6 +205,10 @@ public class YoutubeWebview extends WebView {
 
 	public void setPoTokenContextStore(@NonNull PoTokenContextStore poTokenContextStore) {
 		this.poTokenContextStore = poTokenContextStore;
+	}
+
+	private boolean isWebViewPlayerMode() {
+		return extensionManager != null && extensionManager.isEnabled(Constant.USE_WEBVIEW_PLAYER);
 	}
 
 	public boolean isPoTokenReadyCandidate() {
@@ -304,9 +316,7 @@ public class YoutubeWebview extends WebView {
 
 		setFocusable(true);
 		setFocusableInTouchMode(true);
-		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-			setRendererPriorityPolicy(RENDERER_PRIORITY_IMPORTANT, false);
-		}
+		setRendererPriorityPolicy(RENDERER_PRIORITY_IMPORTANT, false);
 		setOnLongClickListener(v -> true);
 
 		CookieManager.getInstance().setAcceptCookie(true);
@@ -337,23 +347,37 @@ public class YoutubeWebview extends WebView {
 		setTag(jsInterface);
 
 		if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
-			String criticalCss = readCriticalCssFromAssets();
-			if (criticalCss != null && !criticalCss.isEmpty()) {
-				String encoded = Base64.getEncoder().encodeToString(criticalCss.getBytes(StandardCharsets.UTF_8));
-				String js = String.format("""
+			if (!isWebViewPlayerMode()) {
+				String criticalCss = readCriticalCssFromAssets();
+				if (criticalCss != null && !criticalCss.isEmpty()) {
+					String encoded = Base64.getEncoder().encodeToString(criticalCss.getBytes(StandardCharsets.UTF_8));
+					String js = String.format("""
+							(function(){
+							try {
+								var path = location.pathname;
+								var pc = path.indexOf('/watch') === 0 ? 'watch' : (path === '/' ? 'home' : '');
+								if (pc) document.documentElement.setAttribute('page-class', pc);
+							} catch(e) {}
+
+							let style = document.createElement('style');
+							style.textContent = window.atob('%s');
+							(document.head || document.documentElement).appendChild(style);
+							})();
+							""", encoded);
+					WebViewCompat.addDocumentStartJavaScript(this, js, Collections.singleton("*"));
+				}
+			} else {
+				String nativeJs = """
 						(function(){
 						try {
 							var path = location.pathname;
 							var pc = path.indexOf('/watch') === 0 ? 'watch' : (path === '/' ? 'home' : '');
 							if (pc) document.documentElement.setAttribute('page-class', pc);
 						} catch(e) {}
-
-						let style = document.createElement('style');
-						style.textContent = window.atob('%s');
-						(document.head || document.documentElement).appendChild(style);
+						window.__lp_webview_player = true;
 						})();
-						""", encoded);
-				WebViewCompat.addDocumentStartJavaScript(this, js, Collections.singleton("*"));
+						""";
+				WebViewCompat.addDocumentStartJavaScript(this, nativeJs, Collections.singleton("*"));
 			}
 		}
 
@@ -478,8 +502,8 @@ public class YoutubeWebview extends WebView {
 				enableBackgroundPlayback();
 				if (onPageFinishedListener != null) onPageFinishedListener.accept(url);
 				postDelayed(() -> {
-					if (getParent() instanceof SwipeRefreshLayout) {
-						((SwipeRefreshLayout) getParent()).setRefreshing(false);
+					if (view.getParent() instanceof SwipeRefreshLayout) {
+						((SwipeRefreshLayout) view.getParent()).setRefreshing(false);
 					}
 				}, 500);
 			}
@@ -543,31 +567,76 @@ public class YoutubeWebview extends WebView {
 			@Override
 			public void onShowCustomView(@NonNull final View view, @NonNull final CustomViewCallback callback) {
 				if (isDestroyed) return;
-				setVisibility(View.GONE);
-				if (getContext() instanceof MainActivity mainActivity) {
-					ViewGroup decorView = (ViewGroup) mainActivity.getWindow().getDecorView();
-					if (fullscreen != null) decorView.removeView(fullscreen);
-					fullscreen = new FrameLayout(getContext());
-					((FrameLayout) fullscreen).addView(view, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-					ViewUtils.setFullscreen(fullscreen, true);
-					decorView.addView(fullscreen, new FrameLayout.LayoutParams(-1, -1));
-					fullscreen.setVisibility(View.VISIBLE);
-					fullscreen.setKeepScreenOn(true);
-					YoutubeWebview.this.postEvaluateJavascript("window.dispatchEvent(new Event('onFullScreen'));");
-				}
+                if (customView != null) {
+                    onHideCustomView();
+                    return;
+                }
+
+                Activity activity = getActivity();
+                if (activity == null) return;
+
+                customView = view;
+                originalSystemUiVisibility = activity.getWindow().getDecorView().getSystemUiVisibility();
+                customViewCallback = callback;
+                
+                if (player != null) player.setNativeFullscreen(true);
+                
+                ((FrameLayout) activity.getWindow().getDecorView()).addView(customView, new FrameLayout.LayoutParams(-1, -1));
+                activity.getWindow().getDecorView().setSystemUiVisibility(3846);
 			}
 
 			@Override
 			public void onHideCustomView() {
-				if (isDestroyed || fullscreen == null) return;
-				ViewUtils.setFullscreen(fullscreen, false);
-				fullscreen.setVisibility(View.GONE);
-				fullscreen.setKeepScreenOn(false);
-				setVisibility(View.VISIBLE);
-				YoutubeWebview.this.postEvaluateJavascript("window.dispatchEvent(new Event('exitFullScreen'));");
+                hideCustomView();
 			}
 		});
 	}
+
+    public boolean isInFullscreen() {
+        return customView != null;
+    }
+
+    public void exitFullscreen() {
+        if (isInFullscreen()) {
+            hideCustomView();
+        }
+    }
+
+    private void hideCustomView() {
+        if (isDestroyed || customView == null) {
+            if (customViewCallback != null) {
+                customViewCallback.onCustomViewHidden();
+                customViewCallback = null;
+            }
+            return;
+        }
+
+        Activity activity = getActivity();
+        if (activity != null) {
+            ((FrameLayout) activity.getWindow().getDecorView()).removeView(customView);
+            activity.getWindow().getDecorView().setSystemUiVisibility(originalSystemUiVisibility);
+        }
+        customView = null;
+
+        if (player != null) player.setNativeFullscreen(false);
+
+        if (customViewCallback != null) {
+            customViewCallback.onCustomViewHidden();
+            customViewCallback = null;
+        }
+    }
+
+    @Nullable
+    private Activity getActivity() {
+        Context context = getContext();
+        while (context instanceof ContextWrapper) {
+            if (context instanceof Activity) {
+                return (Activity) context;
+            }
+            context = ((ContextWrapper) context).getBaseContext();
+        }
+        return null;
+    }
 
 	 private void enableBackgroundPlayback() {
 		if (!UrlUtils.isMusicUrl(getUrl())) return;
@@ -588,10 +657,6 @@ public class YoutubeWebview extends WebView {
             window.addEventListener('webkitvisibilitychange', block, true);
         })();
         """, null);
-	}
-
-	public boolean isMusicBackgroundActive() {
-		return musicBackgroundActive;
 	}
 
 	public void setMusicBackgroundActive(boolean active) {
@@ -646,20 +711,6 @@ public class YoutubeWebview extends WebView {
 	}
 
 	public void injectJavaScriptContent(@NonNull String js) {
-		addScript(js);
-	}
-
-	public void injectCssContent(@NonNull String css) {
-		String encoded = Base64.getEncoder().encodeToString(css.getBytes());
-		String js = String.format("""
-                        (function(){
-                        let style = document.createElement('style');
-                        style.type = 'text/css';
-                        style.textContent = window.atob('%s');
-                        let target = document.head || document.documentElement;
-                        if (target) target.appendChild(style);
-                        })()
-                        """, encoded);
 		addScript(js);
 	}
 

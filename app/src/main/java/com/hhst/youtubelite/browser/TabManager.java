@@ -67,6 +67,7 @@ public class TabManager {
 
 	private static final List<String> cachedScripts = new ArrayList<>();
 	private static String cachedCssScript = null;
+	private static String cachedCriticalCssScript = null;
 	private static boolean assetsLoaded = false;
 
 	@Nullable private Consumer<String> onPageFinishedListener;
@@ -106,6 +107,10 @@ public class TabManager {
 		}
 
 		if (isWatch) {
+			if (extensionManager.isEnabled(Constant.USE_WEBVIEW_PLAYER)) {
+				litePlayer.hide();
+				return;
+			}
 			if (litePlayer.isInAppMiniPlayer()) litePlayer.exitInAppMiniPlayer();
 			litePlayer.play(url);
 			return;
@@ -181,7 +186,7 @@ public class TabManager {
 				currentTab != null ? currentTab.getMTag() : null,
 				getFragmentPageClass(currentTab),
 				targetTag,
-				extensionManager.isEnabled(Constant.ENABLE_IN_APP_MINI_PLAYER),
+				extensionManager.isEnabled(Constant.ENABLE_IN_APP_MINI_PLAYER) && !extensionManager.isEnabled(Constant.USE_WEBVIEW_PLAYER),
 				litePlayer().canSuspendWatch());
 
 		if (suspendCurrentWatch) {
@@ -235,6 +240,8 @@ public class TabManager {
 		final AssetManager assetManager = activity.getAssets();
 		try {
 			StringBuilder cssBlock = new StringBuilder();
+			StringBuilder criticalBlock = new StringBuilder();
+			
 			cssBlock.append("(function(){");
 			cssBlock.append("if(document.getElementById('_lp_css_injected'))return;");
 			cssBlock.append("var m=document.createElement('meta');");
@@ -248,15 +255,19 @@ public class TabManager {
 						String content = StreamIOUtils.readInputStream(is);
 						if (content != null) {
 							String encoded = Base64.encodeToString(content.getBytes(StandardCharsets.UTF_8), Base64.NO_WRAP);
-							cssBlock.append("var s=document.createElement('style');");
-							cssBlock.append("s.textContent=atob('").append(encoded).append("');");
-							cssBlock.append("(document.head||document.documentElement).appendChild(s);");
+							String js = "var s=document.createElement('style'); s.textContent=atob('" + encoded + "'); (document.head||document.documentElement).appendChild(s);";
+							if (style.equals("critical.css")) {
+								criticalBlock.append(js);
+							} else {
+								cssBlock.append(js);
+							}
 						}
 					}
 				}
 			}
 			cssBlock.append("})();");
 			cachedCssScript = cssBlock.toString();
+			cachedCriticalCssScript = criticalBlock.toString();
 
 			String[] scripts = assetManager.list("script");
 			if (scripts != null) {
@@ -285,6 +296,10 @@ public class TabManager {
 	public void injectScripts(@NonNull final YoutubeWebview webview) {
 		if (!assetsLoaded) loadAssets();
 		if (cachedCssScript != null) webview.injectJavaScriptContent(cachedCssScript);
+		if (!extensionManager.isEnabled(Constant.USE_WEBVIEW_PLAYER)) {
+			if (cachedCriticalCssScript != null) webview.injectJavaScriptContent(cachedCriticalCssScript);
+		}
+
 		for (String js : cachedScripts) {
 			webview.injectJavaScriptContent(js);
 		}
@@ -312,7 +327,9 @@ public class TabManager {
 
 	public void playInWatch(@NonNull final String url) {
 		queueWarmer.prioritizeUrl(url);
-		litePlayer().play(url);
+		if (!extensionManager.isEnabled(Constant.USE_WEBVIEW_PLAYER)) {
+			litePlayer().play(url);
+		}
 		openTab(url, UrlUtils.getPageClass(url));
 	}
 
@@ -431,7 +448,7 @@ public class TabManager {
 		final YoutubeWebview webview = tab.getWebview();
 		final Page prev = prev(tab);
 		final boolean hasBackStack = tabs.size() > 1;
-		final boolean isMiniPlayerEnabled = extensionManager.isEnabled(Constant.ENABLE_IN_APP_MINI_PLAYER);
+		final boolean isMiniPlayerEnabled = extensionManager.isEnabled(Constant.ENABLE_IN_APP_MINI_PLAYER) && !extensionManager.isEnabled(Constant.USE_WEBVIEW_PLAYER);
 
 		if (shouldSuspendCurrentWatchOnBack(
 				tab.getMTag(),

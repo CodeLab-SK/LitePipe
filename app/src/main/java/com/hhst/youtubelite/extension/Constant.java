@@ -83,6 +83,7 @@ public final class Constant {
     public static final String ENABLE_PIP = "enable_pip";
     public static final String ENABLE_BACKGROUND_PLAY = "enable_background_play";
     public static final String ENABLE_ORIENTATION_FULLSCREEN = "enable_orientation_fullscreen";
+    public static final String USE_WEBVIEW_PLAYER = "use_webview_player";
 
     // SponsorBlock
     public static final String SKIP_SPONSORS = "skip_sponsors";
@@ -155,6 +156,7 @@ public final class Constant {
             Map.entry(ENABLE_IN_APP_MINI_PLAYER, true),
             Map.entry(ENABLE_PIP, true),
             Map.entry(ENABLE_BACKGROUND_PLAY, true),
+            Map.entry(USE_WEBVIEW_PLAYER, false),
             Map.entry(SKIP_SPONSORS, true),
             Map.entry(SKIP_SELF_PROMO, true),
             Map.entry(SKIP_POI_HIGHLIGHT, true),

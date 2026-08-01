@@ -20,6 +20,7 @@ import androidx.media3.ui.SubtitleView;
 import com.hhst.youtubelite.PlaybackService;
 import com.hhst.youtubelite.R;
 import com.hhst.youtubelite.downloader.core.history.DownloadRecord;
+import com.hhst.youtubelite.extension.Constant;
 import com.hhst.youtubelite.extractor.ExtractionSession;
 import com.hhst.youtubelite.extractor.PlaybackDetails;
 import com.hhst.youtubelite.extractor.PlaybackPlan;
@@ -109,7 +110,8 @@ public class LitePlayer {
     public interface OnFullscreenChangeListener {
         void onFullscreenChanged(boolean isFullscreen);
     }
-			@Nullable private OnFullscreenChangeListener fullscreenChangeListener;
+    @Nullable
+    private OnFullscreenChangeListener fullscreenChangeListener;
 
     @Inject
     public LitePlayer(@NonNull final Activity activity,
@@ -143,6 +145,20 @@ public class LitePlayer {
         this.fullscreenChangeListener = listener;
     }
 
+    private boolean isWebViewPlayerMode() {
+        return prefs.getExtensionManager().isEnabled(Constant.USE_WEBVIEW_PLAYER);
+    }
+    public void setNativeFullscreen(boolean isFullscreen) {
+        activity.runOnUiThread(() -> {
+            if (isFullscreen) {
+                playerView.hide();
+            } else {
+                if (!isWebViewPlayerMode() && !isMusic()) {
+                    playerView.show();
+                }
+            }
+        });
+    }
     private void setupEngineListeners() {
         engine.addListener(new Player.Listener() {
             @Override
@@ -375,6 +391,13 @@ public class LitePlayer {
             engine.clear();
             playerView.setTitle(null);
             final SponsorOverlayView layer = playerView.findViewById(R.id.sponsor_overlay);
+            if (isWebViewPlayerMode()) {
+                activity.runOnUiThread(() -> {
+                    if (inAppMiniPlayer) exitInAppMiniPlayer();
+                    playerView.hide();
+                });
+                return;
+            }
             if (layer != null) layer.setData(null, 0, TimeUnit.MILLISECONDS);
             final DefaultTimeBar bar = playerView.findViewById(R.id.exo_progress);
             if (bar != null) bar.setAdGroupTimesMs(null, null, 0);

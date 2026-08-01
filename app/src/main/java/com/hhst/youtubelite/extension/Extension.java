@@ -83,6 +83,7 @@ public record Extension(String key, int description, int helpText, List<Extensio
                     new Extension(PLAYER_GESTURE_MINIPLAYER_SWIPE, R.string.gesture_miniplayer_swipe, null)
                 )),
                 new Extension(PLAYER_VOLUME_BOOSTER, R.string.volume_booster, null),
+                new Extension(USE_WEBVIEW_PLAYER, R.string.use_webview_player, null),
                 new Extension(REMEMBER_LAST_POSITION, R.string.remember_last_position, null),
                 new Extension(DEFAULT_QUALITY, R.string.default_quality, null),
                 new Extension(DEFAULT_PLAYBACK_SPEED, R.string.default_playback_speed, null),
