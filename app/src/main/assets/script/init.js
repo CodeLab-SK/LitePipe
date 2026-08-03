@@ -997,8 +997,9 @@ try {
                     const sheet = document.querySelector('.ytSpecBottomSheetLayoutHost, bottom-sheet-layout, .ytm-bottom-sheet-renderer');
                     if (!sheet || sheet.querySelector('[data-lp-custom]')) return;
 
-                    const hasItems = sheet.querySelector('.bottom-sheet-media-menu-item, yt-list-item-view-model, ytm-menu-service-item-renderer, ytm-menu-navigation-item-renderer, toggleable-list-item-view-model, ytm-menu-item');
-                    if (hasItems) Sheet.inject(sheet);
+                    if (sheet.querySelector('.bottom-sheet-media-menu-item, yt-list-view-model')) {
+                    Sheet.inject(sheet);
+                    }
                 });
                 sheetObserver.observe(document.body, { childList: true, subtree: true });
             },
@@ -1010,19 +1011,6 @@ try {
 
                 const pc = getCachedPageClass(location.href);
                 if (pc === 'music' || pc === 'music_watch' || pc === 'shorts') { Sheet._skip = true; return; }
-                if (pc === 'watch') {
-                const t = event.target;
-                    if (t.closest?.(
-                   '.player-settings-icon, ' +
-                   'button[aria-label="Playback Settings"], ' +
-                   '.slim-action-more-button, ' +
-                   'button[aria-label="More"], ' +
-                   'button[aria-label="More options"]'
-                    )) {
-                   Sheet._skip = true;
-                   return;
-                    }
-                }
                 if (event.target.closest('ytm-backstage-post-renderer, ytm-post-renderer, ytm-backstage-post-thread-renderer')) {
                     Sheet._skip = true;
                     return;
@@ -1055,34 +1043,23 @@ try {
 
                 let metadata = Sheet.resolveMetadata(Sheet._root) || Sheet._metadata;
 
-                if (!metadata && getCachedPageClass(location.href) === 'watch') {
-                    const videoId = getVideoId(location.href);
-                    if (videoId) {
-                        metadata = {
-                            url: location.href,
-                            videoId,
-                            title: document.querySelector('.slim-video-information-title, .watch-title, ytm-slim-video-metadata-renderer .title, yt-formatted-string.title')?.textContent?.trim() || videoId,
-                            author: document.querySelector('.slim-owner-name, .channel-name, ytm-slim-owner-renderer .ytm-slim-owner-renderer-text, yt-formatted-string.byline')?.textContent?.trim() || '',
-                            thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
-                        };
-                    }
-                }
 
                 if (!metadata?.url) return;
 
                 const doInject = () => {
                     if (sheet.querySelector('[data-lp-custom]')) return true;
 
-                    const firstItem = sheet.querySelector('.bottom-sheet-media-menu-item, yt-list-item-view-model, ytm-menu-service-item-renderer, ytm-menu-navigation-item-renderer, toggleable-list-item-view-model, ytm-menu-item');
-                    if (!firstItem) return false;
 
-                    const container = firstItem.closest('.bottom-sheet-media-menu-item, yt-list-view-model') || firstItem.parentElement;
+                    const container = sheet.querySelector('.bottom-sheet-media-menu-item, yt-list-view-model');
                     if (!container) return true;
+
+                    const firstItem = container.firstElementChild;
+                    if (!firstItem) return false;
 
                     let itemType = 'menu';
                     let needsWrapper = null;
 
-                    if (firstItem.tagName.toLowerCase() === 'yt-list-item-view-model') {
+                    if (container.tagName.toLowerCase() === 'yt-list-view-model' || firstItem.tagName.toLowerCase() === 'yt-list-item-view-model') {
                         itemType = 'list';
                     } else if (firstItem.tagName.toLowerCase() === 'ytm-menu-service-item-renderer') {
                         itemType = 'menu';
