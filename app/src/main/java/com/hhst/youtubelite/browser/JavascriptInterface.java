@@ -3,8 +3,12 @@ package com.hhst.youtubelite.browser;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.Intent;
+import android.media.AudioManager;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
+import android.view.WindowManager;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -67,6 +71,62 @@ public final class JavascriptInterface {
         this.poTokenProvider = poTokenProvider;
         this.queueRepository = queueRepository;
         this.queueWarmer = queueWarmer;
+    }
+
+    @android.webkit.JavascriptInterface
+    public void showToast(String txt) {
+        handler.post(() -> Toast.makeText(context, txt, Toast.LENGTH_SHORT).show());
+    }
+
+    @android.webkit.JavascriptInterface
+    public void setBgPlay(boolean bgplay) {
+        extensionManager.setEnabled(Constant.ENABLE_BACKGROUND_PLAY, bgplay);
+    }
+
+    @android.webkit.JavascriptInterface
+    public float getVolume() {
+        AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+        int cur = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+        int max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+        return (float) cur / max;
+    }
+
+    @android.webkit.JavascriptInterface
+    public void setVolume(float volume) {
+        handler.post(() -> {
+            AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+            int max = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, (int) (max * volume), 0);
+        });
+    }
+
+    @android.webkit.JavascriptInterface
+    public float getBrightness() {
+        MainActivity activity = findMainActivity(context);
+        if (activity != null) {
+            float brightness = activity.getWindow().getAttributes().screenBrightness;
+            if (brightness < 0) {
+                try {
+                    return (Settings.System.getInt(context.getContentResolver(), Settings.System.SCREEN_BRIGHTNESS) / 255f) * 100f;
+                } catch (Settings.SettingNotFoundException e) {
+                    return 50f;
+                }
+            }
+            return brightness * 100f;
+        }
+        return 50f;
+    }
+
+    @android.webkit.JavascriptInterface
+    public void setBrightness(float brightness) {
+        handler.post(() -> {
+            MainActivity activity = findMainActivity(context);
+            if (activity != null) {
+                WindowManager.LayoutParams lp = activity.getWindow().getAttributes();
+                lp.screenBrightness = Math.max(0.01f, Math.min(brightness, 1.0f));
+                activity.getWindow().setAttributes(lp);
+            }
+        });
     }
 
     @android.webkit.JavascriptInterface

@@ -273,6 +273,18 @@ public class YoutubeWebview extends WebView {
 			ToastUtils.show(getContext(), R.string.application_not_found);
 		}
 	}
+	private void injectWebViewPlayerScript() {
+		try (InputStream is = getContext().getAssets().open("script/webview_player.js")) {
+			byte[] buffer = new byte[is.available()];
+			int read = is.read(buffer);
+			if (read > 0) {
+				String webviewPlayerJs = new String(buffer, StandardCharsets.UTF_8);
+				postEvaluateJavascript(webviewPlayerJs);
+			}
+		} catch (Exception e) {
+			Log.e("YoutubeWebview", "Failed to load webview_player.js", e);
+		}
+	}
 
 	@NonNull
 	String sanitizeLoadUrl(@NonNull final String url) {
@@ -500,6 +512,8 @@ public class YoutubeWebview extends WebView {
 
 				refreshPoTokenContext();
 				enableBackgroundPlayback();
+				injectWebViewPlayerScript();
+
 				if (onPageFinishedListener != null) onPageFinishedListener.accept(url);
 				postDelayed(() -> {
 					if (view.getParent() instanceof SwipeRefreshLayout) {
