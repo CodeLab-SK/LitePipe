@@ -58,6 +58,13 @@ try {
             return cachedPageClass;
         };
 
+        const REFRESH_ENABLED_PAGES = new Set(['home', 'subscriptions', '@', 'library', 'music']);
+        const updateRefreshLayout = (url) => {
+            if (!window.android?.setRefreshLayoutEnabled) return;
+            const pc = getCachedPageClass(url || location.href);
+            android.setRefreshLayoutEnabled(REFRESH_ENABLED_PAGES.has(pc));
+        };
+
         if (!window.originalFetch) {
             window.originalFetch = fetch;
             window.fetch = async (...args) => {
@@ -522,13 +529,13 @@ try {
 
             banner.appendChild(card);
             document.body.appendChild(banner);
-            if (window.android?.setRefreshLayoutEnabled) android.setRefreshLayoutEnabled(true);
+            updateRefreshLayout();
         };
 
         const removeIncognitoFallbackBanner = () => {
             const b = document.getElementById('_lp_incognito_banner');
             if (b) b.remove();
-            if (window.android?.setRefreshLayoutEnabled) android.setRefreshLayoutEnabled(true);
+            updateRefreshLayout();
         };
 
         const ensureLibraryButton = () => {
@@ -1176,8 +1183,7 @@ try {
         window.addEventListener('onProgressChangeFinish', () => { updatePageClass(); if (window.android?.finishRefresh) android.finishRefresh(); });
         window.addEventListener('onRefresh', () => location.reload());
         window.addEventListener('doUpdateVisitedHistory', () => {
-            const pc = getCachedPageClass(location.href);
-            if (window.android?.setRefreshLayoutEnabled) android.setRefreshLayoutEnabled(['home', 'subscriptions', '@', 'library', 'music'].includes(pc));
+            updateRefreshLayout();
             if (window.android?.finishRefresh) android.finishRefresh();
         });
 
