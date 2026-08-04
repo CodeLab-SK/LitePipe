@@ -1340,16 +1340,6 @@ try {
                   node.addEventListener('onStateChange', s => {
                       if (s === 1 && !window.__liteSyncInFlight) node.pauseVideo?.();
                   });
-                  } else {
-                      const unmute = () => {
-                          if (typeof node.unMute === 'function') node.unMute();
-                          if (typeof node.setVolume === 'function') node.setVolume(100);
-                          const muteBtn = node.querySelector('.ytp-unmute-button, .ytp-mute-button[aria-label*="unmute"]');
-                          if (muteBtn) muteBtn.click();
-                      };
-                      unmute();
-                      st(unmute, 500);
-                      st(unmute, 2000);
                   }
                     document.body.style.setProperty('overflow', 'auto', 'important');
                     document.documentElement.style.setProperty('overflow', 'auto', 'important');
@@ -1381,18 +1371,11 @@ try {
 
             if (pc === 'watch') {
                 ensureWatchButtons();
-                 if (!window.__lp_webview_player) {
                 const ad = document.querySelector('.ad-showing video');
                 if (ad) ad.currentTime = ad.duration;
-                const mp = document.querySelector('#movie_player');
-                if (mp && !window.__liteSyncInFlight) { mp.mute?.(); mp.pauseVideo?.(); }
-                } else {
+                 if (!window.__lp_webview_player) {
                     const mp = document.querySelector('#movie_player');
-                    if (mp && mp.isMuted?.()) {
-                        mp.unMute?.();
-                        const muteBtn = mp.querySelector('.ytp-unmute-button, .ytp-mute-button[aria-label*="unmute"]');
-                        if (muteBtn) muteBtn.click();
-                    }
+                    if (mp && !window.__liteSyncInFlight) { mp.mute?.(); mp.pauseVideo?.(); }
                 }
             } else if (pc === 'music_watch') {
                 setupMusicVideoListeners();
@@ -1400,6 +1383,10 @@ try {
                 const v = getMusicVideo();
                 if (v) v.muted = true;
                } else if (pc === 'shorts') {
+
+                const shortsVideo = document.querySelector('#movie_player video, shorts-video video, #shorts-container video');
+                if (shortsVideo && shortsVideo.muted) shortsVideo.muted = false;
+
                 if (!cachedHeaderElement) cachedHeaderElement = document.querySelector('ytm-header-bar-renderer, .ytm-header-bar-renderer');
                 if (cachedHeaderElement) cachedHeaderElement.style.setProperty('display', 'none', 'important');
                 document.querySelectorAll('#home-icon, .logo-in-player, [aria-label*="Search"], .topbar-menu-button-avatar-button, .header-bar-search-button, .header-search-button, .search-button').forEach(el => el.style.setProperty('display', 'none', 'important'));

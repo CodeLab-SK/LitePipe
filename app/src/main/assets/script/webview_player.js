@@ -201,62 +201,121 @@
     const brtSvg = `<svg xmlns="http://www.w3.org/2000/svg" height="16" viewBox="0 0 24 24" width="16" fill="#fff" style="filter:drop-shadow(0 0 1px black)"><path d="M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0 c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2 c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1 C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06 c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41 l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41 c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36 c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg>`;
 
     // Volume and brightness gestures
-      function initGestures() {
-          const player = document.getElementById("player-container-id") || document.getElementById("movie_player");
-          if (!player || document.getElementById("volS")) return;
-
-        const overlayStyle = "height:50%;width:20%;display:flex;flex-direction:column;align-items:center;justify-content:center;position:absolute;top:25%;opacity:0;transition:opacity 0.3s;z-index:2147483647;pointer-events:auto;";
-        const barWrap = "position:relative;background:rgba(255,255,255,0.2);height:80%;width:6px;border-radius:6px;backdrop-filter:blur(4px);display:flex;flex-direction:column-reverse;overflow:hidden;";
+      function createGestureOverlays(isShorts) {
+        const overlayStyle = "height:50%;width:20%;display:flex;flex-direction:column;align-items:center;justify-content:center;position:absolute;top:25%;opacity:0;transition:opacity 0.3s;z-index:2147483647;pointer-events:none;";
+        const barHeightPercent = isShorts ? 45 : 80;
+        const barWrap = `position:relative;background:rgba(255,255,255,0.2);height:${barHeightPercent}%;width:6px;border-radius:6px;backdrop-filter:blur(4px);display:flex;flex-direction:column-reverse;overflow:hidden;`;
         const barInner = "background:#fff;width:100%;transition:height 0.1s linear;";
         const iconStyle = "margin-bottom:12px;filter:drop-shadow(0 0 4px rgba(0,0,0,0.5));";
 
         const volS = document.createElement("div");
         volS.id = "volS";
+        volS.dataset.shorts = String(isShorts);
         volS.style.cssText = overlayStyle + "right:0%;";
         volS.innerHTML = `<div style="${iconStyle}">${volSvg}</div><div style="${barWrap}"><div id="volIS" style="${barInner}height:${vol * 100}%;"></div></div>`;
 
         const brtS = document.createElement("div");
         brtS.id = "brtS";
+        brtS.dataset.shorts = String(isShorts);
         brtS.style.cssText = overlayStyle + "left:0%;";
         brtS.innerHTML = `<div style="${iconStyle}">${brtSvg}</div><div style="${barWrap}"><div id="brtIS" style="${barInner}height:${brt * 100}%;"></div></div>`;
 
-        player.appendChild(volS);
-        player.appendChild(brtS);
+        return { volS, brtS };
+     }
 
-        function handleMove(e, isBrt) {
-            const touchY = e.touches[0].pageY;
-            const h = window.innerHeight;
-            if (touchY < h * 0.15 || touchY > h * 0.85) return;
+        function bindGestureListeners() {
+         if (window._lp_gesture_bound) return;
+         window._lp_gesture_bound = true;
+
+         let dragging = false;
+         let side = null;
+         let startX = 0, startY = 0;
+         const DRAG_THRESHOLD = 10;
+
+         function getSide(x) {
+             const w = window.innerWidth;
+             if (x > w * 0.8) return "vol";
+             if (x < w * 0.2) return "brt";
+             return null;
+         }
+
+         document.addEventListener("touchstart", (e) => {
+             if (e.touches.length !== 1) { side = null; return; }
+             const t = e.touches[0];
+             const h = window.innerHeight;
+             if (t.pageY < h * 0.15 || t.pageY > h * 0.85) { side = null; return; }
+             side = getSide(t.pageX);
+             if (!side) return;
+             dragging = false;
+             startX = t.pageX;
+             startY = t.pageY;
+             touchstartY = t.pageY;
+         }, { capture: true, passive: true });
+
+         document.addEventListener("touchmove", (e) => {
+             if (!side || e.touches.length !== 1) return;
+             const t = e.touches[0];
+             const diffX = t.pageX - startX;
+             const diffY = t.pageY - startY;
+
+             if (!dragging) {
+                 if (Math.abs(diffX) > Math.abs(diffY)) { side = null; return; }
+                 if (Math.abs(diffY) < DRAG_THRESHOLD) return;
+                 dragging = true;
+             }
 
             e.preventDefault();
             e.stopPropagation();
 
-            const target = isBrt ? brtS : volS;
+            const isBrt = side === "brt";
+            const target = document.getElementById(isBrt ? "brtS" : "volS");
             const bar = document.getElementById(isBrt ? "brtIS" : "volIS");
-            target.style.opacity = "1";
+            if (target) target.style.opacity = "1";
 
-            const diff = touchstartY - e.touches[0].pageY;
+            const moveDiff = touchstartY - t.pageY;
             if (isBrt) {
-                brt = Math.max(0, Math.min(1, brt + (diff * sens)));
+                brt = Math.max(0, Math.min(1, brt + (moveDiff * sens)));
                 Android.setBrightness(brt);
                 if (bar) bar.style.height = (brt * 100) + "%";
             } else {
-                vol = Math.max(0, Math.min(1, vol + (diff * sens)));
+                vol = Math.max(0, Math.min(1, vol + (moveDiff * sens)));
                 Android.setVolume(vol);
                 if (bar) bar.style.height = (vol * 100) + "%";
             }
-            touchstartY = e.touches[0].pageY;
-        }
+            touchstartY = t.pageY;
+         }, { capture: true, passive: false });
 
-        const onStart = (e) => { touchstartY = e.touches[0].pageY; e.stopPropagation(); };
-        const onEnd = (e, t) => { t.style.opacity = "0"; e.stopPropagation(); };
+         document.addEventListener("touchend", () => {
+             if (dragging) {
+                 const target = document.getElementById(side === "brt" ? "brtS" : "volS");
+                 if (target) target.style.opacity = "0";
+             }
+             dragging = false;
+             side = null;
+         }, { capture: true, passive: true });
+     }
 
-        [volS, brtS].forEach(el => el.addEventListener("touchstart", onStart, { passive: false }));
-        volS.addEventListener("touchmove", e => handleMove(e, false), { passive: false });
-        brtS.addEventListener("touchmove", e => handleMove(e, true), { passive: false });
-        volS.addEventListener("touchend", e => onEnd(e, volS), { passive: false });
-        brtS.addEventListener("touchend", e => onEnd(e, brtS), { passive: false });
-    }
+     function initGestures() {
+         const player = document.getElementById("player-container-id") || document.getElementById("movie_player");
+         if (!player) return;
+
+         const isShorts = window.location.pathname.includes("/shorts/");
+         const existingVolS = document.getElementById("volS");
+         if (existingVolS && existingVolS.dataset.shorts === String(isShorts)) {
+             bindGestureListeners();
+             return;
+         }
+
+        if (existingVolS) existingVolS.remove();
+        const existingBrtS = document.getElementById("brtS");
+        if (existingBrtS) existingBrtS.remove();
+
+         const { volS, brtS } = createGestureOverlays(isShorts);
+         player.appendChild(volS);
+         player.appendChild(brtS);
+
+         bindGestureListeners();
+     }
 
     // Video zoom
     function initPinchZoom() {
@@ -338,6 +397,8 @@
                     }
                 });
             }
+
+            if (video.muted) video.muted = false;
         }
     }
 
