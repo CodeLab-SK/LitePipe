@@ -1010,7 +1010,23 @@ try {
                 Sheet._root = null;
 
                 const pc = getCachedPageClass(location.href);
-                if (pc === 'music' || pc === 'music_watch' || pc === 'shorts') { Sheet._skip = true; return; }
+                if (pc === 'music' || pc === 'music_watch') { Sheet._skip = true; return; }
+
+                if (pc === 'shorts') {
+                    const videoId = location.pathname.split('/shorts/')[1]?.split(/[?#]/)[0];
+                    if (!videoId) { Sheet._skip = true; return; }
+                    const title = document.querySelector('.ytShortsVideoTitleViewModelShortsVideoTitle')?.textContent?.trim() || videoId;
+                    const author = document.querySelector('.ytReelChannelBarViewModelChannelName')?.textContent?.trim() || '';
+                    Sheet._metadata = {
+                        url: location.href,
+                        videoId,
+                        title,
+                        author,
+                        thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+                    };
+                    return;
+                }
+
                 if (event.target.closest('ytm-backstage-post-renderer, ytm-post-renderer, ytm-backstage-post-thread-renderer')) {
                     Sheet._skip = true;
                     return;
