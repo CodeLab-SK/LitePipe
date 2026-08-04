@@ -358,13 +358,18 @@
 
     function pkc() {
         const prefs = JSON.parse(Android.getPreferences() || '{}');
-        if (prefs.use_webview_player === false) return;
+        const isShorts = window.location.pathname.includes("/shorts/");
+        const webviewPlayerEnabled = prefs.use_webview_player !== false;
 
         if (!window.location.href.includes("watch") && !window.location.href.includes("shorts")) return;
 
+        if (isShorts) initGestures();
+
+        if (!webviewPlayerEnabled) return;
+
         applyForceZoom();
         applyExtraSpeed();
-        initGestures();
+        if (!isShorts) initGestures();
         initPinchZoom();
         checkSponsors();
 
