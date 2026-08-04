@@ -230,6 +230,7 @@
          let dragging = false;
          let side = null;
          let startX = 0, startY = 0;
+         let startTarget = null;
          const DRAG_THRESHOLD = 10;
 
          function getSide(x) {
@@ -250,6 +251,7 @@
              startX = t.pageX;
              startY = t.pageY;
              touchstartY = t.pageY;
+             startTarget = t.target;
          }, { capture: true, passive: true });
 
          document.addEventListener("touchmove", (e) => {
@@ -262,6 +264,18 @@
                  if (Math.abs(diffX) > Math.abs(diffY)) { side = null; return; }
                  if (Math.abs(diffY) < DRAG_THRESHOLD) return;
                  dragging = true;
+
+                  if (startTarget) {
+                      try {
+                          startTarget.dispatchEvent(new TouchEvent("touchcancel", {
+                              touches: [],
+                              targetTouches: [],
+                              changedTouches: e.changedTouches,
+                              bubbles: true,
+                              cancelable: true
+                          }));
+                     } catch (err) {}
+                 }
              }
 
             e.preventDefault();
@@ -292,6 +306,7 @@
              }
              dragging = false;
              side = null;
+             startTarget = null;
          }, { capture: true, passive: true });
      }
 
@@ -377,6 +392,9 @@
         if (video) {
             if (!video._lp_bound) {
                 video._lp_bound = true;
+                setTimeout(() => {
+                    video.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+                }, 100);
 
                 const observer = new MutationObserver(() => {
                     const expectedTransform = `scale(${currentZoom})`;
