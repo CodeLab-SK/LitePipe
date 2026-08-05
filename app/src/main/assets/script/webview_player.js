@@ -201,22 +201,22 @@
     const brtSvg = `<svg xmlns="http://www.w3.org/2000/svg" height="16" viewBox="0 0 24 24" width="16" fill="#fff" style="filter:drop-shadow(0 0 1px black)"><path d="M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0 c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2 c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1 C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06 c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41 l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41 c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36 c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"/></svg>`;
 
     // Volume and brightness gestures
-      function createGestureOverlays(isShorts) {
+      function createGestureOverlays(mode) {
         const overlayStyle = "height:50%;width:20%;display:flex;flex-direction:column;align-items:center;justify-content:center;position:absolute;top:25%;opacity:0;transition:opacity 0.3s;z-index:2147483647;pointer-events:none;";
-        const barHeightPercent = isShorts ? 45 : 80;
+        const barHeightPercent = mode === "shorts" ? 45 : 80;
         const barWrap = `position:relative;background:rgba(255,255,255,0.2);height:${barHeightPercent}%;width:6px;border-radius:6px;backdrop-filter:blur(4px);display:flex;flex-direction:column-reverse;overflow:hidden;`;
         const barInner = "background:#fff;width:100%;transition:height 0.1s linear;";
         const iconStyle = "margin-bottom:12px;filter:drop-shadow(0 0 4px rgba(0,0,0,0.5));";
 
         const volS = document.createElement("div");
         volS.id = "volS";
-        volS.dataset.shorts = String(isShorts);
+        volS.dataset.mode = mode;
         volS.style.cssText = overlayStyle + "right:0%;";
         volS.innerHTML = `<div style="${iconStyle}">${volSvg}</div><div style="${barWrap}"><div id="volIS" style="${barInner}height:${vol * 100}%;"></div></div>`;
 
         const brtS = document.createElement("div");
         brtS.id = "brtS";
-        brtS.dataset.shorts = String(isShorts);
+        brtS.dataset.mode = mode;
         brtS.style.cssText = overlayStyle + "left:0%;";
         brtS.innerHTML = `<div style="${iconStyle}">${brtSvg}</div><div style="${barWrap}"><div id="brtIS" style="${barInner}height:${brt * 100}%;"></div></div>`;
 
@@ -242,6 +242,10 @@
 
          document.addEventListener("touchstart", (e) => {
              if (e.touches.length !== 1) { side = null; return; }
+           if (window.location.hostname === "music.youtube.com") {
+               const playerEl = document.getElementById("player");
+               if (!playerEl || !playerEl.hasAttribute("player-page-open")) { side = null; return; }
+           }
              const t = e.touches[0];
              const h = window.innerHeight;
              if (t.pageY < h * 0.15 || t.pageY > h * 0.85) { side = null; return; }
@@ -311,12 +315,16 @@
      }
 
      function initGestures() {
-         const player = document.getElementById("player-container-id") || document.getElementById("movie_player");
+         const isShorts = window.location.pathname.includes("/shorts/");
+         const isMusic = window.location.hostname === "music.youtube.com";
+         const player = isMusic
+          ? (document.getElementById("player") || document.getElementById("music-player-wrapper"))
+          : (document.getElementById("player-container-id") || document.getElementById("movie_player"));
          if (!player) return;
 
-         const isShorts = window.location.pathname.includes("/shorts/");
+      const mode = isMusic ? "music" : (isShorts ? "shorts" : "watch");
          const existingVolS = document.getElementById("volS");
-         if (existingVolS && existingVolS.dataset.shorts === String(isShorts)) {
+         if (existingVolS && existingVolS.dataset.mode === mode) {
              bindGestureListeners();
              return;
          }
@@ -325,7 +333,7 @@
         const existingBrtS = document.getElementById("brtS");
         if (existingBrtS) existingBrtS.remove();
 
-         const { volS, brtS } = createGestureOverlays(isShorts);
+         const { volS, brtS } = createGestureOverlays(mode);
          player.appendChild(volS);
          player.appendChild(brtS);
 
@@ -374,11 +382,14 @@
     function pkc() {
         const prefs = JSON.parse(Android.getPreferences() || '{}');
         const isShorts = window.location.pathname.includes("/shorts/");
+        const isMusic = window.location.hostname === "music.youtube.com";
         const webviewPlayerEnabled = prefs.use_webview_player !== false;
 
         if (!window.location.href.includes("watch") && !window.location.href.includes("shorts")) return;
 
-        if (isShorts) initGestures();
+        if (isShorts || isMusic) initGestures();
+
+        if (isMusic) return;
 
         if (!webviewPlayerEnabled) return;
 
