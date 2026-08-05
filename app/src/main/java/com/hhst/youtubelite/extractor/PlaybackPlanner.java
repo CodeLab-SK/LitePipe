@@ -38,6 +38,8 @@ public final class PlaybackPlanner {
 		PlaybackPlan plan = new PlaybackPlan();
 		plan.setStreamType(deliveries.getStreamType());
 
+		boolean audioOnly = "Audio".equalsIgnoreCase(preferredQuality);
+
 		boolean live = deliveries.getStreamType() == StreamType.LIVE_STREAM
 						|| deliveries.getStreamType() == StreamType.AUDIO_LIVE_STREAM;
 		if (live) {
@@ -54,6 +56,25 @@ public final class PlaybackPlanner {
 			return plan;
 		}
 
+		if (audioOnly) {
+			Delivery audio = deliveries.first(PlaybackMode.AUDIO_ONLY);
+			if (audio != null) {
+				List<AudioStream> tracks = reorderAudioTracks(audio.audioStreams(), preferredAudioLanguage);
+				plan.setMode(PlaybackMode.AUDIO_ONLY);
+				plan.setDelivery(audio);
+				plan.setAudioCandidate(findAudioCandidate(audio.getAudio(),
+								PlayerUtils.selectAudioStream(tracks, null)));
+				return plan;
+			}
+			Delivery adaptive = deliveries.first(PlaybackMode.ADAPTIVE);
+			if (adaptive != null) {
+				PlaybackPlan adaptivePlan = adaptivePlan(plan, adaptive, preferredQuality, preferredAudioLanguage);
+				if (adaptivePlan.getAudioCandidate() != null) {
+					return adaptivePlan;
+				}
+			}
+		}
+
 		Delivery adaptive = deliveries.first(PlaybackMode.ADAPTIVE);
 		if (adaptive != null) {
 			PlaybackPlan adaptivePlan = adaptivePlan(plan, adaptive, preferredQuality, preferredAudioLanguage);
@@ -63,7 +84,7 @@ public final class PlaybackPlanner {
 		}
 
 		Delivery muxed = deliveries.first(PlaybackMode.MUXED);
-		if (muxed != null) {
+		if (muxed != null && !audioOnly) {
 			VideoStream selected = PlayerUtils.selectVideoStream(muxed.muxedStreams(), preferredQuality);
 			plan.setMode(PlaybackMode.MUXED);
 			plan.setDelivery(muxed);
@@ -115,6 +136,9 @@ public final class PlaybackPlanner {
 						.collect(Collectors.toList());
 		PlaybackPlan plan = adaptivePlan(new PlaybackPlan(), adaptive, video, audio,
 						preferredQuality, preferredAudioLanguage);
+		if ("Audio".equalsIgnoreCase(preferredQuality)) {
+			return plan.getAudioCandidate() != null ? plan : null;
+		}
 		return plan.getVideoCandidate() != null && plan.getAudioCandidate() != null ? plan : null;
 	}
 
@@ -214,9 +238,11 @@ public final class PlaybackPlanner {
 	                                         @Nullable String preferredAudioLanguage) {
 		plan.setMode(delivery.getMode());
 		plan.setDelivery(delivery);
-		VideoStream video = PlayerUtils.selectVideoStream(videoStreams(videoCandidates), preferredQuality);
+		if (!"Audio".equalsIgnoreCase(preferredQuality)) {
+			VideoStream video = PlayerUtils.selectVideoStream(videoStreams(videoCandidates), preferredQuality);
+			plan.setVideoCandidate(findVideoCandidate(videoCandidates, video));
+		}
 		List<AudioStream> tracks = reorderAudioTracks(audioStreams(audioCandidates), preferredAudioLanguage);
-		plan.setVideoCandidate(findVideoCandidate(videoCandidates, video));
 		plan.setAudioCandidate(findAudioCandidate(audioCandidates, PlayerUtils.selectAudioStream(tracks, null)));
 		return plan;
 	}

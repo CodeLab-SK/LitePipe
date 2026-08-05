@@ -989,6 +989,10 @@ public class Engine {
 				.clearOverridesOfType(C.TRACK_TYPE_VIDEO)
 				.setForceHighestSupportedBitrate(false);
 		PlaybackPlan plan = playbackPlan;
+
+		boolean noVideo = plan != null && plan.getVideoCandidate() == null && plan.getMuxedCandidate() == null;
+		builder.setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, noVideo);
+
 		if (plan == null || plan.getDelivery() == null) {
 			builder.clearVideoSizeConstraints();
 		} else {
