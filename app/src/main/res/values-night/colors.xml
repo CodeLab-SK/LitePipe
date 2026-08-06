@@ -23,10 +23,10 @@
     <!-- Download Chips Colors (Night) -->
     <color name="chip_active_bg">#004A77</color>
     <color name="chip_active_text">#D3E4FF</color>
-    <color name="chip_completed_bg">#1C4532</color>
+    <color name="chip_completed_bg">#0F5223</color>
     <color name="chip_completed_text">#C6F6D5</color>
-    <color name="chip_error_bg">#822727</color>
-    <color name="chip_error_text">#FED7D7</color>
+    <color name="chip_error_bg">#8C1D18</color>
+    <color name="chip_error_text">#F9DEDC</color>
     <color name="chip_paused_bg">#2D3748</color>
     <color name="chip_paused_text">#E2E8F0</color>
     <color name="chip_type_bg">#212121</color>
