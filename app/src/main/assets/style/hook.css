@@ -13,7 +13,7 @@ ytm-watch,
 ytm-settings,
 grid-shelf-view-model,
 ytm-shorts-lockup-view-model,
-.pivot-bar-item-tab.pivot-shorts,
+yt-tab-shape[tab-title="Shorts"],
 a[href^="/shorts/"] {
     animation-duration: 0.001s;
     animation-name: nodeInserted;

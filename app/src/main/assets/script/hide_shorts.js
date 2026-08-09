@@ -10,7 +10,8 @@
             'ytm-video-with-context-renderer',
             'ytm-rich-section-renderer',
             'grid-shelf-view-model',
-            'ytm-shelf-renderer'
+            'ytm-shelf-renderer',
+            'yt-tab-shape[tab-title="Shorts"]'
         ];
         
         for (const selector of closestSelectors) {
@@ -28,7 +29,7 @@
             
             if (element.matches('ytm-shorts-lockup-view-model')) {
                 hideElement(element);
-            } else if (element.matches('.pivot-bar-item-tab.pivot-shorts')) {
+            } else if (element.matches('yt-tab-shape[tab-title="Shorts"]')) {
                 hideElement(element);
             } else if (element.matches('a[href^="/shorts/"]')) {
                 hideElement(element);
@@ -40,7 +41,7 @@
 
     const shortsElements = [
         'ytm-shorts-lockup-view-model',
-        '.pivot-bar-item-tab.pivot-shorts',
+        'yt-tab-shape[tab-title="Shorts"]',
         'a[href^="/shorts/"]',
         'grid-shelf-view-model'
     ];
