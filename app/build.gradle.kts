@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.hhst.youtubelite"
+    namespace = "com.codelabsk.litepipe"
     compileSdk = 36
 
     installation {
@@ -18,7 +18,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.google.LitePipe"
+        applicationId = "com.codelabsk.LitePipe"
         minSdk = 26
         targetSdk = 36
         versionCode = 121

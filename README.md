@@ -103,7 +103,7 @@ Whether you have ideas, bug reports, translations, design improvements, code cle
 </p>
 
 ## 📝 Note
-If you use YouTube Morphe and want to use LitePipe as an external downloader only, you can put com.google.LitePipe in the external downloader input box to download via LitePipe.
+If you use YouTube Morphe and want to use LitePipe as an external downloader only, you can put com.codelabsk.LitePipe in the external downloader input box to download via LitePipe.
 
 ## ❓ FAQ
 **Q: Is this app safe?**  

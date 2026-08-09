@@ -23,22 +23,22 @@
 -keepclassmembers class * extends com.google.gson.reflect.TypeToken { *; }
 
 # Data Models (Keep fields for Gson serialization)
--keep class com.hhst.youtubelite.player.model.** { *; }
--keep class com.hhst.youtubelite.player.queue.QueueItem { *; }
--keepclassmembers class com.hhst.youtubelite.player.queue.QueueItem { <fields>; }
--keepclassmembers class com.hhst.youtubelite.extractor.** { <fields>; }
--keepclassmembers class com.hhst.youtubelite.downloader.core.history.** { <fields>; }
--keep class com.hhst.youtubelite.extension.Extension { *; }
--keepclassmembers class com.hhst.youtubelite.extension.Extension { <fields>; }
+-keep class com.codelabsk.litepipe.player.model.** { *; }
+-keep class com.codelabsk.litepipe.player.queue.QueueItem { *; }
+-keepclassmembers class com.codelabsk.litepipe.player.queue.QueueItem { <fields>; }
+-keepclassmembers class com.codelabsk.litepipe.extractor.** { <fields>; }
+-keepclassmembers class com.codelabsk.litepipe.downloader.core.history.** { <fields>; }
+-keep class com.codelabsk.litepipe.extension.Extension { *; }
+-keepclassmembers class com.codelabsk.litepipe.extension.Extension { <fields>; }
 
 # Constants (Prevent inlining of User Agent)
--keep class com.hhst.youtubelite.Constants { *; }
--keepclassmembers class com.hhst.youtubelite.Constants {
+-keep class com.codelabsk.litepipe.Constants { *; }
+-keepclassmembers class com.codelabsk.litepipe.Constants {
     public static java.lang.String USER_AGENT;
 }
 
 # JavaScript Interface
--keepclassmembers class com.hhst.youtubelite.browser.JavascriptInterface {
+-keepclassmembers class com.codelabsk.litepipe.browser.JavascriptInterface {
    @android.webkit.JavascriptInterface <methods>;
 }
 

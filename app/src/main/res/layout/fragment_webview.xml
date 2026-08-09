@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <com.hhst.youtubelite.browser.YoutubeWebview
+    <com.codelabsk.litepipe.browser.YoutubeWebview
         android:id="@+id/webview"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />

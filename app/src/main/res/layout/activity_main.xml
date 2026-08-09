@@ -19,7 +19,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toTopOf="@+id/bottom_navigation_container" />
 
-    <com.hhst.youtubelite.player.LitePlayerView
+    <com.codelabsk.litepipe.player.LitePlayerView
         android:id="@+id/playerView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -195,7 +195,7 @@
         </LinearLayout>
 
     </com.google.android.material.card.MaterialCardView>
-    <com.hhst.youtubelite.player.BottomRecommendationsSheet
+    <com.codelabsk.litepipe.player.BottomRecommendationsSheet
         android:id="@+id/recommendations_sheet"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -216,7 +216,7 @@
             android:background="?attr/colorOutline"
             android:visibility="gone" />
 
-        <com.hhst.youtubelite.ui.NavigationBar
+        <com.codelabsk.litepipe.ui.NavigationBar
             android:id="@+id/custom_nav_bar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

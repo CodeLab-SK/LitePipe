@@ -35,7 +35,7 @@
                 app:boxStrokeColor="?attr/colorPrimary"
                 app:hintTextColor="?attr/colorPrimary">
 
-                <com.hhst.youtubelite.ui.widget.NestedScrollableTextInputEditText
+                <com.codelabsk.litepipe.ui.widget.NestedScrollableTextInputEditText
                     android:id="@+id/download_edit_text"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

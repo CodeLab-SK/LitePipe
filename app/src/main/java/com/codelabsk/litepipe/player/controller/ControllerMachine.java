@@ -1,0 +1,149 @@
+package com.codelabsk.litepipe.player.controller;
+
+import androidx.annotation.DrawableRes;
+
+public final class ControllerMachine {
+
+	public enum State {
+		NORMAL(ControllerState.Mode.NORMAL),
+		FULLSCREEN_UNLOCKED(ControllerState.Mode.FULLSCREEN_UNLOCK),
+		FULLSCREEN_LOCKED(ControllerState.Mode.FULLSCREEN_LOCK),
+		MINI_PLAYER(ControllerState.Mode.MINI_PLAYER),
+		PIP(ControllerState.Mode.PIP);
+
+		private final ControllerState.Mode mode;
+
+		State(ControllerState.Mode mode) {
+			this.mode = mode;
+		}
+
+		public ControllerState.Mode toMode() {
+			return mode;
+		}
+
+		public boolean isFullscreen() {
+			return this == FULLSCREEN_UNLOCKED || this == FULLSCREEN_LOCKED;
+		}
+	}
+
+	public record RenderState(
+					boolean controlsVisible,
+					boolean showCenterControls,
+					boolean showOtherControls,
+					boolean showProgressBar,
+					boolean showResetButton,
+					boolean showLockButton,
+					boolean showRemainingDuration,
+					boolean showMiniControls,
+					boolean showMiniScrim,
+                    boolean showMiniCloseRestore,
+					boolean locked,
+					boolean fullscreen,
+					boolean pip,
+					@DrawableRes int fullscreenIconRes,
+					@DrawableRes int lockIconRes
+	) {
+	}
+
+	private ControllerState state = ControllerState.initial();
+	private boolean lockButtonHiddenByUser = false;
+
+	public State getState() {
+		return toState(state.mode());
+	}
+
+	public boolean isFullscreen() {
+		return state.mode().isFullscreen();
+	}
+
+	public boolean isLocked() {
+		return state.isLocked();
+	}
+
+	public boolean isInPictureInPicture() {
+		return state.isInPictureInPicture();
+	}
+
+	public boolean isInMiniPlayer() {
+		return state.isInMiniPlayer();
+	}
+
+	public boolean isControlsVisible() {
+		return state.controlsVisible();
+	}
+
+	public void setControlsVisible(final boolean visible) {
+		state = state.withControlsVisible(visible);
+	}
+
+	public void enterFullscreen() {
+		state = state.enterFullscreen();
+	}
+
+	public void exitFullscreen() {
+		state = state.exitFullscreen();
+	}
+
+	public void toggleLock() {
+		state = state.toggleLock();
+	}
+
+	public void hideLockButton(boolean hide) {
+		this.lockButtonHiddenByUser = hide;
+	}
+
+	public void enterMiniPlayer() {
+		state = state.enterMiniPlayer();
+	}
+
+	public void exitMiniPlayer() {
+		state = state.exitMiniPlayer();
+	}
+
+	public void onPictureInPictureModeChanged(final boolean isInPictureInPictureMode) {
+		state = isInPictureInPictureMode ? state.enterPip() : state.exitPip();
+	}
+
+	public RenderState buildRenderState(final boolean controlsVisible,
+	                                    final boolean isBuffering,
+	                                    final boolean isZoomed) {
+		return toRenderState(state.withControlsVisible(controlsVisible), isBuffering, isZoomed, lockButtonHiddenByUser);
+	}
+
+	public RenderState currentRenderState(final boolean isBuffering, final boolean isZoomed) {
+		return toRenderState(state, isBuffering, isZoomed, lockButtonHiddenByUser);
+	}
+
+	private static RenderState toRenderState(final ControllerState state,
+	                                         final boolean isBuffering,
+	                                         final boolean isZoomed,
+	                                         final boolean lockButtonHiddenByUser) {
+		final ControllerState.UiState uiState = state.toUiState(isBuffering, isZoomed);
+		return new RenderState(
+						state.controlsVisible(),
+						uiState.centerControlsVisible(),
+						uiState.otherControlsVisible(),
+						uiState.progressVisible(),
+						uiState.resetVisible(),
+						uiState.lockButtonVisible() && !lockButtonHiddenByUser,
+						uiState.remainingDurationVisible(),
+						uiState.miniControlsVisible(),
+						uiState.miniScrimVisible(),
+                        uiState.miniCloseRestoreVisible(),
+						state.isLocked(),
+						uiState.fullscreen(),
+						state.isInPictureInPicture(),
+						uiState.fullscreenIconRes(),
+						uiState.lockIconRes());
+	}
+
+	private static State toState(final ControllerState.Mode mode) {
+		return switch (mode) {
+			case NORMAL -> State.NORMAL;
+			case FULLSCREEN_UNLOCK -> State.FULLSCREEN_UNLOCKED;
+			case FULLSCREEN_LOCK -> State.FULLSCREEN_LOCKED;
+			case MINI_PLAYER -> State.MINI_PLAYER;
+			case PIP -> State.PIP;
+		};
+	}
+}

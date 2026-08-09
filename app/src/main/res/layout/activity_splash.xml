@@ -107,7 +107,7 @@
             android:textSize="12sp" />
 
         <TextView
-            android:id="@+id/tagline_minimal"
+            android:id="@+id/tagline_modern"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:alpha="0"
