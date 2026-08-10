@@ -1,0 +1,23 @@
+# Changelog — v1.3.0
+
+* Fixed music player synchronization issues.
+* Fixed background playback issues in the music player.
+* Fixed lag and touch-interception issues in the music player WebView.
+* Added **Next** and **Previous** track buttons to music playback notifications.
+* Added volume and brightness gesture controls to the music player.
+* Fixed music playback not working correctly in mini-player mode.
+* Added an **audio-only playback plan** for music.
+* Added an option to use the **YouTube WebView player** instead of ExoPlayer for video playback.
+* Added volume and brightness gesture controls for webview player.
+* Added **SponsorBlock** support.
+* Added additional playback speed options.
+* Improved playback controls and overall interaction.
+* Added volume and brightness gesture controls for shorts player.
+* Fixed Shorts player starting in a muted state.
+* Added support for downloading Shorts.
+* Fixed the inability to disable subtitles in the offline player.
+* Fixed the subtitle icon not being grayed out when subtitles were disabled.
+* Fixed the **pull-to-refresh** gesture being active on pages where it should not be.
+* Improved the colors and visibility of download status chips.
+* Added the **Shorts** tab to the channel page in the Shorts-hiding toggle.
+* Improved overall playback stability and user interaction.

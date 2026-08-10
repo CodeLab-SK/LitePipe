@@ -21,8 +21,8 @@ android {
         applicationId = "com.codelabsk.LitePipe"
         minSdk = 26
         targetSdk = 36
-        versionCode = 121
-        versionName = "1.2.1"
+        versionCode = 130
+        versionName = "1.3.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

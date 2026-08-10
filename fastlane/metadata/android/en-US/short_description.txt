@@ -1,1 +1,1 @@
-An advanced webview wrapper for YouTube with cool features.
+LitePipe is a fast, feature-rich YouTube and YouTube Music client for Android.

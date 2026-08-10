@@ -1,7 +1,23 @@
-LitePipe is an advanced webview wrapper for YouTube.
+LitePipe is a fast, lightweight, and feature-rich webview YouTube & YouTube Music client for Android.
+It offers a completely ad-free experience with powerful extra features that the official YouTube app doesn’t provide.
 
-<b>Features</b>
-* <b>Ad-free playback</b>
-* <b>Background & Picture-in-Picture support</b>
-* <b>Built-in video downloader</b>
-* <b>Live stream chat support, etc.</b>
+## Key Features
+
+- Ad-free YouTube and YouTube Music experience
+- SponsorBlock – automatically skips sponsors, intros, outros, and self-promotions
+- Return YouTube Dislike – shows dislike counts again
+- Advanced custom player with subtitles, multiple audio tracks, and gesture controls
+- Background playback and Picture-in-Picture (PiP) support
+- Playback queue – add videos to a queue and keep watching
+- Live chat support for streams
+- Powerful built-in downloader – download videos, audio, shorts, captions, playlists, and thumbnails
+- Local video player – play downloaded or local device videos with the same advanced player
+- Incognito mode – watch without saving history
+- Very lightweight – full APK size is only around 6 MB
+
+# Other useful features
+
+- Open YouTube links directly or download them from the share menu
+- Can be set as the default app for YouTube links
+- Supports signing in with your Google account
+- Works alongside the official YouTube app
