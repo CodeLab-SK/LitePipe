@@ -183,6 +183,7 @@
     <string name="clear_history">Clear history</string>
 
     <string name="litepipe_settings">LitePipe Settings</string>
+    <string name="search_settings">Search settings…</string>
     <string name="general">General</string>
     <string name="show_search_suggestions">Search Suggestions</string>
     <string name="hide_comments">Hide Comments</string>

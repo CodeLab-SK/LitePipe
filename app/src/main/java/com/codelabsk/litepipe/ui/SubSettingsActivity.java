@@ -53,6 +53,7 @@ public class SubSettingsActivity extends AppCompatActivity {
     public static final String EXTRA_NAV_BAR_MODE = "extra_nav_bar_mode";
     public static final String EXTRA_ACTION_BAR_MODE = "extra_action_bar_mode";
     public static final String EXTRA_EXTENSION_KEY = "extra_extension_key";
+    public static final String EXTRA_SCROLL_TO_KEY = "extra_scroll_to_key";
 
     @Inject ExtensionManager extensionManager;
     private SettingsAdapter adapter;
@@ -87,6 +88,7 @@ public class SubSettingsActivity extends AppCompatActivity {
         boolean navBarMode = getIntent().getBooleanExtra(EXTRA_NAV_BAR_MODE, false);
         boolean actionBarMode = getIntent().getBooleanExtra(EXTRA_ACTION_BAR_MODE, false);
         String extensionKey = getIntent().getStringExtra(EXTRA_EXTENSION_KEY);
+        String scrollToKey = getIntent().getStringExtra(EXTRA_SCROLL_TO_KEY);
 
         com.google.android.material.appbar.MaterialToolbar toolbar = findViewById(R.id.toolbar);
         toolbar.setTitle(titleRes);
@@ -111,6 +113,15 @@ public class SubSettingsActivity extends AppCompatActivity {
         adapter = new SettingsAdapter(extensions, navBarMode || actionBarMode, navBarMode);
         recyclerView.setAdapter(adapter);
 
+        if (scrollToKey != null) {
+            recyclerView.post(() -> {
+                int pos = adapter.getPositionByKey(scrollToKey);
+                if (pos != -1) {
+                    ((LinearLayoutManager) recyclerView.getLayoutManager()).scrollToPositionWithOffset(pos, 0);
+                }
+            });
+        }
+
         if (navBarMode || actionBarMode) {
             ItemTouchHelper touchHelper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0) {
                 @Override
@@ -132,6 +143,7 @@ public class SubSettingsActivity extends AppCompatActivity {
     }
 
     private List<Extension> findExtensionByKey(List<Extension> tree, String key) {
+        if (key == null) return null;
         for (Extension ext : tree) {
             if (key.equals(ext.key())) return ext.children();
             if (ext.children() != null) {
@@ -156,6 +168,14 @@ public class SubSettingsActivity extends AppCompatActivity {
             this.draggableMode = draggableMode;
             this.isNavBar = isNavBar;
             if (draggableMode) sortItems();
+        }
+
+        int getPositionByKey(String key) {
+            if (key == null) return -1;
+            for (int i = 0; i < items.size(); i++) {
+                if (key.equals(items.get(i).key())) return i;
+            }
+            return -1;
         }
 
         private void sortItems() {
