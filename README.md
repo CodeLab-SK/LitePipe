@@ -9,8 +9,7 @@
 
 <br>
 
-<img src="https://img.shields.io/badge/Status-Active%20Development-success?style=for-the-badge">
-
+<img src="https://img.shields.io/badge/Status-Inactive-success?style=for-the-badge">
 <br>
 
 <img src="https://img.shields.io/github/v/release/CodeLab-SK/LitePipe?style=for-the-badge&label=Latest%20Version">
@@ -23,6 +22,20 @@
 <img src="https://img.shields.io/github/last-commit/CodeLab-SK/LitePipe?style=for-the-badge&label=Last%20Commit">
 
 <br>
+
+</div>
+
+## Note
+
+I’m no longer able to dedicate time to this app, and this might be the end of the project.
+
+If anyone is interested in taking over the development, feel free to fork the repository and build upon it. I would be happy to see the future development of the app.
+
+For alternatives, check out:
+
+* [YTPro](https://github.com/prateek-chaubey/YTPro/)
+* [Flow](https://github.com/a-edev/Flow)
+* [NouTube](https://github.com/nonbili/NouTube)
 
 </div>
 
@@ -101,9 +114,6 @@ Whether you have ideas, bug reports, translations, design improvements, code cle
 </a>
 
 </p>
-
-## 📝 Note
-If you use YouTube Morphe and want to use LitePipe as an external downloader only, you can put com.codelabsk.LitePipe in the external downloader input box to download via LitePipe.
 
 ## ❓ FAQ
 **Q: Is this app safe?**  
